@@ -58,10 +58,12 @@ UI_LOG_LEVEL = 1
 # email notify sell/buy
 sender = 'wcadaydayup@163.com'
 sender_password = "998zhiyao998"
-receiver = "wcadaydayup@163.com, bbb201@126.com, 2879230281@qq.com, 371606063@qq.com, 790840993@qq.com, 383362849@qq.com, " \
-           "351172940@qq.com, 182089859@qq.com, 278995617@qq.com, 2931429366@qq.com"
-rceiver_list = ["wcadaydayup@163.com", "bbb201@126.com", "2879230281@qq.com", "371606063@qq.com", "790840993@qq.com",
-                "383362849@qq.com", "351172940@qq.com", "182089859@qq.com", "278995617@qq.com", "2931429366@qq.com"]
+receiver = "wcadaydayup@163.com, 1447385994@qq.com"
+rceiver_list = ["wcadaydayup@163.com", "1447385994@qq.com"]
+"""
+"bbb201@126.com", "2879230281@qq.com", "371606063@qq.com", "790840993@qq.com",
+                "383362849@qq.com", "351172940@qq.com", "182089859@qq.com", "278995617@qq.com", "2931429366@qq.com"
+"""
 receiver_own = "wcadaydayup@163.com"#bbb201@126.com,
 rceiver_list_own = ["wcadaydayup@163.com"]#"bbb201@126.com",
 

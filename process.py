@@ -36,6 +36,7 @@ REALTIME_UML = queue.Queue()
 #所有的K线订阅响应都在此处理
 def kline_sub_msg_process(response):
     if not is_valid(response, "sub"):
+        logger.warning("kline_sub_msg_process invalid response:{}".format(response))
         return False
 
     save_data_df(response)

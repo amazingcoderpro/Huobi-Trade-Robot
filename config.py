@@ -110,4 +110,4 @@ RETRY_TIMES = -1  # 小于0无限重试
 #是否邮件通知
 EMAIL_NOTIFY = True
 ROOT = None
-ALARM = True
+ALARM = False

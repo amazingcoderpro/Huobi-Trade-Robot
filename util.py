@@ -64,7 +64,7 @@ def deco_retry(retry_times=3):
         def wrapper(*args, **kwargs):
             for i in range(retry_times):
                 ret = func(*args, **kwargs)
-                logger.info("deco_retry call {} retry = {}, ret={}".format(func.__name__, i, ret))
+                logger.info("deco_retry call {} retry = {}, ret={}".format(func.__name__, i, ret[0] if ret else "None"))
                 if isinstance(ret, tuple):
                     if ret[0] == 200 and ret[1]:
                         return ret

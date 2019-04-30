@@ -331,9 +331,9 @@ def kdj_strategy_buy(currency=[], max_trade=1):
     logger.info("current k={}, d={}, current_price={}".format(cur_k, cur_d, current_price))
     log_config.output2ui("current k={}, d={}, current_price={}".format(cur_k, cur_d, current_price))
 
-    #kd不能大于40
-    if cur_k >40 or cur_d>40:
-        logger.info("cur_k or cur_d > 40")
+    # kd不能大于40
+    if cur_k >60 or cur_d>60:
+        logger.info("cur_k or cur_d > 60")
         return False
 
     #回暖幅度超过0.008
@@ -346,9 +346,10 @@ def kdj_strategy_buy(currency=[], max_trade=1):
                                                                                                             up_percent,
                                                                                                             actual_up_percent))
     if actual_up_percent < up_percent:
+        logger.info("kdj buy actual_up_percent{} less than need up_percent{}.".format(actual_up_percent, up_percent))
         return False
-    logger.info("kdj buy actual_up_percent big than need up_percent")
 
+    logger.info("kdj buy actual_up_percent{} big than need up_percent{}.".format(actual_up_percent, up_percent))
     # 最近三个周期内出现过kd小于20
     last_k, last_d, last_j = get_kdj(market, 1)
     last_k_2, last_d_2, last_j_2 = get_kdj(market, 2)
@@ -1116,7 +1117,7 @@ STRATEGY_LIST = [
     # Strategy(kdj_strategy_buy, 240, -1, after_execute_sleep=900 * 3, name="kdj_strategy_buy"),
     # Strategy(kdj_strategy_sell, 240, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
     Strategy(kdj_strategy_buy, 110, -1, after_execute_sleep=900 * 3, name="kdj_strategy_buy"),
-    Strategy(kdj_strategy_sell, 110, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
+    Strategy(kdj_strategy_sell, 105, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
     Strategy(stop_loss, 35, -1, after_execute_sleep=120, name="stop_loss"),
     Strategy(move_stop_profit, 30, -1, after_execute_sleep=120, name="move_stop_profit"),
     Strategy(vol_price_fly, 120, -1, name="vol_price_fly", after_execute_sleep=900 * 2),

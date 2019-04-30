@@ -3,12 +3,14 @@
 # Created by Charles on 2018/7/1
 # Function: 
 
+import time
 from tkinter import Toplevel, Label, Button,  LEFT, RIGHT, Frame, END
 from tkinter.scrolledtext import ScrolledText
 import threading
 # import win32com.client
 # import winsound
 RUNING = True
+
 class TradeStrategy(Toplevel):
     def __init__(self, message, show_time=60, title="Trad Alarm"):
         Toplevel.__init__(self)
@@ -44,6 +46,7 @@ class TradeStrategy(Toplevel):
             while timeout>0 and RUNING:
                 # winsound.Beep(2015, 1000)
                 print("Beep-----------------------")
+                time.sleep(1)
                 timeout -= 1
             self.destroy()
         self.alarm_th = threading.Thread(target=alarm_th, args=(self.show_time, ))

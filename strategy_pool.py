@@ -117,23 +117,23 @@ class Strategy:
             self._last_check_time = current_time
 
     def should_be_check(self):
-        logger.debug("should_be_check...")
+        # logger.debug("should_be_check...")
         if self._state != 1:
-            logger.debug("should_be_check return false, state={}".format(self._state))
+            # logger.debug("should_be_check return false, state={}".format(self._state))
             return False
 
         if self._execute_times == 0:
-            logger.debug("should_be_check return false, _execute_times={}".format(self._execute_times))
+            # logger.debug("should_be_check return false, _execute_times={}".format(self._execute_times))
             return False    #
 
         current_time = int(time.time())
         if current_time-self._last_check_time < self._check_period:
-            logger.debug("should_be_check return false, _last_check_time={}".format(self._last_check_time))
+            # logger.debug("should_be_check return false, _last_check_time={}".format(self._last_check_time))
             return False
 
         if self._last_execute_time > 0 and current_time-self._last_execute_time < self._after_execute_sleep:
-            logger.debug("should_be_check return false, _last_execute_time={}, _after_execute_sleep={}"
-                        .format(self._last_execute_time, self._after_execute_sleep))
+            # logger.debug("should_be_check return false, _last_execute_time={}, _after_execute_sleep={}"
+            #             .format(self._last_execute_time, self._after_execute_sleep))
             return False
         logger.info("should_be_check return True")
         return True

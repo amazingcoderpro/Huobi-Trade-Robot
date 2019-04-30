@@ -511,8 +511,8 @@ if __name__ == '__main__':
     my_gui = MainUI(root)
     config.ROOT = root
     root.protocol('WM_DELETE_WINDOW', my_gui.close_window)
-    my_gui.center_window(1050, 500)
-    root.maxsize(1200, 500)
+    my_gui.center_window(1250, 600)
+    root.maxsize(1250, 600)
     # root.minsize(320, 240)
     # root.iconbitmap('spider_128px_1169260_easyicon.net.ico')
     my_gui.update_ui()
