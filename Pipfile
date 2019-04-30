@@ -1,0 +1,20 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+log-config = "*"
+websocket-client = "*"
+matplotlib = "*"
+pandas = "*"
+requests = "*"
+cryptography = "*"
+mpl-finance = "*"
+pymongo = "*"
+ta-lib = "*"
+
+[requires]
+python_version = "3.6"
