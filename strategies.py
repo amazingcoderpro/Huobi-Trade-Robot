@@ -14,7 +14,7 @@ from rs_util import HuobiREST
 import log_config
 import logging
 import huobi
-from popup_trade import TradeStrategy
+from popup_trade import PopupTrade
 
 # result = {"trade_vol": 0, "buy_vol": 0, "sell_vol": 0, "big_buy": 0, "big_sell": 0, "total_buy_cost": 0,
 #           "total_sell_cost": 0, "avg_buy_cost": 0, "avg_sell_cost": 0, "start_time": 0, "end_time": 0}
@@ -32,8 +32,8 @@ TRADE_RECORD = []
 
 move_stop_profit_params = {"check": 1, "msf_min": 0.02, "msf_back": 0.25}
 stop_loss_params = {"check": 1, "percent": 0.02}
-kdj_buy_params = {"check": 1, "k": 20, "d": 22, "buy_percent": 0.4, "up_percent": 0.008, "peroid": "15min"}
-kdj_sell_params = {"check": 1, "k": 82, "d": 78, "sell_percent": 0.4, "down_percent": 0.008, "peroid": "15min"}
+kdj_buy_params = {"check": 1, "k": 20, "d": 22, "buy_percent": 0.4, "up_percent": 0.004, "peroid": "15min"}
+kdj_sell_params = {"check": 1, "k": 82, "d": 78, "sell_percent": 0.4, "down_percent": 0.004, "peroid": "15min"}
 vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 3, "price_up_limit": 0.03, "buy_percent": 0.5,
                         "peroid": "5min"}
 boll_strategy_params = {"check": 1, "peroid": "15min", "open_diff1_percent": 0.012, "open_diff2_percent": 0.012,
@@ -273,9 +273,9 @@ def boll_strategy():
     if buy_percent > 0:
         msg = "[BUY]boll_strategy buy {} percent: {}, current price={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(symbol, buy_percent, price, upper, middle, lower, pdiff1, pdiff2)
         if not trade_alarm(msg):
-            return True
+            return False
 
-        ret = buy_market(symbol, percent=buy_percent)
+        ret = buy_market(symbol, percent=buy_percent, current_price=price)
         if ret[0]:
             logger.info(
                 "--boll_strategy be trigger buy {} percent: {}, current price={}, buy amount={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(
@@ -296,9 +296,9 @@ def boll_strategy():
     if sell_percent > 0 and G_BOLL_BUY > 0:
         msg = "[SELL]boll_strategy sell {} percent: {}, current price={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(symbol, buy_percent, price, upper, middle, lower, pdiff1, pdiff2)
         if not trade_alarm(msg):
-            return True
+            return False
 
-        ret = sell_market(symbol, percent=sell_percent)
+        ret = sell_market(symbol, percent=sell_percent, current_price=price)
         if ret[0]:
             logger.info(
                 "--boll_strategy be trigger sell {} percent: {}, current price={}, sell amount={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(
@@ -390,9 +390,9 @@ def kdj_strategy_buy(currency=[], max_trade=1):
         msg = "[BUY]kdj_strategy buy {} percent: {}, current price={}, min price={}, current k={}, d={}, actual_up_percent={}".format(
                 symbol, percent, current_price, min_price, cur_k, cur_d, actual_up_percent)
         if not trade_alarm(msg):
-            return True
+            return False
 
-        ret = buy_market(symbol, percent=percent)
+        ret = buy_market(symbol, percent=percent, current_price=current_price)
         if ret[0]:
             logger.info(
                 "--kdj_buy_{} be trigger buy {} percent: {}, current price={}, min price={} buy amount={}, current k={}, d={}, actual_up_percent={}".format(
@@ -455,10 +455,10 @@ def kdj_strategy_sell(currency=[], max_trade=1):
         msg = "[SELL]kdj_strategy sell {} percent: {}, current price={}, max price={}, current k={}, d={}, actual_down_percent={}".format(
                 symbol, percent, current_price, max_price, cur_k, cur_d, actual_down_percent)
         if not trade_alarm(msg):
-            return True
+            return False
 
         logger.info("kdj sell actual_down_percent={} is big than need down percent".format(actual_down_percent))
-        ret = sell_market(symbol, percent=percent)
+        ret = sell_market(symbol, percent=percent, current_price=current_price)
         if ret[0]:
             logger.info(
                 "--kdj_{}_80 be trigger sell {} percent: {}, current price={}, max price={}, actual_down_percent={}, sell amount={}, current k={}, d={}".format(
@@ -547,7 +547,7 @@ def stop_loss(percent=0.03):
             msg = "[SELL] stop loss execute, sell {}, loss percent={}, config loss percent={}, last_buy_price={}, last_buy_amount={}, current_price={}".format(
                     symbol, loss_percent, stop_loss_params["percent"], last_price, last_buy_amount, current_price)
             if not trade_alarm(msg):
-                return True
+                return False
 
             logger.info(
                 "stop loss execute, loss percent={}, config loss percent={}, last_buy_price={}, last_buy_amount={}, current_price={}".format(
@@ -556,7 +556,7 @@ def stop_loss(percent=0.03):
                 "stop loss execute, loss percent={}, config loss percent={}, last_buy_price={}, last_buy_amount={}, current_price={}".format(
                     loss_percent, stop_loss_params["percent"], last_price, last_buy_amount, current_price))
 
-            ret = sell_market(symbol, last_buy_amount)
+            ret = sell_market(symbol, last_buy_amount, current_price=current_price)
             if ret[0]:
                 BUY_RECORD.remove(trade)
                 trigger = True
@@ -619,7 +619,7 @@ def move_stop_profit():
             msg = "[SELL]Move stop profit be trigger sell {},  current price={}, last_price={}, max_price={} profit={}% down_back_percent={}%".format(
                         symbol, current_price, last_price, max_price, profit, down_back_percent)
             if not trade_alarm(msg):
-                return True
+                return False
 
             logger.warning(
                 "move_stop_profit last_price={}, max_price={}, current_price={}, down_back_percent={}, last_buy_amount={}, profit={}%".format(
@@ -629,7 +629,7 @@ def move_stop_profit():
                     last_price, max_price, current_price, down_back_percent, last_buy_amount, profit), 7)
 
 
-            ret = sell_market(symbol, last_buy_amount)
+            ret = sell_market(symbol, last_buy_amount, current_price=current_price)
             if ret[0]:
                 trigger = True
                 log_config.send_mail(
@@ -763,9 +763,9 @@ def vol_price_fly():
     percent = vol_price_fly_params["buy_percent"]
     msg = "[BUY]vol_price_fly buy {} percent={}, current price={}".format(symbol, percent, current_price)
     if not trade_alarm(msg):
-        return True
+        return False
 
-    ret = buy_market(symbol, percent=percent, strategy_type="vol_price_fly")
+    ret = buy_market(symbol, percent=percent, strategy_type="vol_price_fly", current_price=current_price)
     if ret[0]:
         logger.info("[BUY SUCCESS]vol_price_fly buy {} percent={}, amount={}, current price={}".format(symbol, percent, ret[1], current_price))
         log_config.output2ui(
@@ -783,12 +783,12 @@ def trade_alarm(message, show_time=60):
         return True
 
     logger.warning("Trade Alarm: {}".format(message))
-    pop = TradeStrategy(message, show_time)
+    pop = PopupTrade(message, show_time)
     config.ROOT.wait_window(pop)
     return pop.is_ok
 
 
-def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type=""):
+def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", current_price=0):
     # 按余额比例买
     if amount == 0 and percent > 0:
         currency = symbol[3:]
@@ -799,8 +799,8 @@ def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type=""):
             return False, amount
 
     amount = round(amount, 2)
-    if amount < 100:
-        logger.warning("buy {} amount {} , less than 100. trade cancel!".format(symbol, amount))
+    if current_price and amount*current_price<config.TRADE_LIMIT_VALUE:
+        logger.warning("buy {} amount {}, current price={}, total value less than 10$. trade cancel!".format(symbol, amount, current_price))
         return False, amount
 
     hrs = HuobiREST(config.CURRENT_REST_MARKET_URL, config.CURRENT_REST_TRADE_URL, config.ACCESS_KEY, config.SECRET_KEY, config.PRIVATE_KEY)
@@ -830,7 +830,7 @@ def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type=""):
     return False, amount
 
 
-def sell_market(symbol, amount=0, percent=0.1, record=True):
+def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
     if amount == 0 and percent > 0:
         currency = symbol[0:3]
         balance = get_balance(currency)
@@ -841,6 +841,9 @@ def sell_market(symbol, amount=0, percent=0.1, record=True):
 
 
     amount = round(amount, 2)
+    if current_price and amount*current_price<config.TRADE_LIMIT_VALUE:
+        logger.warning("sell {} amount {}, current price={}, total value less than 10$. trade cancel!".format(symbol, amount, current_price))
+        return False, amount
     # if amount < 100:
     #     logger.warning("sell {} amount {} , less than 100. trade cancel!".format(symbol, amount))
     #     return False,
@@ -882,7 +885,7 @@ def get_close(market, before=1):
         return -1
 
     try:
-        print(len(df))
+        # print(len(df))
         close = df.loc[len(df) - 1 - before, "close"]
     except Exception as e:
         logger.exception("get_close")
@@ -1030,8 +1033,35 @@ def get_kdj(market, pos=0, fastk_period=9, slowk_period=3, slowk_matype=0, slowd
     # plt.legend(loc='upper left')
     # plt.show()
     # plt.savefig("picture//{}.png".format(flag))
-    process.REALTIME_KDJ.put((k,d,j))
+    # process.REALTIME_KDJ.put((k, d, j))
     return k, d, j
+
+
+def kdj_5min_update():
+    market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], "5min")
+    k,d,j = get_kdj(market)
+    process.REALTIME_KDJ_5MIN.put((k, d, j))
+    return k, d, j
+
+def kdj_15min_update():
+    market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], "15min")
+    k,d,j = get_kdj(market)
+    process.REALTIME_KDJ_15MIN.put((k, d, j))
+    return k, d, j
+
+
+def kdj_30min_update():
+    market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], "30min")
+    k,d,j = get_kdj(market)
+    process.REALTIME_KDJ_30MIN.put((k, d, j))
+    return k, d, j
+
+def kdj_1day_update():
+    market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], "1day")
+    k,d,j = get_kdj(market)
+    process.REALTIME_KDJ_1DAY.put((k, d, j))
+    return k, d, j
+
 
 
 # 本地存储的是以5分钟为周期的，beg=0代表从后往前推
@@ -1109,6 +1139,89 @@ def get_balance(currency, access_key=None, secret_key=None, retry=2, result_type
     # def __init__(self, func, check_period, execute_times=-1, after_execute_sleep=0,
     #              state=1, is_after_execute_pause=False, name=""):
 
+def buy_low():
+    now = int(time.time()) * 1000
+    symbol = config.NEED_TOBE_SUB_SYMBOL[0]
+    market = "market.{}.kline.{}".format(symbol, "15min")
+
+    min_price_5 = get_min_price(symbol, now - (15 * 60 * 1000)*5)
+    min_price_20 = get_min_price(symbol, now - (15 * 60 * 1000) * 20)
+    min_price_60 = get_min_price(symbol, now - (15 * 60 * 1000) * 60)
+
+    current_price = get_current_price(symbol)
+    logger.info("buy low called. current price={}, min_price_5={}, min_price_20={}, min_price_60={}".format(current_price, min_price_5, min_price_20, min_price_60))
+    buy_percent = 0
+    if current_price*1.01 < min_price_5 and get_open(market, 1) > get_close(market, 1) \
+            and get_open(market, 2) > get_close(market, 2) and get_open(market, 3) > get_close(market, 3):
+        buy_percent += 0.1
+
+    if current_price*1.01 < min_price_20:
+        buy_percent += 0.3
+
+    if current_price*1.01 < min_price_60:
+        buy_percent += 0.2
+
+    if buy_percent > 0:
+        msg = "[BUY]buy_low buy {} percent: {}, current price={}, min_price_5={}, min_price_20={}, min_price_60={}".format(
+            symbol, buy_percent, current_price, min_price_5, min_price_20, min_price_60)
+
+        if not trade_alarm(msg):
+            return False
+
+        ret = buy_market(symbol, percent=buy_percent, current_price=current_price)
+        if ret[0]:
+            logger.info(msg)
+            log_config.output2ui(msg, 6)
+            log_config.send_mail(msg, own=True)
+            log_config.send_mail(
+                "[BUY SUCCESS]buy {} percent: {}, current price: {}".format(symbol, buy_percent, current_price))
+        logger.info("-----BUY_RECORD = {}".format(BUY_RECORD))
+        return True
+    else:
+        return False
+
+
+def sell_high():
+    now = int(time.time()) * 1000
+    symbol = config.NEED_TOBE_SUB_SYMBOL[0]
+    market = "market.{}.kline.{}".format(symbol, "15min")
+
+    max_price_5 = get_max_price(symbol, now - (15 * 60 * 1000) * 5)
+    max_price_20 = get_max_price(symbol, now - (15 * 60 * 1000) * 20)
+    max_price_60 = get_max_price(symbol, now - (15 * 60 * 1000) * 60)
+
+    current_price = get_current_price(symbol)
+    logger.info("sell high called. current price={}, max_price_5={}, max_price_20={}, max_price_60={}".format(current_price, max_price_5, max_price_20, max_price_60))
+    sell_percent = 0
+    if current_price >= max_price_5*1.01 and get_open(market, 1) < get_close(market, 1) and get_open(market, 2) < get_close(
+            market, 2) and get_open(market, 3) < get_close(market, 3):
+        sell_percent += 0.1
+
+    if current_price >= 1.01 * max_price_20:
+        sell_percent += 0.3
+
+    if current_price >= max_price_60 * 1.01:
+        sell_percent += 0.2
+
+    if sell_percent > 0:
+        msg = "[BUY]sell_high sell {} percent: {}, current price={}, max_price_5={}, max_price_20={}, max_price_60={}".format(
+            symbol, sell_percent, current_price, max_price_5, max_price_20, max_price_60)
+        if not trade_alarm(msg):
+            return False
+
+        ret = sell_market(symbol, percent=sell_percent, current_price=current_price)
+        if ret[0]:
+            logger.info(msg)
+            log_config.output2ui(msg, 6)
+            log_config.send_mail(msg, own=True)
+            log_config.send_mail(
+                "[SELL SUCCESS]sell {} percent: {}, current price: {}".format(symbol, sell_percent, current_price))
+        logger.info("-----SELL_RECORD = {}".format(SELL_RECORD))
+        return True
+    else:
+        return False
+
+
 
 STRATEGY_LIST = [
     # Strategy(macd_strategy_5min, 15, 1, "macd_strategy_5min"),
@@ -1116,13 +1229,18 @@ STRATEGY_LIST = [
     # Strategy(macd_strategy_1day, 20, 1, "macd_strategy_1day"),
     # Strategy(kdj_strategy_buy, 240, -1, after_execute_sleep=900 * 3, name="kdj_strategy_buy"),
     # Strategy(kdj_strategy_sell, 240, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
-    Strategy(kdj_strategy_buy, 110, -1, after_execute_sleep=900 * 3, name="kdj_strategy_buy"),
+    Strategy(kdj_strategy_buy, 30, -1, after_execute_sleep=900 * 3, name="kdj_strategy_buy"),
     Strategy(kdj_strategy_sell, 105, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
     Strategy(stop_loss, 35, -1, after_execute_sleep=120, name="stop_loss"),
     Strategy(move_stop_profit, 30, -1, after_execute_sleep=120, name="move_stop_profit"),
-    Strategy(vol_price_fly, 120, -1, name="vol_price_fly", after_execute_sleep=900 * 2),
-    Strategy(boll_strategy, 120, -1, name="boll strategy", after_execute_sleep=900 * 2)
-    # Strategy(boll_strategy, 10, -1, name="boll strategy", after_execute_sleep=900 * 2)
+    Strategy(vol_price_fly, 60, -1, name="vol_price_fly", after_execute_sleep=900 * 2),
+    Strategy(boll_strategy, 60, -1, name="boll strategy", after_execute_sleep=900 * 2),
+    # Strategy(kdj_5min_update, 30, -1, name="kdj_5min_update", after_execute_sleep=1),
+    Strategy(kdj_15min_update, 40, -1, name="kdj_15min_update", after_execute_sleep=1),
+    Strategy(buy_low, 25, -1, name="buy_low", after_execute_sleep=900*2),
+    Strategy(sell_high, 30, -1, name="sell_high", after_execute_sleep=900*2),
+
+
 ]
 
 

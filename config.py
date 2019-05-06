@@ -107,6 +107,9 @@ DB_PASSWORD = ""
 NET_TIMEOUT = 45
 RETRY_TIMES = -1  # 小于0无限重试
 
+
+TRADE_LIMIT_VALUE = 10  # 最小交易額不能低於10美金
+
 #是否邮件通知
 EMAIL_NOTIFY = True
 ROOT = None

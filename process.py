@@ -31,7 +31,11 @@ REALTIME_BALANCE = queue.Queue()
 TRADE_VOL_HISTORY = {}
 ORG_COIN = None
 ORG_DOLLAR = None
-REALTIME_KDJ = queue.Queue()
+REALTIME_KDJ_5MIN = queue.Queue()
+REALTIME_KDJ_30MIN = queue.Queue()
+REALTIME_KDJ_1DAY = queue.Queue()
+
+REALTIME_KDJ_15MIN = queue.Queue()
 REALTIME_UML = queue.Queue()
 #所有的K线订阅响应都在此处理
 def kline_sub_msg_process(response):
@@ -199,7 +203,7 @@ def plot_candle_chart(df, type=0, pic_name='candle_chart'):
 
     fig, ax = plt.subplots()
     candlestick2_ohlc(ax, df['open'].values, df['high'].values, df['low'].values, df['close'].values,
-                      width=0.6, colorup='r', colordown='g', alpha=1)
+                      width=0.6, colorup='g', colordown='r', alpha=1)
 
     #eg:xticks(np.arange(12), calendar.month_name[1:13], rotation=20)
     plt.xticks(ll, xticks, rotation=60)

@@ -152,7 +152,7 @@ def save_history_trade_vol(symbols):
                                                                                                     result))
                         trade_vol_list.append(result)
                         process.TRADE_VOL_HISTORY[symbol] = trade_vol_list
-                    logger.debug("TRADE_VOL_HISTORY={}".format(process.TRADE_VOL_HISTORY))
+                    # logger.debug("TRADE_VOL_HISTORY={}".format(process.TRADE_VOL_HISTORY))
             except Exception as e:
                 logger.exception("get_trade_vol_by_time, e={}".format(e))
             time.sleep(300)

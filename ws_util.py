@@ -272,27 +272,27 @@ if __name__ == '__main__':
     from config import CURRENT_WS_URL, WS_URL_PRO
     import process
 
-    hws = HuobiWS(url=CURRENT_WS_URL)
+    hws = HuobiWS(url=WS_URL_PRO)
     if not hws.ws_connect():
         print("-------connect websocket failed...exit")
         exit(1)
 
     #测试订阅（重复）
-    hws.ws_sub("market.btcusdt.kline.5min", process.kline_sub_msg_process)
-
-    hws.ws_sub("market.btcusdt.kline.1day", process.kline_sub_msg_process)
+    hws.ws_sub("market.eosusdt.kline.1year", process.kline_sub_msg_process)
+    #
+    hws.ws_sub("market.eosusdt.kline.1day", process.kline_sub_msg_process)
     # hws.ws_sub("market.ethusdt.kline.5min", kline_msg_process)
     # print(hws._sub_map)
-    hws.ws_req("market.btcusdt.kline.1day", kline_req_process, t_from=1508947200, t_to=1527782400)
+    # hws.ws_req("market.eosusdt.kline.1day", process.kline_req_msg_process, t_from=1508947200, t_to=1527782400)
     # 请求 KLine 数据 market.$symbol.kline.$period 这个接口最多只能返回300条数据 ，亲测！！
-    hws.ws_req("market.btcusdt.kline.5min", kline_req_process, t_from=1508990400, t_to=1508990400+90300)
+    hws.ws_req("market.eosusdt.kline.15min", process.kline_req_msg_process, t_from=1557122524-106000, t_to=1557122524)
 
     #开始启动接收线程
     hws.start_recv()
 
-    time.sleep(20)
+    time.sleep(200)
     hws.ws_close()
-    for channel, df in process.map_df.items():
+    for channel, df in process.KLINE_DATA.items():
         print("\n{} data:\n{}".format(channel, df))
         process.plot_candle_chart(df, type=2, pic_name=channel)
     exit(1)

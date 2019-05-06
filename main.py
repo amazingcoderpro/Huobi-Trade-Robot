@@ -97,13 +97,13 @@ class MainUI():
         # row6 = Frame(root)
         # row6.pack(fill="x", ipadx=1, ipady=1)
 
-        self.label_kdj = Label(root, text="K/D/J: ", width=6)
+        self.label_kdj = Label(root, text="KDJ_15M: ", width=8)
         self.kdj_text = StringVar()
         self.kdj_text.set("")
         self.kdj_label = Label(root, textvariable=self.kdj_text, foreground='red', background="gray",
                                font=("", 12, 'bold'), width=20)
 
-        self.label_uml = Label(root, text="U/M/L: ", width=6)
+        self.label_uml = Label(root, text="BOLL: ", width=6)
         self.uml_text = StringVar()
         self.uml_text.set("")
         self.uml_label = Label(root, textvariable=self.uml_text, foreground='red', background="gray",
@@ -373,8 +373,9 @@ class MainUI():
         def update_kdj(kdj_text):
             while True:
                 try:
-                    kdj = process.REALTIME_KDJ.get(block=True)
-                    self.kdj_text.set("{}/{}/{}".format(round(kdj[0], 2), round(kdj[1], 2), round(kdj[2], 2)))
+                    kdj_15min = process.REALTIME_KDJ_15MIN.get(block=True)
+                    # kdj_5min = process.REALTIME_KDJ_5MIN.get(block=True)
+                    kdj_text.set("{}/{}/{}".format(round(kdj_15min[0], 2), round(kdj_15min[1], 2), round(kdj_15min[2], 2)))
                 except Exception as e:
                     logger.exception("update_kdj exception....")
                     log_config.output2ui("update_kdj exception....", 3)

@@ -20,18 +20,18 @@ from email.header import Header
 import config
 
 # formatter
-FORMATTER = "%(asctime)s %(filename)s[line:%(lineno)d] " \
-            "[%(module)s:%(funcName)s] [%(threadName)s:%(thread)d] " \
+FORMATTER = "%(asctime)s [%(threadName)s] [%(filename)s:%(funcName)s:%(lineno)d] " \
             "%(levelname)s %(message)s"
+
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 # log file args
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-is_exists = os.path.exists(os.path.join(BASE_DIR, "log"))
+is_exists = os.path.exists(os.path.join(BASE_DIR, "logs"))
 if not is_exists:
-    os.makedirs(os.path.join(BASE_DIR, "log"))
+    os.makedirs(os.path.join(BASE_DIR, "logs"))
 LOG_FILE_PREFIX = "HuobiTrade"
-LOG_FILE_NAME = "{}_{}.log".format(LOG_FILE_PREFIX, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))       # your_log_file_name.log
+LOG_FILE_NAME = "logs//{}_{}.log".format(LOG_FILE_PREFIX, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))       # your_log_file_name.log
 # LOG_FILE_PATH = os.path.join(BASE_DIR, "log", LOG_FILE_NAME)   # your log full path
 LOG_FILE_PATH = LOG_FILE_NAME
 LOG_FILE_SIZE = 10 * 1024 * 1024                        # the limit of log file size

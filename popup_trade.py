@@ -11,8 +11,8 @@ import threading
 # import winsound
 RUNING = True
 
-class TradeStrategy(Toplevel):
-    def __init__(self, message, show_time=60, title="Trad Alarm"):
+class PopupTrade(Toplevel):
+    def __init__(self, message="交易提醒", show_time=60, title="Trad Alarm"):
         Toplevel.__init__(self)
         self.alarm_th = None
         self.is_run = True
@@ -68,4 +68,6 @@ class TradeStrategy(Toplevel):
 
 if __name__ == '__main__':
     value_dict = {}
-    TradeStrategy("aaaa", "策略配置")
+    pt = PopupTrade()
+    pt.setup_ui()
+    time.sleep(100)
