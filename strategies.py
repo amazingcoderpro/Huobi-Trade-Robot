@@ -264,52 +264,56 @@ def boll_strategy():
     #         sell_percent = 0.2
 
     logger.info(
-        "boll_strategy call buy percent: {},sell_percent={}, current price={}, upper={}, middle={}, lower={}".format(
-            buy_percent, sell_percent, price, upper, middle, lower))
+        "boll_strategy call buy percent: {},sell_percent={}, current price={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(
+            buy_percent, sell_percent, price, upper, middle, lower, pdiff1, pdiff2))
     log_config.output2ui(
-        "boll_strategy call buy percent: {},sell_percent={}, current price={}, upper={}, middle={}, lower={}".format(
-            buy_percent, sell_percent, price, upper, middle, lower))
+        "boll_strategy call buy percent: {},sell_percent={}, current price={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(
+            buy_percent, sell_percent, price, upper, middle, lower, pdiff1, pdiff2))
     global G_BOLL_BUY
     if buy_percent > 0:
-        msg = "[BUY]boll_strategy buy {} percent: {}, current price={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(symbol, buy_percent, price, upper, middle, lower, pdiff1, pdiff2)
+        # msg = "[BUY]boll_strategy buy {} percent: {}, current price={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(symbol, buy_percent, price, upper, middle, lower, pdiff1, pdiff2)
+        msg = "[买入{}]boll 买入比例={}%, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
+            buy_percent * 100, 2), round(price, 3), round(upper, 2), round(middle, 2),
+                                                                                                     round(lower, 2),
+                                                                                                     round(pdiff1, 2),
+                                                                                                     round(pdiff2, 2))
         if not trade_alarm(msg):
             return False
 
         ret = buy_market(symbol, percent=buy_percent, current_price=price)
         if ret[0]:
-            logger.info(
-                "--boll_strategy be trigger buy {} percent: {}, current price={}, buy amount={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(
-                    symbol, buy_percent, price, ret[1], upper, middle, lower, pdiff1, pdiff2))
-            log_config.output2ui(
-                "--boll_strategy be trigger buy {} percent: {}, current price={}, buy amount={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(
-                    symbol, buy_percent, price, ret[1], upper, middle, lower, pdiff1, pdiff2), 7)
-            log_config.send_mail(
-                "[BUY SUCCESS]boll_strategy be trigger buy {} percent: {}, current price={}, buy amount={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(
-                    symbol, buy_percent, price, ret[1], upper, middle, lower, pdiff1, pdiff2), own=True)
+            msg = "[买入{}]boll 买入比例={}%, 买入量={}, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
+                buy_percent * 100, 2), round(price, 3), round(ret[1], 3), round(upper, 2), round(middle, 2), round(lower, 2),
+                                                                                                 round(pdiff1, 2),
+                                                                                                 round(pdiff2, 2))
 
-            log_config.send_mail(
-                "[BUY SUCCESS]buy {} percent: {}, current price: {}".format(symbol, buy_percent, price))
+            logger.info(msg)
+            log_config.output2ui(msg, 7)
+            log_config.send_mail(msg)
+
+            # log_config.send_mail(
+            #     "[BUY SUCCESS]buy {} percent: {}, current price: {}".format(symbol, buy_percent, price))
 
             G_BOLL_BUY += 1
             return True
 
-    if sell_percent > 0 and G_BOLL_BUY > 0:
-        msg = "[SELL]boll_strategy sell {} percent: {}, current price={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(symbol, buy_percent, price, upper, middle, lower, pdiff1, pdiff2)
+    # if sell_percent > 0 and G_BOLL_BUY > 0:
+    if sell_percent > 0:
+        msg = "[卖出{}]boll 卖出比例={}%, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(sell_percent*100, 2), round(price,3), round(upper,2), round(middle,2), round(lower,2), round(pdiff1,2), round(pdiff2,2))
         if not trade_alarm(msg):
             return False
 
         ret = sell_market(symbol, percent=sell_percent, current_price=price)
         if ret[0]:
-            logger.info(
-                "--boll_strategy be trigger sell {} percent: {}, current price={}, sell amount={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(
-                    symbol, sell_percent, price, ret[1], upper, middle, lower, pdiff1, pdiff2))
-            log_config.output2ui(
-                "--boll_strategy be trigger sell {} percent: {}, current price={}, sell amount={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(
-                    symbol, sell_percent, price, ret[1], upper, middle, lower, pdiff1, pdiff2), 7)
-            log_config.send_mail(
-                "[SELL SUCCESS]boll_strategy be trigger sell {} percent: {}, current price={}, sell amount={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(
-                    symbol, sell_percent, price, ret[1], upper, middle, lower, pdiff1, pdiff2), own=True)
-            log_config.send_mail("[SELL SUCCESS]sell {} percent: {}, current price: {}".format(symbol, sell_percent, price))
+            msg = "[卖出{}]boll 卖出比例={}%, 卖出量={}, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
+                sell_percent * 100, 2), round(price, 3), round(ret[1], 3), round(upper, 2), round(middle, 2), round(lower, 2),
+                                                                                                 round(pdiff1, 2),
+                                                                                                 round(pdiff2, 2))
+
+            logger.info(msg)
+            log_config.output2ui(msg, 7)
+            log_config.send_mail(msg)
+            # log_config.send_mail("[SELL SUCCESS]sell {} percent: {}, current price: {}".format(symbol, sell_percent, price))
             G_BOLL_BUY -= 1
             return True
 
@@ -390,7 +394,7 @@ def kdj_strategy_buy(currency=[], max_trade=1):
             log_config.output2ui("is_buy_big_than_sell return True")
             percent += 0.1
 
-        msg_show = "[买入{}]kdj_{} 买入比例={}, 当前价格={}, 阶段最低价格={}, 指标K={}, D={}, 回暖幅度={}%".format(
+        msg_show = "[买入{}]kdj_{} 买入比例={}%, 当前价格={}, 阶段最低价格={}, 指标K={}, D={}, 回暖幅度={}%".format(
             symbol, peroid, round(percent * 100, 2), round(current_price, 3), round(min_price, 3),
             round(cur_k, 2), round(cur_d, 2), round(actual_up_percent * 100, 2))
 
@@ -399,7 +403,7 @@ def kdj_strategy_buy(currency=[], max_trade=1):
 
         ret = buy_market(symbol, percent=percent, current_price=current_price)
         if ret[0]:
-            msg_show = "[买入{}]kdj_{} 买入比例={}, 买入数量={}, 当前价格={}, 阶段最低价格={}, 指标K={}, D={}, 回暖幅度={}%".format(
+            msg_show = "[买入{}]kdj_{} 买入比例={}%, 买入数量={}, 当前价格={}, 阶段最低价格={}, 指标K={}, D={}, 回暖幅度={}%".format(
                 symbol, peroid, round(percent * 100, 2), round(ret[1], 3), round(current_price, 3), round(min_price, 3),
                 round(cur_k, 2), round(cur_d, 2), round(actual_up_percent * 100, 2))
             logger.info(msg_show)
@@ -457,7 +461,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
             or (last_k_2 >= need_k and last_d_2 >= need_d):
         percent = kdj_sell_params.get("sell_percent", 0.4)
 
-        msg_show = "[卖出{}]kdj_{} 卖出比例={}, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}．".format(
+        msg_show = "[卖出{}]kdj_{} 卖出比例={}%, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}．".format(
             symbol, peroid, round(percent * 100, 2), round(current_price, 3), round(max_price, 3),
             round(actual_down_percent * 100, 2), round(cur_k, 2), round(cur_d, 2), )
         if not trade_alarm(msg_show):
@@ -466,7 +470,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
         logger.info("kdj sell actual_down_percent={} is big than need down percent".format(actual_down_percent))
         ret = sell_market(symbol, percent=percent, current_price=current_price)
         if ret[0]:
-            msg_show = "[卖出{}]kdj_{} 卖出比例={}, 卖出数量={}, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}．".format(
+            msg_show = "[卖出{}]kdj_{} 卖出比例={}%, 卖出数量={}, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}．".format(
                 symbol, peroid, round(percent * 100, 2), round(ret[1], 3), round(current_price, 3), round(max_price, 3),
                 round(actual_down_percent * 100, 2), round(cur_k, 2), round(cur_d, 2), )
 
@@ -1330,11 +1334,11 @@ STRATEGY_LIST = [
     # Strategy(kdj_strategy_buy, 240, -1, after_execute_sleep=900 * 3, name="kdj_strategy_buy"),
     # Strategy(kdj_strategy_sell, 240, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
     Strategy(kdj_strategy_buy, 30, -1, after_execute_sleep=900 * 3, name="kdj_strategy_buy"),
-    Strategy(kdj_strategy_sell, 105, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
+    Strategy(kdj_strategy_sell, 45, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
     Strategy(stop_loss, 35, -1, after_execute_sleep=120, name="stop_loss"),
     Strategy(move_stop_profit, 30, -1, after_execute_sleep=120, name="move_stop_profit"),
-    Strategy(vol_price_fly, 60, -1, name="vol_price_fly", after_execute_sleep=900 * 2),
-    Strategy(boll_strategy, 60, -1, name="boll strategy", after_execute_sleep=900 * 2),
+    Strategy(vol_price_fly, 35, -1, name="vol_price_fly", after_execute_sleep=900 * 2),
+    Strategy(boll_strategy, 30, -1, name="boll strategy", after_execute_sleep=900 * 2),
     # Strategy(kdj_5min_update, 30, -1, name="kdj_5min_update", after_execute_sleep=1),
     Strategy(kdj_15min_update, 40, -1, name="kdj_15min_update", after_execute_sleep=1),
     Strategy(buy_low, 25, -1, name="buy_low", after_execute_sleep=900*2),

@@ -73,10 +73,17 @@ def kline_req_msg_process(response):
         return False
 
     channel = response.get("rep")
-    df_kl = KLINE_DATA.get(channel, None)
-    if df_kl is None:
-        df_kl = pd.DataFrame([], columns=["ts", "tick_id", "open", "high", "low", 'close', 'amount', 'vol', 'count'])
-        KLINE_DATA[channel] = df_kl
+    if "1min" in channel:
+        symbol = channel.split(".")[1]
+        df_kl = KLINE_DATA.get(symbol, None)
+        if df_kl is None:
+            df_kl = pd.DataFrame([], columns=["ts", "tick_id", "open", "high", "low", 'close', 'amount', 'vol', 'count'])
+            KLINE_DATA[symbol] = df_kl
+    else:
+        df_kl = KLINE_DATA.get(channel, None)
+        if df_kl is None:
+            df_kl = pd.DataFrame([], columns=["ts", "tick_id", "open", "high", "low", 'close', 'amount', 'vol', 'count'])
+            KLINE_DATA[channel] = df_kl
 
     pos = len(df_kl)  # 追加
     data_list = response.get("data", [])

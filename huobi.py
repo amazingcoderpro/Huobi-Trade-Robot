@@ -37,7 +37,7 @@ class Huobi:
         logger.info("---req_history_kline.")
         log_config.output2ui("---req_history_kline.")
         for symbol in config.NEED_TOBE_SUB_SYMBOL:
-            for kl in config.KL_ALL:
+            for kl in config.KL_HISTORY:
                 channel = "market.{}.kline.{}".format(symbol, kl)
                 logger.info("---req_history_kline: {}.".format(channel))
                 log_config.output2ui("---req_history_kline: {}.".format(channel))
