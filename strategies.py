@@ -32,8 +32,8 @@ TRADE_RECORD = []
 
 move_stop_profit_params = {"check": 1, "msf_min": 0.02, "msf_back": 0.25}
 stop_loss_params = {"check": 1, "percent": 0.02}
-kdj_buy_params = {"check": 1, "k": 20, "d": 22, "buy_percent": 0.4, "up_percent": 0.006, "peroid": "15min"}
-kdj_sell_params = {"check": 1, "k": 82, "d": 78, "sell_percent": 0.4, "down_percent": 0.006, "peroid": "15min"}
+kdj_buy_params = {"check": 1, "k": 20, "d": 22, "buy_percent": 0.4, "up_percent": 0.004, "peroid": "15min"}
+kdj_sell_params = {"check": 1, "k": 82, "d": 78, "sell_percent": 0.4, "down_percent": 0.004, "peroid": "15min"}
 vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 3, "price_up_limit": 0.03, "buy_percent": 0.5,
                         "peroid": "5min"}
 boll_strategy_params = {"check": 1, "peroid": "15min", "open_diff1_percent": 0.012, "open_diff2_percent": 0.012,
@@ -339,8 +339,8 @@ def kdj_strategy_buy(currency=[], max_trade=1):
     log_config.output2ui("current k={}, d={}, current_price={}".format(cur_k, cur_d, current_price))
 
     # kd不能大于40
-    if cur_k >60 or cur_d>60:
-        logger.info("cur_k or cur_d > 60")
+    if cur_k >25 or cur_d>25:
+        logger.info("cur_k or cur_d > 25")
         return False
 
     #回暖幅度超过0.008
@@ -434,8 +434,8 @@ def kdj_strategy_sell(currency=[], max_trade=1):
     log_config.output2ui("current k={}, d={}, current_price={}".format(cur_k, cur_d, current_price))
 
     #kd要大于50
-    if cur_k<50 or cur_d<50:
-        logger.info("cur_k or cur_d < 50")
+    if cur_k<70 or cur_d<70:
+        logger.info("cur_k or cur_d < 80")
         return False
 
     #回撤超过0.008
