@@ -106,7 +106,9 @@ class Strategy:
         else:
             if ret:
                 logger.warning("strategy be triggered, name={}".format(self._name))
-                log_config.output2ui("strategy be triggered, name={}".format(self._name), 2)
+                if self._name != "kdj_15min_update":
+                    log_config.output2ui("strategy be triggered, name={}".format(self._name), 2)
+
                 self._last_execute_time = int(time.time())  #策略被执行了
                 if self._is_after_execute_pause:
                     self._state = 2 #pause

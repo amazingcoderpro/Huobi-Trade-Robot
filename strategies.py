@@ -32,8 +32,8 @@ TRADE_RECORD = []
 
 move_stop_profit_params = {"check": 1, "msf_min": 0.02, "msf_back": 0.25}
 stop_loss_params = {"check": 1, "percent": 0.02}
-kdj_buy_params = {"check": 1, "k": 20, "d": 22, "buy_percent": 0.4, "up_percent": 0.004, "peroid": "15min"}
-kdj_sell_params = {"check": 1, "k": 82, "d": 78, "sell_percent": 0.4, "down_percent": 0.004, "peroid": "15min"}
+kdj_buy_params = {"check": 1, "k": 20, "d": 22, "buy_percent": 0.4, "up_percent": 0.006, "peroid": "15min"}
+kdj_sell_params = {"check": 1, "k": 82, "d": 78, "sell_percent": 0.4, "down_percent": 0.006, "peroid": "15min"}
 vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 3, "price_up_limit": 0.03, "buy_percent": 0.5,
                         "peroid": "5min"}
 boll_strategy_params = {"check": 1, "peroid": "15min", "open_diff1_percent": 0.012, "open_diff2_percent": 0.012,
@@ -338,7 +338,10 @@ def kdj_strategy_buy(currency=[], max_trade=1):
 
     #回暖幅度超过0.008
     now = int(time.time()) * 1000
-    min_price = get_min_price(symbol, now - 15 * 60 * 1000)
+    min_price = get_min_price(symbol, last_time=now - (15 * 60 * 1000))
+    if not min_price or min_price <= 0:
+        return False
+
     up_percent = kdj_buy_params.get("up_percent", 0.008)
     actual_up_percent = round((current_price - min_price) / min_price, 4)
     logger.info("kdj buy min_price={}, current_price={},  need up_percent={} actual up_percent = {}".format(min_price,
@@ -387,23 +390,22 @@ def kdj_strategy_buy(currency=[], max_trade=1):
             log_config.output2ui("is_buy_big_than_sell return True")
             percent += 0.1
 
-        msg = "[BUY]kdj_strategy buy {} percent: {}, current price={}, min price={}, current k={}, d={}, actual_up_percent={}".format(
-                symbol, percent, current_price, min_price, cur_k, cur_d, actual_up_percent)
-        if not trade_alarm(msg):
+        msg_show = "[买入{}]kdj_{} 买入比例={}, 当前价格={}, 阶段最低价格={}, 指标K={}, D={}, 回暖幅度={}%".format(
+            symbol, peroid, round(percent * 100, 2), round(current_price, 3), round(min_price, 3),
+            round(cur_k, 2), round(cur_d, 2), round(actual_up_percent * 100, 2))
+
+        if not trade_alarm(msg_show):
             return False
 
         ret = buy_market(symbol, percent=percent, current_price=current_price)
         if ret[0]:
-            logger.info(
-                "--kdj_buy_{} be trigger buy {} percent: {}, current price={}, min price={} buy amount={}, current k={}, d={}, actual_up_percent={}".format(
-                    peroid, symbol, percent, current_price, min_price, ret[1], cur_k, cur_d, actual_up_percent))
-            log_config.output2ui(
-                "kdj_buy_{} trigger, buy {} percent={}, current price={}, min price={} buy amount={}, current k={}, d={},actual_up_percent={}".format(
-                    peroid, symbol, percent, current_price, min_price, ret[1], cur_k, cur_d, actual_up_percent), 6)
-            log_config.send_mail(
-                "[BUY SUCCESS]kdj_buy_{} be trigger buy {} percent:{}, buy amount={}, current price={}, min price={}, current k={}, d={}, actual_up_percent={}".format(
-                    peroid, symbol, percent, ret[1], current_price, min_price, cur_k, cur_d, actual_up_percent), own=True)
-            log_config.send_mail("[BUY SUCCESS]buy {} percent: {}, current price: {}".format(symbol, percent, current_price))
+            msg_show = "[买入{}]kdj_{} 买入比例={}, 买入数量={}, 当前价格={}, 阶段最低价格={}, 指标K={}, D={}, 回暖幅度={}%".format(
+                symbol, peroid, round(percent * 100, 2), round(ret[1], 3), round(current_price, 3), round(min_price, 3),
+                round(cur_k, 2), round(cur_d, 2), round(actual_up_percent * 100, 2))
+            logger.info(msg_show)
+            log_config.output2ui(msg_show, 6)
+            log_config.send_mail(msg_show)
+            # log_config.send_mail("[BUY SUCCESS]buy {} percent: {}, current price: {}".format(symbol, percent, current_price))
         logger.info("-----BUY_RECORD = {}".format(BUY_RECORD))
         return True
     return False
@@ -432,6 +434,9 @@ def kdj_strategy_sell(currency=[], max_trade=1):
     #回撤超过0.008
     now = int(time.time()) * 1000
     max_price = get_max_price(symbol, now - 15 * 60 * 1000)
+    if max_price<= 0:
+        return False
+
     down_percent = kdj_sell_params.get("down_percent", 0.008)
     actual_down_percent = round((max_price - current_price) / max_price, 4)
     logger.info(
@@ -452,24 +457,23 @@ def kdj_strategy_sell(currency=[], max_trade=1):
             or (last_k_2 >= need_k and last_d_2 >= need_d):
         percent = kdj_sell_params.get("sell_percent", 0.4)
 
-        msg = "[SELL]kdj_strategy sell {} percent: {}, current price={}, max price={}, current k={}, d={}, actual_down_percent={}".format(
-                symbol, percent, current_price, max_price, cur_k, cur_d, actual_down_percent)
-        if not trade_alarm(msg):
+        msg_show = "[卖出{}]kdj_{} 卖出比例={}, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}．".format(
+            symbol, peroid, round(percent * 100, 2), round(current_price, 3), round(max_price, 3),
+            round(actual_down_percent * 100, 2), round(cur_k, 2), round(cur_d, 2), )
+        if not trade_alarm(msg_show):
             return False
 
         logger.info("kdj sell actual_down_percent={} is big than need down percent".format(actual_down_percent))
         ret = sell_market(symbol, percent=percent, current_price=current_price)
         if ret[0]:
-            logger.info(
-                "--kdj_{}_80 be trigger sell {} percent: {}, current price={}, max price={}, actual_down_percent={}, sell amount={}, current k={}, d={}".format(
-                    peroid, symbol, percent, current_price, max_price, actual_down_percent, ret[1], cur_k, cur_d))
-            log_config.output2ui(
-                "--kdj_{}_80 be trigger sell {} percent: {}, current price={}, max price={}, actual_down_percent={}, sell amount={}, current k={}, d={}".format(
-                    peroid, symbol, percent, current_price, max_price, actual_down_percent, ret[1], cur_k, cur_d), 7)
-            log_config.send_mail(
-                "[SELL SUCCESS]kdj_{} sell {} be trigger sell percent:{}, current price={}, max price={}, actual_down_percent={}, sell amount={}, current k={}, d={}".format(
-                    peroid, symbol, percent, current_price, max_price, actual_down_percent, ret[1], cur_k, cur_d), own=True)
-            log_config.send_mail("[SELL SUCCESS]sell {} percent: {}, current price: {}".format(symbol, percent, current_price))
+            msg_show = "[卖出{}]kdj_{} 卖出比例={}, 卖出数量={}, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}．".format(
+                symbol, peroid, round(percent * 100, 2), round(ret[1], 3), round(current_price, 3), round(max_price, 3),
+                round(actual_down_percent * 100, 2), round(cur_k, 2), round(cur_d, 2), )
+
+            logger.info(msg_show)
+            log_config.output2ui(msg_show, 7)
+            log_config.send_mail(msg_show)
+            # log_config.send_mail("[SELL SUCCESS]sell {} percent: {}, current price: {}".format(symbol, percent, current_price))
         return True
 
     return False
@@ -564,14 +568,14 @@ def stop_loss(percent=0.03):
                     "stop_loss sell {} amount={}, last buy price={}, current price={}, loss_percent={}".format(
                         symbol, last_buy_amount, last_price,
                         current_price, loss_percent))
-                log_config.output2ui(
-                    "stop_loss sell {} amount={}, last buy price={}, current price={}, loss_percent={}".format(
-                        symbol, last_buy_amount, last_price,
-                        current_price, loss_percent), 7)
-                log_config.send_mail(
-                    "[SELL SUCCESS]stop loss be trigger sell {} amount={}, current price={}, last_buy_price={}, loss_percent={}%".format(
-                        symbol, ret[1], current_price, last_price, round(loss_percent * 100, 3)), own=True)
-                log_config.send_mail("[SELL SUCCESS]sell {} current price: {}".format(symbol, current_price))
+
+                msg_show = "[卖出{}] 移动止损 卖出量={}, 买入价={}, 当前价={}, 损失比例={}%".format(
+                        symbol, round(last_buy_amount, 3), round(last_price, 3),
+                        round(current_price,3), round(loss_percent*100, 2))
+
+                log_config.output2ui(msg_show, 7)
+                log_config.send_mail(msg_show)
+                # log_config.send_mail("[SELL SUCCESS]sell {} current price: {}".format(symbol, current_price))
     return trigger
 
 
@@ -600,44 +604,81 @@ def move_stop_profit():
         symbol = trade.get("symbol", "")
         current_price = get_current_price(symbol)
         max_price = get_max_price(symbol, last_time)
+        if max_price <= 0:
+            continue
         # if max_price < last_price * 1.02:
+        # 上涨超过两个点
+        max_upper = (max_price-last_price)/last_price
+        logger.info("move_stop_profit, profit upper={}, msf_min={}".format(max_upper, move_stop_profit_params.get("msf_min", 0.02)))
+
         if trade.get("strategy_type", "") == "vol_price_fly":
-            if max_price < last_price * (1 + 0.5 * move_stop_profit_params.get("msf_min", 0.02)):
+            if max_upper < 0.5 * move_stop_profit_params.get("msf_min", 0.02):
                 continue
         else:
-            if max_price < last_price * (1 + move_stop_profit_params.get("msf_min", 0.02)):
-                logger.info("profit not up {}".format(1 + move_stop_profit_params.get("msf_min", 0.02)))
+            if max_upper < move_stop_profit_params.get("msf_min", 0.02):
                 continue
 
+        # 当前回撤幅度
         down_back_percent = round((max_price - current_price) / (max_price - last_price), 3)
+
+        # 当前盈利
         profit = round(((current_price-last_price)/last_price)*100, 3)
+
         logger.info(
-            "move_stop_profit last_price={}, max_price={}, current_price={}, down_back_percent={}, last_buy_amount={}, msf_back={}".format(
-                last_price, max_price, current_price, down_back_percent, last_buy_amount,
+            "move_stop_profit last_price={}, max_price={}, current_price={}, max_upper={}, down_back_percent={}, last_buy_amount={}, msf_back={}".format(
+                last_price, max_price, current_price, max_upper, down_back_percent, last_buy_amount,
                 move_stop_profit_params["msf_back"]))
-        if down_back_percent >= move_stop_profit_params.get("msf_back", 0.25):
-            msg = "[SELL]Move stop profit be trigger sell {},  current price={}, last_price={}, max_price={} profit={}% down_back_percent={}%".format(
-                        symbol, current_price, last_price, max_price, profit, down_back_percent)
-            if not trade_alarm(msg):
-                return False
 
-            logger.warning(
-                "move_stop_profit last_price={}, max_price={}, current_price={}, down_back_percent={}, last_buy_amount={}, profit={}%".format(
-                    last_price, max_price, current_price, down_back_percent, last_buy_amount, profit))
-            log_config.output2ui(
-                "move_stop_profit last_price={}, max_price={}, current_price={}, down_back_percent={}, last_buy_amount={}, profit={}%".format(
-                    last_price, max_price, current_price, down_back_percent, last_buy_amount, profit), 7)
+        # 回撤幅度超过25％（涨幅在2个点以内的）, 如果超过两个点，则要求回撤幅度需要缩小，以保证更多的盈利
+        if down_back_percent < move_stop_profit_params.get("msf_back", 0.25) * (0.02/max_upper):
+            continue
 
+        # 盈利小于１个点不卖
+        if profit < 0.01:
+            continue
 
-            ret = sell_market(symbol, last_buy_amount, current_price=current_price)
-            if ret[0]:
-                trigger = True
-                log_config.send_mail(
-                    "[SELL SUCCESS]Move stop profit be trigger sell {} amount={}, current price={}, last_price={}, max_price={} profit={}% down_back_percent={}%".format(
-                        symbol, ret[1], current_price, last_price, max_price, profit, down_back_percent), own=True)
-                log_config.send_mail(
-                    "[SELL SUCCESS]sell {} current price: {}, last buy price: {}, profit: {}%".format(symbol, current_price, last_price, profit))
-                BUY_RECORD.remove(trade)
+        msg = "[SELL]Move stop profit be trigger sell {},  current price={}, last_price={}, max_price={} max_upper={}, profit={}% down_back_percent={}%".format(
+                    symbol, current_price, last_price, max_price, max_upper, profit, down_back_percent)
+        if not trade_alarm(msg):
+            return False
+
+        bal = get_balance(symbol[0:3], result_type=0)
+        if bal and float(bal) <= last_buy_amount:
+            last_buy_amount = round(float(bal)*0.95, 3)
+
+        logger.warning(
+            "move_stop_profit last_price={}, max_price={}, current_price={}, down_back_percent={}, last_buy_amount={}, profit={}%".format(
+                last_price, max_price, current_price, down_back_percent, last_buy_amount, profit))
+
+        ret = sell_market(symbol, last_buy_amount, current_price=current_price)
+        if ret[0]:
+            trigger = True
+            msg_show = "[卖出{}]移动止盈： 上次买入价={}, 最高价={}, 回撤幅度={}%, 当前卖出价={}, 当前卖出量={}, 盈利比={}%, 盈利金额=${} ".format(symbol,
+                                                                                                               round(
+                                                                                                                   last_price,
+                                                                                                                   3),
+                                                                                                               round(
+                                                                                                                   max_price,
+                                                                                                                   3),
+                                                                                                               round(
+                                                                                                                   down_back_percent * 100,
+                                                                                                                   2),
+                                                                                                               round(
+                                                                                                                   current_price,
+                                                                                                                   3),
+                                                                                                               round(
+                                                                                                                   last_buy_amount,
+                                                                                                                   3),
+                                                                                                               round(
+                                                                                                                   profit,
+                                                                                                                   2),
+                                                                                                               round(
+                                                                                                                   last_buy_amount * (
+                                                                                                                               current_price - last_price),
+                                                                                                                   3))
+            log_config.output2ui(msg_show, 7)
+            log_config.send_mail(msg_show)
+            BUY_RECORD.remove(trade)
 
     return trigger
 
@@ -768,13 +809,10 @@ def vol_price_fly():
     ret = buy_market(symbol, percent=percent, strategy_type="vol_price_fly", current_price=current_price)
     if ret[0]:
         logger.info("[BUY SUCCESS]vol_price_fly buy {} percent={}, amount={}, current price={}".format(symbol, percent, ret[1], current_price))
-        log_config.output2ui(
-            "[BUY SUCCESS]vol_price_fly buy {} percent={}, amount={}, current price={}".format(symbol, percent, ret[1], current_price), 6)
-        log_config.send_mail(
-            "[BUY SUCCESS]vol_price_fly buy {} percent={}, amount={}, current price={}".format(symbol, percent, ret[1], current_price), own=True)
+        msg_show = "[买入{}]量价齐升 买入比例={}%, 数量={}, 当前价格={}".format(symbol, round(percent*100, 2), round(ret[1],2), round(current_price, 3))
+        log_config.output2ui(msg_show, 6)
+        log_config.send_mail(msg_show)
 
-        log_config.send_mail(
-            "[BUY SUCCESS]buy {} percent: {}, current price: {}".format(symbol, percent, current_price))
     return ret
 
 
@@ -872,8 +910,8 @@ def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
         update_balance()
         return True, amount
 
-    logger.error("sell market failed, symbol={}, amount={}, record={}".format(symbol, amount, record))
-    log_config.output2ui("sell market error, symbol={}, amount={}, record={}".format(symbol, amount, record), 3)
+    logger.error("sell market failed, symbol={}, amount={}, record={}, ret={}".format(symbol, amount, record, ret))
+    log_config.output2ui("sell market error, symbol={}, amount={}, record={}, ret={}".format(symbol, amount, record, ret), 3)
     return False, amount
 
 
@@ -938,41 +976,80 @@ def get_current_price(symbol):
 
     # return df.loc[len(df) - 1, "close"]
     try:
-        print(len(df))
+        # print(len(df))
         price = df.loc[len(df) - 1, "close"]
     except Exception as e:
-        logger.exception("get_close")
+        logger.exception("get_close e={}".format(e))
         print(len(df))
         price = df.loc[len(df) - 1 - 1, "close"]
+
+    logger.info("get_current_price sysmbol={}, price={}".format(symbol, price))
     return price
 
 
-def get_max_price(symbol, last_time):
+def get_max_price(symbol, last_time, current=0):
     df = process.KLINE_DATA.get(symbol, None)
     if df is None:
         return -1
-    try:
-        max_price = df.loc[df["ts"] >= last_time].close.max()
-    except Exception as e:
-        logger.exception("get_max_price catch e={}".format(e))
-        temp_df = df[["ts", "close"]][df.ts >= last_time]
-        max_price = temp_df.close.max()
 
-    return max_price
+    if current>0:
+        # 默认取五分钟之前往前的最大价格
+        # current = ((int(time.time()) * 1000) - 5*60*1000) if current <= 0 else current
+        try:
+            tmp_df = df.loc[df["ts"] >= last_time]
+            max_price = tmp_df.loc[tmp_df["ts"]<current].close.max()
+        except Exception as e:
+            logger.exception("get_max_price catch e={}, last_time={}, current={}".format(e, last_time, current))
+            temp_df = df[["ts", "close"]][df.ts >= last_time]
+            temp_df = temp_df.loc[temp_df["ts"]<current]
+            max_price = temp_df.close.max()
+    else:
+        try:
+            max_price = df.loc[df["ts"] >= last_time].close.max()
+        except Exception as e:
+            logger.exception("get_max_price catch e={}, last_time={}, current={}".format(e, last_time, current))
+            temp_df = df[["ts", "close"]][df.ts >= last_time]
+            temp_df = temp_df.loc[temp_df["ts"] < current]
+            max_price = temp_df.close.max()
+
+    logger.info("get_max_price, symbol={}, last time={}, current={}, max_price={}".format(symbol, last_time, current, max_price))
+    if not max_price:
+        return -1
+    else:
+        return max_price
 
 
-def get_min_price(symbol, last_time):
+def get_min_price(symbol, last_time, current=0):
+    # 默认取五分钟之前往前的最低价格
+    # current = ((int(time.time()) * 1000)-5*60*1000) if current <= 0 else current
+
     df = process.KLINE_DATA.get(symbol, None)
     if df is None:
         return -1
-    try:
-        min_price = df.loc[df["ts"] >= last_time].close.min()
-    except Exception as e:
-        logger.exception("get_min_price catch e={}".format(e))
-        temp_df = df[["ts", "close"]][df.ts >= last_time]
-        min_price = temp_df.close.min()
 
-    return min_price
+    if current>0:
+        try:
+            temp_df = df.loc[df["ts"] >= last_time]
+            min_price = temp_df.loc[temp_df["ts"]<current].close.min()
+        except Exception as e:
+            logger.exception("get_min_price catch e={}, last_time={}, current={}".format(e, last_time, current))
+            temp_df = df[["ts", "close"]][df.ts >= last_time][df.ts < current]
+            min_price = temp_df.close.min()
+
+    else:
+        try:
+            min_price = df.loc[df["ts"] >= last_time].close.min()
+        except Exception as e:
+            logger.exception("get_min_price catch e={}, last_time={}, current={}".format(e, last_time, current))
+            temp_df = df[["ts", "close"]][df.ts >= last_time]
+            min_price = temp_df.close.min()
+
+    logger.info("get_min_price, symbol={}, last time={}, current={}, min_price={}".format(symbol, last_time, current, min_price))
+
+    if not min_price:
+        return -1
+    else:
+        return min_price
 
 
 def get_boll(market, pos=0, update2ui=True):
@@ -1144,37 +1221,48 @@ def buy_low():
     symbol = config.NEED_TOBE_SUB_SYMBOL[0]
     market = "market.{}.kline.{}".format(symbol, "15min")
 
-    min_price_5 = get_min_price(symbol, now - (15 * 60 * 1000)*5)
-    min_price_20 = get_min_price(symbol, now - (15 * 60 * 1000) * 20)
-    min_price_60 = get_min_price(symbol, now - (15 * 60 * 1000) * 60)
+    min_price_5 = get_min_price(symbol, now - (15 * 60 * 1000)*5, current=now - (10 * 60 * 1000))
+    min_price_20 = get_min_price(symbol, now - (15 * 60 * 1000) * 20, now - (10 * 60 * 1000))
+    min_price_60 = get_min_price(symbol, now - (15 * 60 * 1000) * 60, now - (10 * 60 * 1000))
+
+    if min_price_5<=0 or min_price_20<=0 or min_price_60<=0:
+        return False
 
     current_price = get_current_price(symbol)
+    if current_price<=0:
+        return False
+
     logger.info("buy low called. current price={}, min_price_5={}, min_price_20={}, min_price_60={}".format(current_price, min_price_5, min_price_20, min_price_60))
     buy_percent = 0
+    # 比最低价还低1％以上，且最近三个周期都在跌
     if current_price*1.01 < min_price_5 and get_open(market, 1) > get_close(market, 1) \
             and get_open(market, 2) > get_close(market, 2) and get_open(market, 3) > get_close(market, 3):
         buy_percent += 0.1
 
     if current_price*1.01 < min_price_20:
-        buy_percent += 0.3
-
-    if current_price*1.01 < min_price_60:
         buy_percent += 0.2
 
+    if current_price*1.01 < min_price_60:
+        buy_percent += 0.3
+
     if buy_percent > 0:
-        msg = "[BUY]buy_low buy {} percent: {}, current price={}, min_price_5={}, min_price_20={}, min_price_60={}".format(
-            symbol, buy_percent, current_price, min_price_5, min_price_20, min_price_60)
+        msg = "[买入{}]抄底 买入比例={}%, 当前价格={}, 最近5/20/60周期内最低价={}/{}/{}.".format(
+            symbol, round(buy_percent*100, 2), round(current_price, 3), round(min_price_5, 3), round(min_price_20, 3), round(min_price_60, 3))
 
         if not trade_alarm(msg):
             return False
 
         ret = buy_market(symbol, percent=buy_percent, current_price=current_price)
         if ret[0]:
+            msg = "[买入{}]抄底 买入比例={}%, 买入量={}, 当前价格={}, 最近5/20/60周期内最低价={}/{}/{}.".format(
+                symbol, round(buy_percent * 100, 2), round(ret[1], 2), round(current_price, 3), round(min_price_5, 3),
+                round(min_price_20, 3), round(min_price_60, 3))
+
             logger.info(msg)
             log_config.output2ui(msg, 6)
-            log_config.send_mail(msg, own=True)
-            log_config.send_mail(
-                "[BUY SUCCESS]buy {} percent: {}, current price: {}".format(symbol, buy_percent, current_price))
+            log_config.send_mail(msg)
+            # log_config.send_mail(
+            #     "[BUY SUCCESS]buy {} percent: {}, current price: {}".format(symbol, buy_percent, current_price))
         logger.info("-----BUY_RECORD = {}".format(BUY_RECORD))
         return True
     else:
@@ -1186,36 +1274,48 @@ def sell_high():
     symbol = config.NEED_TOBE_SUB_SYMBOL[0]
     market = "market.{}.kline.{}".format(symbol, "15min")
 
-    max_price_5 = get_max_price(symbol, now - (15 * 60 * 1000) * 5)
-    max_price_20 = get_max_price(symbol, now - (15 * 60 * 1000) * 20)
-    max_price_60 = get_max_price(symbol, now - (15 * 60 * 1000) * 60)
+    max_price_5 = get_max_price(symbol, now - (15 * 60 * 1000) * 5, now - (10 * 60 * 1000))
+    max_price_20 = get_max_price(symbol, now - (15 * 60 * 1000) * 20, now - (10 * 60 * 1000))
+    max_price_60 = get_max_price(symbol, now - (15 * 60 * 1000) * 60, now - (10 * 60 * 1000))
+
+    if max_price_5<=0 or max_price_20<=0 or max_price_60<=0:
+        return False
 
     current_price = get_current_price(symbol)
     logger.info("sell high called. current price={}, max_price_5={}, max_price_20={}, max_price_60={}".format(current_price, max_price_5, max_price_20, max_price_60))
     sell_percent = 0
+    # 比最高价还高1％，且最近三个周期都在涨
     if current_price >= max_price_5*1.01 and get_open(market, 1) < get_close(market, 1) and get_open(market, 2) < get_close(
             market, 2) and get_open(market, 3) < get_close(market, 3):
-        sell_percent += 0.1
-
-    if current_price >= 1.01 * max_price_20:
-        sell_percent += 0.3
-
-    if current_price >= max_price_60 * 1.01:
         sell_percent += 0.2
 
+    if current_price >= 1.01 * max_price_20:
+        sell_percent += 0.2
+
+    if current_price >= max_price_60 * 1.01:
+        sell_percent += 0.3
+
     if sell_percent > 0:
-        msg = "[BUY]sell_high sell {} percent: {}, current price={}, max_price_5={}, max_price_20={}, max_price_60={}".format(
-            symbol, sell_percent, current_price, max_price_5, max_price_20, max_price_60)
+        msg = "[卖出{}]高抛 卖出比例={}%,　当前价格={}, 最近5/20/60周期内最高价={}/{}/{}.".format(
+            symbol, round(sell_percent * 100, 2), round(current_price, 3), round(max_price_5, 3),
+            round(max_price_20, 3), round(max_price_60, 3))
+
+        # msg = "[BUY]sell_high sell {} percent: {}, current price={}, max_price_5={}, max_price_20={}, max_price_60={}".format(
+        #     symbol, sell_percent, current_price, max_price_5, max_price_20, max_price_60)
         if not trade_alarm(msg):
             return False
 
         ret = sell_market(symbol, percent=sell_percent, current_price=current_price)
         if ret[0]:
+            msg = "[卖出{}]高抛 卖出比例={}%, 卖出量={}, 当前价格={}, 最近5/20/60周期内最高价={}/{}/{}.".format(
+                symbol, round(sell_percent * 100, 2), round(ret[1], 2), round(current_price, 3), round(max_price_5, 3),
+                round(max_price_20, 3), round(max_price_60, 3))
+
             logger.info(msg)
             log_config.output2ui(msg, 6)
-            log_config.send_mail(msg, own=True)
-            log_config.send_mail(
-                "[SELL SUCCESS]sell {} percent: {}, current price: {}".format(symbol, sell_percent, current_price))
+            log_config.send_mail(msg)
+            # log_config.send_mail(
+            #     "[SELL SUCCESS]sell {} percent: {}, current price: {}".format(symbol, sell_percent, current_price))
         logger.info("-----SELL_RECORD = {}".format(SELL_RECORD))
         return True
     else:
