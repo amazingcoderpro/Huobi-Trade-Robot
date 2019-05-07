@@ -285,7 +285,7 @@ def boll_strategy():
 
         ret = buy_market(symbol, percent=buy_percent, current_price=price)
         if ret[0]:
-            msg = "[买入{}]boll 买入比例={}%, 买入量={}, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
+            msg = "[买入{}]boll 买入比例={}%, 买入金额={}$, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
                 buy_percent * 100, 2), round(price, 3), round(ret[1], 3), round(upper, 2), round(middle, 2), round(lower, 2),
                                                                                                  round(pdiff1, 2),
                                                                                                  round(pdiff2, 2))
@@ -308,7 +308,7 @@ def boll_strategy():
 
         ret = sell_market(symbol, percent=sell_percent, current_price=price)
         if ret[0]:
-            msg = "[卖出{}]boll 卖出比例={}%, 卖出量={}, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
+            msg = "[卖出{}]boll 卖出比例={}%, 卖出量={}个, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
                 sell_percent * 100, 2), round(price, 3), round(ret[1], 3), round(upper, 2), round(middle, 2), round(lower, 2),
                                                                                                  round(pdiff1, 2),
                                                                                                  round(pdiff2, 2))
@@ -406,7 +406,7 @@ def kdj_strategy_buy(currency=[], max_trade=1):
 
         ret = buy_market(symbol, percent=percent, current_price=current_price)
         if ret[0]:
-            msg_show = "[买入{}]kdj_{} 买入比例={}%, 买入数量={}, 当前价格={}, 阶段最低价格={}, 指标K={}, D={}, 回暖幅度={}%".format(
+            msg_show = "[买入{}]kdj_{} 买入比例={}%, 买入金额数={}$, 当前价格={}, 阶段最低价格={}, 指标K={}, D={}, 回暖幅度={}%".format(
                 symbol, peroid, round(percent * 100, 2), round(ret[1], 3), round(current_price, 3), round(min_price, 3),
                 round(cur_k, 2), round(cur_d, 2), round(actual_up_percent * 100, 2))
             logger.info(msg_show)
@@ -473,7 +473,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
         logger.info("kdj sell actual_down_percent={} is big than need down percent".format(actual_down_percent))
         ret = sell_market(symbol, percent=percent, current_price=current_price)
         if ret[0]:
-            msg_show = "[卖出{}]kdj_{} 卖出比例={}%, 卖出数量={}, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}．".format(
+            msg_show = "[卖出{}]kdj_{} 卖出比例={}%, 卖出数量={}个, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}．".format(
                 symbol, peroid, round(percent * 100, 2), round(ret[1], 3), round(current_price, 3), round(max_price, 3),
                 round(actual_down_percent * 100, 2), round(cur_k, 2), round(cur_d, 2), )
 
@@ -576,7 +576,7 @@ def stop_loss(percent=0.03):
                         symbol, last_buy_amount, last_price,
                         current_price, loss_percent))
 
-                msg_show = "[卖出{}] 移动止损 卖出量={}, 买入价={}, 当前价={}, 损失比例={}%".format(
+                msg_show = "[卖出{}] 移动止损 卖出量={}个, 买入价={}, 当前价={}, 损失比例={}%".format(
                         symbol, round(last_buy_amount, 3), round(last_price, 3),
                         round(current_price,3), round(loss_percent*100, 2))
 
@@ -660,7 +660,7 @@ def move_stop_profit():
         ret = sell_market(symbol, last_buy_amount, current_price=current_price)
         if ret[0]:
             trigger = True
-            msg_show = "[卖出{}]移动止盈： 上次买入价={}, 最高价={}, 回撤幅度={}%, 当前卖出价={}, 当前卖出量={}, 盈利比={}%, 盈利金额=${} ".format(symbol,
+            msg_show = "[卖出{}]移动止盈： 上次买入价={}, 最高价={}, 回撤幅度={}%, 当前卖出价={}, 当前卖出量={}个, 盈利比={}%, 盈利金额={}$ ".format(symbol,
                                                                                                                round(
                                                                                                                    last_price,
                                                                                                                    3),
@@ -816,7 +816,7 @@ def vol_price_fly():
     ret = buy_market(symbol, percent=percent, strategy_type="vol_price_fly", current_price=current_price)
     if ret[0]:
         logger.info("[BUY SUCCESS]vol_price_fly buy {} percent={}, amount={}, current price={}".format(symbol, percent, ret[1], current_price))
-        msg_show = "[买入{}]量价齐升 买入比例={}%, 数量={}, 当前价格={}".format(symbol, round(percent*100, 2), round(ret[1],2), round(current_price, 3))
+        msg_show = "[买入{}]量价齐升 买入比例={}%, 买入金额数={}$, 当前价格={}".format(symbol, round(percent*100, 2), round(ret[1],2), round(current_price, 3))
         log_config.output2ui(msg_show, 6)
         log_config.send_mail(msg_show)
 
@@ -835,19 +835,43 @@ def trade_alarm(message, show_time=60):
 
 def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", current_price=0):
     # 按余额比例买
-    if amount == 0 and percent > 0:
-        currency = symbol[3:]
-        balance = get_balance(currency)
-        if balance and balance > 0:
-            amount = round(balance * percent, 2)
+    currency = symbol[3:]
+    balance = get_balance(currency)
+    if amount <= 0:
+        if percent > 0:
+            if balance and balance > 0:
+                amount = round(balance * percent, 2)
+            else:
+                return False, amount
         else:
-            return False, amount
+            return False, 0
+    else:
+        # 余额不足
+        if amount > balance:
+            amount = balance*0.95
 
     # 市价amount代表买多少钱的
+    if amount < config.TRADE_MIN_LIMIT_VALUE:
+        # 如果余钱够的话，按最小交易额买
+        if balance > config.TRADE_MIN_LIMIT_VALUE:
+            amount = config.TRADE_MIN_LIMIT_VALUE
+        else:
+            logger.warning(
+                "buy {} amount {}, current price={}, balance={} total value less than {}$. trade cancel!".format(
+                    symbol, amount, current_price, balance, config.TRADE_MIN_LIMIT_VALUE))
+            return False, amount
+
+    # 超限时按最大钱或当前所有余钱数买
+    if amount > config.TRADE_MAX_LIMIT_VALUE:
+        if balance >= config.TRADE_MAX_LIMIT_VALUE:
+            amount = config.TRADE_MAX_LIMIT_VALUE
+        else:
+            amount = balance
+
     amount = round(amount, 2)
-    if amount<config.TRADE_MIN_LIMIT_VALUE or amount>config.TRADE_MAX_LIMIT_VALUE:
-        logger.warning("buy {} amount {}, current price={}, total value less than {}$ or bigger than {}$. trade cancel!".format(symbol, amount, current_price, config.TRADE_MIN_LIMIT_VALUE, config.TRADE_MAX_LIMIT_VALUE))
-        return False, amount
+    logger.warning(
+        "buy {} amount {}$, current price={}, balance={} , min trade={} max trade={}".format(
+            symbol, amount, current_price, balance, config.TRADE_MIN_LIMIT_VALUE, config.TRADE_MAX_LIMIT_VALUE))
 
     hrs = HuobiREST(config.CURRENT_REST_MARKET_URL, config.CURRENT_REST_TRADE_URL, config.ACCESS_KEY, config.SECRET_KEY, config.PRIVATE_KEY)
     ret = hrs.send_order(amount=amount, source="api", symbol=symbol, _type="buy-market")
@@ -877,26 +901,45 @@ def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", cur
 
 
 def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
-    if amount == 0 and percent > 0:
-        currency = symbol[0:3]
-        balance = get_balance(currency)
-        if balance and balance > 0:
-            amount = round(balance * percent, 4)
+    currency = symbol[0:3]
+    balance = get_balance(currency)
+
+    if amount <= 0:
+        if percent > 0:
+            if balance and balance > 0:
+                amount = round(balance * percent, 4)
+            else:
+                return False, amount
         else:
-            return False, amount
+            return False, 0
+    else:
+        # 余币不足
+        if amount > balance:
+            amount = balance*0.95
 
     # 市价卖时表示卖多少币
-    amount = round(amount, 4)
     if current_price:
         total_value = amount*current_price
-        if total_value < config.TRADE_MIN_LIMIT_VALUE or total_value>config.TRADE_MAX_LIMIT_VALUE:
-            logger.warning("sell {} amount {}, current price={}, total value={} less than {}$ or bigger than {}$. trade cancel!".format(symbol, amount, current_price, amount*current_price, config.TRADE_MIN_LIMIT_VALUE, config.TRADE_MAX_LIMIT_VALUE))
-            return False, amount
+        if total_value < config.TRADE_MIN_LIMIT_VALUE:
+            # 如果余币够的话，按最小交易额卖
+            if balance*current_price > config.TRADE_MIN_LIMIT_VALUE:
+                amount = config.TRADE_MIN_LIMIT_VALUE/current_price
+            else:
+                logger.warning("sell {} amount {}, current price={}, balance={},total value={} less than {}$. trade cancel!".format(symbol, amount, current_price, balance, amount*current_price, config.TRADE_MIN_LIMIT_VALUE))
+                return False, amount
+        elif total_value > config.TRADE_MAX_LIMIT_VALUE:
+            amount = round(config.TRADE_MAX_LIMIT_VALUE/current_price, 4)
+            if amount > balance:
+                amount = balance*0.95
 
-    # if amount < 100:
-    #     logger.warning("sell {} amount {} , less than 100. trade cancel!".format(symbol, amount))
-    #     return False,
-
+    amount = round(amount, 4)
+    logger.warning(
+        "sell {} amount {}(个), current price={}, balance={}(个),total value={}$, min trade={}$, max trade={}$. trade cancel!".format(symbol,
+                                                                                                             amount,
+                                                                                                             current_price,
+                                                                                                             balance,
+                                                                                                             total_value,
+                                                                                                             config.TRADE_MIN_LIMIT_VALUE, config.TRADE_MAX_LIMIT_VALUE))
     hrs = HuobiREST(config.CURRENT_REST_MARKET_URL, config.CURRENT_REST_TRADE_URL, config.ACCESS_KEY, config.SECRET_KEY, config.PRIVATE_KEY)
     ret = hrs.send_order(amount=amount, source="api", symbol=symbol, _type="sell-market")
     # (True, '6766866273')
@@ -1273,7 +1316,7 @@ def buy_low():
 
         ret = buy_market(symbol, percent=buy_percent, current_price=current_price)
         if ret[0]:
-            msg = "[买入{}]抄底 买入比例={}%, 买入量={}, 当前价格={}, 最近5/20/60周期内最低价={}/{}/{}.".format(
+            msg = "[买入{}]抄底 买入比例={}%, 买入金额={}$, 当前价格={}, 最近5/20/60周期内最低价={}/{}/{}.".format(
                 symbol, round(buy_percent * 100, 2), round(ret[1], 2), round(current_price, 3), round(min_price_5, 3),
                 round(min_price_20, 3), round(min_price_60, 3))
 
@@ -1326,12 +1369,12 @@ def sell_high():
 
         ret = sell_market(symbol, percent=sell_percent, current_price=current_price)
         if ret[0]:
-            msg = "[卖出{}]高抛 卖出比例={}%, 卖出量={}, 当前价格={}, 最近5/20/60周期内最高价={}/{}/{}.".format(
+            msg = "[卖出{}]高抛 卖出比例={}%, 卖出量={}个, 当前价格={}, 最近5/20/60周期内最高价={}/{}/{}.".format(
                 symbol, round(sell_percent * 100, 2), round(ret[1], 2), round(current_price, 3), round(max_price_5, 3),
                 round(max_price_20, 3), round(max_price_60, 3))
 
             logger.info(msg)
-            log_config.output2ui(msg, 6)
+            log_config.output2ui(msg, 7)
             log_config.send_mail(msg)
             # log_config.send_mail(
             #     "[SELL SUCCESS]sell {} percent: {}, current price: {}".format(symbol, sell_percent, current_price))
