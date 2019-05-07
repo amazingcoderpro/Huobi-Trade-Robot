@@ -1001,20 +1001,20 @@ def get_max_price(symbol, last_time, current=0):
         # current = ((int(time.time()) * 1000) - 5*60*1000) if current <= 0 else current
         try:
             tmp_df = df.loc[df["ts"] >= last_time]
-            max_price = tmp_df.loc[tmp_df["ts"]<current].close.max()
+            max_price = tmp_df.loc[tmp_df["ts"]<current].high.max()
         except Exception as e:
             logger.exception("get_max_price catch e={}, last_time={}, current={}".format(e, last_time, current))
-            temp_df = df[["ts", "close"]][df.ts >= last_time]
+            temp_df = df[["ts", "high"]][df.ts >= last_time]
             temp_df = temp_df.loc[temp_df["ts"]<current]
-            max_price = temp_df.close.max()
+            max_price = temp_df.high.max()
     else:
         try:
-            max_price = df.loc[df["ts"] >= last_time].close.max()
+            max_price = df.loc[df["ts"] >= last_time].high.max()
         except Exception as e:
             logger.exception("get_max_price catch e={}, last_time={}, current={}".format(e, last_time, current))
-            temp_df = df[["ts", "close"]][df.ts >= last_time]
+            temp_df = df[["ts", "high"]][df.ts >= last_time]
             temp_df = temp_df.loc[temp_df["ts"] < current]
-            max_price = temp_df.close.max()
+            max_price = temp_df.high.max()
 
     logger.info("get_max_price, symbol={}, last time={}, current={}, max_price={}".format(symbol, last_time, current, max_price))
     if not max_price:
@@ -1034,19 +1034,19 @@ def get_min_price(symbol, last_time, current=0):
     if current>0:
         try:
             temp_df = df.loc[df["ts"] >= last_time]
-            min_price = temp_df.loc[temp_df["ts"]<current].close.min()
+            min_price = temp_df.loc[temp_df["ts"]<current].low.min()
         except Exception as e:
             logger.exception("get_min_price catch e={}, last_time={}, current={}".format(e, last_time, current))
-            temp_df = df[["ts", "close"]][df.ts >= last_time][df.ts < current]
-            min_price = temp_df.close.min()
+            temp_df = df[["ts", "low"]][df.ts >= last_time][df.ts < current]
+            min_price = temp_df.low.min()
 
     else:
         try:
-            min_price = df.loc[df["ts"] >= last_time].close.min()
+            min_price = df.loc[df["ts"] >= last_time].low.min()
         except Exception as e:
             logger.exception("get_min_price catch e={}, last_time={}, current={}".format(e, last_time, current))
-            temp_df = df[["ts", "close"]][df.ts >= last_time]
-            min_price = temp_df.close.min()
+            temp_df = df[["ts", "low"]][df.ts >= last_time]
+            min_price = temp_df.low.min()
 
     logger.info("get_min_price, symbol={}, last time={}, current={}, min_price={}".format(symbol, last_time, current, min_price))
 
