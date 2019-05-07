@@ -66,6 +66,8 @@ class MainUI():
         self.init_history_button = Button(root, text="Init History", command=self.init_history_asyn, width=20)
 
         self.strategy_setting_button = Button(root, text="Strategy Config", command=self.set_up_strategy, width=20)
+        self.system_setting_button = Button(root, text="System Config", command=self.set_up_system, width=20)
+
 
         self.label_pop = Label(root, text="POP: ", width=5)
 
@@ -138,11 +140,14 @@ class MainUI():
         self.init_history_button.grid(row=1, column=0)
         self.start_button.grid(row=2, column=0)
         self.strategy_setting_button.grid(row=3, column=0)
-        self.register_button.grid(row=4, column=0)
-        self.start_check_strategy_button.grid(row=5, column=0)
-        self.clean_st_button.grid(row=6, column=0)
-        self.stop_check_strategy_button.grid(row=7, column=0)
-        self.stop_button.grid(row=8, column=0)
+        self.system_setting_button.grid(row=4, column=0)
+
+        self.register_button.grid(row=5, column=0)
+        self.start_check_strategy_button.grid(row=6, column=0)
+        self.clean_st_button.grid(row=7, column=0)
+        self.stop_check_strategy_button.grid(row=8, column=0)
+        self.stop_button.grid(row=9, column=0)
+
 
         self.label_pop.grid(row=0, column=1)
         self.price_label.grid(row=0, column=2)
@@ -178,6 +183,8 @@ class MainUI():
         self.stop_check_strategy_button.config(state="disabled")
         self.start_check_strategy_button.config(state="disabled")
         self.init_history_button.config(state="disabled")
+
+        self.working = False
 
     def init_history_asyn(self):
         def init_history(hb):
@@ -220,6 +227,7 @@ class MainUI():
         self.start_button.config(state="disabled")
         self.start_check_strategy_button.config(state="normal")
         self.verify_identity_button.config(state="disabled")
+        self.working = True
 
     def stop_work(self):
         logger.info("stop_work!")
@@ -236,6 +244,7 @@ class MainUI():
         self.init_history_button.config(state="normal")
         self.verify_identity_button.config(state="normal")
         log_config.output2ui("Stop work successfully!", 8)
+        self.working = False
 
     def start_check_strategy(self):
         # 策略检测线程启动
@@ -283,7 +292,41 @@ class MainUI():
         size = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
         self.root.geometry(size)
 
+    def wait_buy_sell(self, price):
+        if not price or not self.working:
+            return False
+
+        # logger.info("wait buy {}/{}, wait sell {}/{}, current price={}".format(config.WAIT_BUY_PRICE, config.WAIT_BUY_ACCOUNT, config.WAIT_SELL_PRICE, config.WAIT_SELL_ACCOUNT,price))
+        if config.WAIT_BUY_PRICE>0 and config.WAIT_BUY_ACCOUNT>0.00001:
+            if price <= config.WAIT_BUY_PRICE:
+                ret = strategies.buy_market(config.NEED_TOBE_SUB_SYMBOL[0], amount=config.WAIT_BUY_ACCOUNT, record=False, current_price=price)
+                if ret[0]:
+                    log_config.output2ui("Wait to buy succeed! wait buy price={}, amount={}, actural price={}, amount={}".format(config.WAIT_BUY_PRICE, config.WAIT_BUY_ACCOUNT, price, ret[1]), 6)
+                    logger.warning("Wait to buy succeed! wait buy price={}, amount={}, actural price={}, amount={}".format(config.WAIT_BUY_PRICE, config.WAIT_BUY_ACCOUNT, price, ret[1]))
+                    config.WAIT_BUY_ACCOUNT = config.WAIT_BUY_ACCOUNT - ret[1]
+                    log_config.send_mail("挂单买入: wait buy price={}, amount={}, actural price={}, amount={}".format(
+                            config.WAIT_BUY_PRICE, config.WAIT_BUY_ACCOUNT, price, ret[1]))
+
+
+        if config.WAIT_SELL_PRICE>0 and config.WAIT_SELL_ACCOUNT>0.00001:
+            if price >= config.WAIT_SELL_PRICE:
+                ret = strategies.sell_market(config.NEED_TOBE_SUB_SYMBOL[0], amount=config.WAIT_SELL_ACCOUNT, record=False, current_price=price)
+                if ret[0]:
+                    log_config.output2ui(
+                        "Wait to sell succeed! wait sell price={}, amount={}, actural price={}, amount={}".format(
+                            config.WAIT_SELL_PRICE, config.WAIT_SELL_ACCOUNT, price, ret[1]), 7)
+                    logger.warning("Wait to sell succeed! wait sell price={}, amount={}, actural price={}, amount={}".format(
+                            config.WAIT_SELL_PRICE, config.WAIT_SELL_ACCOUNT, price, ret[1]))
+                    config.WAIT_SELL_ACCOUNT = config.WAIT_SELL_ACCOUNT - ret[1]
+                    log_config.send_mail("挂单卖出: wait sell price={}, amount={}, actural price={}, amount={}".format(
+                            config.WAIT_SELL_PRICE, config.WAIT_SELL_ACCOUNT, price, ret[1]))
+
     def update_coin(self, price=None):
+        """
+        更新盈利信息
+        :param price:
+        :return:
+        """
         try:
             if not price:
                 price_text = self.price_text.get()
@@ -334,6 +377,8 @@ class MainUI():
                     global CURRENT_PRICE
                     CURRENT_PRICE = float(value)
                     price_text.set("{}:{}".format(key.upper(), value))
+
+                    self.wait_buy_sell(price=CURRENT_PRICE)
                     self.update_coin(price=value)
                 except Exception as e:
                     logger.exception("update_price exception....")
@@ -463,8 +508,8 @@ class MainUI():
         self.gress_bar_verify_user.start(text="Verifying user identity, please wait a moment...")
 
     def set_up_config(self):
-        from popup_config import PopupConfig
-        pop = PopupConfig(self._user_info, "Verify identity")
+        from popup_account import PopupAccountConfig
+        pop = PopupAccountConfig(self._user_info, "Verify identity")
         self.root.wait_window(pop)
         if not self._user_info.get("ok", False):
             return
@@ -500,6 +545,23 @@ class MainUI():
                             "Strategy config")
         self.root.wait_window(pop)
         print(strategies.kdj_buy_params)
+
+    def set_up_system(self):
+        from popup_system import PopupSystem
+        value_dict = {"is_email": config.EMAIL_NOTIFY, "is_alarm": config.ALARM, "trade_min": config.TRADE_MIN_LIMIT_VALUE,
+                      "trade_max": config.TRADE_MAX_LIMIT_VALUE, "wait_buy_price": config.WAIT_BUY_PRICE,
+                      "wait_buy_account": config.WAIT_BUY_ACCOUNT, "wait_sell_price":config.WAIT_SELL_PRICE, "wait_sell_account":config.WAIT_SELL_ACCOUNT}
+        pop = PopupSystem(value_dict)
+        self.root.wait_window(pop)
+        if pop.is_ok:
+            config.EMAIL_NOTIFY = value_dict["is_email"]
+            config.ALARM = value_dict["is_alarm"]
+            config.TRADE_MIN_LIMIT_VALUE = value_dict["trade_min"]
+            config.TRADE_MAX_LIMIT_VALUE = value_dict["trade_max"]
+            config.WAIT_BUY_PRICE = value_dict["wait_buy_price"]
+            config.WAIT_BUY_ACCOUNT = value_dict["wait_buy_account"]
+            config.WAIT_SELL_PRICE = value_dict["wait_sell_price"]
+            config.WAIT_SELL_ACCOUNT = value_dict["wait_sell_account"]
 
     def clean_profit(self):
         process.ORG_COIN = None

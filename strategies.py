@@ -227,8 +227,11 @@ def boll_strategy():
             # 上下轨缩口幅度在一定范围
             if pdiff1 > close_diff1_percent and pdiff1 < 0.004:
                 if pdiff2 > close_diff1_percent and pdiff2 < 0.004:
-                    t1_vol = get_trade_vol_from_local(symbol, 0, 3).get("trade_vol", 0)
-                    t2_vol = get_trade_vol_from_local(symbol, 3, 6).get("trade_vol", 0)
+                    try:
+                        t1_vol = get_trade_vol_from_local(symbol, 0, 3).get("trade_vol", 0)
+                        t2_vol = get_trade_vol_from_local(symbol, 3, 6).get("trade_vol", 0)
+                    except:
+                        return False
                     trade_percent = boll_strategy_params.get("trade_percent", 1.5)
                     # 交易量0-3 大于 1.5 倍的 3-6
                     if t1_vol > trade_percent * t2_vol:
@@ -437,8 +440,8 @@ def kdj_strategy_sell(currency=[], max_trade=1):
 
     #回撤超过0.008
     now = int(time.time()) * 1000
-    max_price = get_max_price(symbol, now - 15 * 60 * 1000)
-    if max_price<= 0:
+    max_price = get_max_price(symbol, last_time=now - (15 * 60 * 1000))
+    if not max_price or max_price<= 0:
         return False
 
     down_percent = kdj_sell_params.get("down_percent", 0.008)
@@ -840,9 +843,10 @@ def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", cur
         else:
             return False, amount
 
+    # 市价amount代表买多少钱的
     amount = round(amount, 2)
-    if current_price and amount*current_price<config.TRADE_LIMIT_VALUE:
-        logger.warning("buy {} amount {}, current price={}, total value less than 10$. trade cancel!".format(symbol, amount, current_price))
+    if amount<config.TRADE_MIN_LIMIT_VALUE or amount>config.TRADE_MAX_LIMIT_VALUE:
+        logger.warning("buy {} amount {}, current price={}, total value less than {}$ or bigger than {}$. trade cancel!".format(symbol, amount, current_price, config.TRADE_MIN_LIMIT_VALUE, config.TRADE_MAX_LIMIT_VALUE))
         return False, amount
 
     hrs = HuobiREST(config.CURRENT_REST_MARKET_URL, config.CURRENT_REST_TRADE_URL, config.ACCESS_KEY, config.SECRET_KEY, config.PRIVATE_KEY)
@@ -877,15 +881,18 @@ def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
         currency = symbol[0:3]
         balance = get_balance(currency)
         if balance and balance > 0:
-            amount = round(balance * percent, 2)
+            amount = round(balance * percent, 4)
         else:
             return False, amount
 
+    # 市价卖时表示卖多少币
+    amount = round(amount, 4)
+    if current_price:
+        total_value = amount*current_price
+        if total_value < config.TRADE_MIN_LIMIT_VALUE or total_value>config.TRADE_MAX_LIMIT_VALUE:
+            logger.warning("sell {} amount {}, current price={}, total value={} less than {}$ or bigger than {}$. trade cancel!".format(symbol, amount, current_price, amount*current_price, config.TRADE_MIN_LIMIT_VALUE, config.TRADE_MAX_LIMIT_VALUE))
+            return False, amount
 
-    amount = round(amount, 2)
-    if current_price and amount*current_price<config.TRADE_LIMIT_VALUE:
-        logger.warning("sell {} amount {}, current price={}, total value less than 10$. trade cancel!".format(symbol, amount, current_price))
-        return False, amount
     # if amount < 100:
     #     logger.warning("sell {} amount {} , less than 100. trade cancel!".format(symbol, amount))
     #     return False,
@@ -1002,6 +1009,8 @@ def get_max_price(symbol, last_time, current=0):
         try:
             tmp_df = df.loc[df["ts"] >= last_time]
             max_price = tmp_df.loc[tmp_df["ts"]<current].high.max()
+            if pd.isna(max_price):
+                max_price = tmp_df.loc[tmp_df["ts"] < current].close.max()
         except Exception as e:
             logger.exception("get_max_price catch e={}, last_time={}, current={}".format(e, last_time, current))
             temp_df = df[["ts", "high"]][df.ts >= last_time]
@@ -1010,6 +1019,8 @@ def get_max_price(symbol, last_time, current=0):
     else:
         try:
             max_price = df.loc[df["ts"] >= last_time].high.max()
+            if pd.isna(max_price):
+                max_price = df.loc[df["ts"] >= last_time].close.max()
         except Exception as e:
             logger.exception("get_max_price catch e={}, last_time={}, current={}".format(e, last_time, current))
             temp_df = df[["ts", "high"]][df.ts >= last_time]
@@ -1017,7 +1028,7 @@ def get_max_price(symbol, last_time, current=0):
             max_price = temp_df.high.max()
 
     logger.info("get_max_price, symbol={}, last time={}, current={}, max_price={}".format(symbol, last_time, current, max_price))
-    if not max_price:
+    if not max_price or pd.isna(max_price):
         return -1
     else:
         return max_price
@@ -1035,6 +1046,8 @@ def get_min_price(symbol, last_time, current=0):
         try:
             temp_df = df.loc[df["ts"] >= last_time]
             min_price = temp_df.loc[temp_df["ts"]<current].low.min()
+            if pd.isna(min_price):
+                min_price = temp_df.loc[temp_df["ts"]<current].close.min()
         except Exception as e:
             logger.exception("get_min_price catch e={}, last_time={}, current={}".format(e, last_time, current))
             temp_df = df[["ts", "low"]][df.ts >= last_time][df.ts < current]
@@ -1043,6 +1056,8 @@ def get_min_price(symbol, last_time, current=0):
     else:
         try:
             min_price = df.loc[df["ts"] >= last_time].low.min()
+            if pd.isna(min_price):
+                min_price = df.loc[df["ts"] >= last_time].close.min()
         except Exception as e:
             logger.exception("get_min_price catch e={}, last_time={}, current={}".format(e, last_time, current))
             temp_df = df[["ts", "low"]][df.ts >= last_time]
@@ -1050,7 +1065,7 @@ def get_min_price(symbol, last_time, current=0):
 
     logger.info("get_min_price, symbol={}, last time={}, current={}, min_price={}".format(symbol, last_time, current, min_price))
 
-    if not min_price:
+    if not min_price or pd.isna(min_price):
         return -1
     else:
         return min_price

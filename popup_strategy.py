@@ -14,7 +14,7 @@ class PopupStrategy(Toplevel):
                  kdj_sell_params,
                  vol_price_fly_params,
                  boll_params,
-                 title="Strategy Configturation"):
+                 title="Strategy Configuration"):
         Toplevel.__init__(self)
         self.is_ok = False
         self.vol_price_fly_params = vol_price_fly_params
