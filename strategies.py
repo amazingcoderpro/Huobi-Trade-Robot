@@ -285,8 +285,8 @@ def boll_strategy():
 
         ret = buy_market(symbol, percent=buy_percent, current_price=price)
         if ret[0]:
-            msg = "[买入{}]boll 买入比例={}%, 买入金额={}$, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
-                buy_percent * 100, 2), round(price, 3), round(ret[1], 3), round(upper, 2), round(middle, 2), round(lower, 2),
+            msg = "[买入{}]boll 买入比例={}%, 买入金额={}$, 当前价格={}$, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
+                buy_percent * 100, 2), round(ret[1], 3), round(price, 3), round(upper, 2), round(middle, 2), round(lower, 2),
                                                                                                  round(pdiff1, 2),
                                                                                                  round(pdiff2, 2))
 
@@ -308,8 +308,8 @@ def boll_strategy():
 
         ret = sell_market(symbol, percent=sell_percent, current_price=price)
         if ret[0]:
-            msg = "[卖出{}]boll 卖出比例={}%, 卖出量={}个, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
-                sell_percent * 100, 2), round(price, 3), round(ret[1], 3), round(upper, 2), round(middle, 2), round(lower, 2),
+            msg = "[卖出{}]boll 卖出比例={}%, 卖出量={}个, 当前价格={}$, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
+                sell_percent * 100, 2), round(ret[1], 3), round(price, 3), round(upper, 2), round(middle, 2), round(lower, 2),
                                                                                                  round(pdiff1, 2),
                                                                                                  round(pdiff2, 2))
 
@@ -823,14 +823,26 @@ def vol_price_fly():
     return ret
 
 
-def trade_alarm(message, show_time=60):
-    if not config.ALARM:
+def trade_alarm(message, show_time=0):
+    if not config.ALARM_NOTIFY:
         return True
 
     logger.warning("Trade Alarm: {}".format(message))
-    pop = PopupTrade(message, show_time)
+    if show_time>0:
+        pop = PopupTrade(message, show_time)
+    else:
+        pop = PopupTrade(message, config.ALARM_TIME)
+
     config.ROOT.wait_window(pop)
-    return pop.is_ok
+
+    # 如果用户未处理，走默认值
+    if not pop.is_ok and not pop.is_cancel:
+        return config.ALARM_TRADE_DEFAULT
+    else:
+        if pop.is_ok:
+            return True
+        else:
+            return False
 
 
 def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", current_price=0):
@@ -856,7 +868,7 @@ def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", cur
         if balance > config.TRADE_MIN_LIMIT_VALUE:
             amount = config.TRADE_MIN_LIMIT_VALUE
         else:
-            logger.warning(
+            logger.info(
                 "buy {} amount {}, current price={}, balance={} total value less than {}$. trade cancel!".format(
                     symbol, amount, current_price, balance, config.TRADE_MIN_LIMIT_VALUE))
             return False, amount
@@ -870,7 +882,7 @@ def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", cur
 
     amount = round(amount, 2)
     logger.warning(
-        "buy {} amount {}$, current price={}, balance={} , min trade={} max trade={}".format(
+        "buy {} amount {}$, current price={}, balance={}$, min trade={} max trade={}".format(
             symbol, amount, current_price, balance, config.TRADE_MIN_LIMIT_VALUE, config.TRADE_MAX_LIMIT_VALUE))
 
     hrs = HuobiREST(config.CURRENT_REST_MARKET_URL, config.CURRENT_REST_TRADE_URL, config.ACCESS_KEY, config.SECRET_KEY, config.PRIVATE_KEY)
@@ -925,7 +937,7 @@ def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
             if balance*current_price > config.TRADE_MIN_LIMIT_VALUE:
                 amount = config.TRADE_MIN_LIMIT_VALUE/current_price
             else:
-                logger.warning("sell {} amount {}, current price={}, balance={},total value={} less than {}$. trade cancel!".format(symbol, amount, current_price, balance, amount*current_price, config.TRADE_MIN_LIMIT_VALUE))
+                logger.info("sell {} amount {}, current price={}, balance={},total value={} less than {}$. trade cancel!".format(symbol, amount, current_price, balance, amount*current_price, config.TRADE_MIN_LIMIT_VALUE))
                 return False, amount
         elif total_value > config.TRADE_MAX_LIMIT_VALUE:
             amount = round(config.TRADE_MAX_LIMIT_VALUE/current_price, 4)

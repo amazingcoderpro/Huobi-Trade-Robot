@@ -61,7 +61,7 @@ class MainUI():
 
         self.clean_st_button = Button(root, text="Clean Strategy", command=self.clean_strategy, width=20)
         # self.clean_st_button.pack()
-        self.verify_identity_button = Button(root, text="Verify Identity", command=self.set_up_config, width=20)
+        self.verify_identity_button = Button(root, text="Verify Identity", command=self.set_up_account, width=20)
 
         self.init_history_button = Button(root, text="Init History", command=self.init_history_asyn, width=20)
 
@@ -296,6 +296,13 @@ class MainUI():
         if not price or not self.working:
             return False
 
+        # buy_prices = config.WAIT_BUY_PRICE.split("/")
+        # buy_amounts = config.WAIT_BUY_ACCOUNT.split("/")
+        # len_short = len(buy_prices) if len(buy_prices)<=len(buy_amounts) else len(buy_amounts)
+        # for i in range(len_short):
+        #     buy_price = buy_prices[i]
+        #     buy_amount = buy_amounts[i]
+
         # logger.info("wait buy {}/{}, wait sell {}/{}, current price={}".format(config.WAIT_BUY_PRICE, config.WAIT_BUY_ACCOUNT, config.WAIT_SELL_PRICE, config.WAIT_SELL_ACCOUNT,price))
         if config.WAIT_BUY_PRICE>0 and config.WAIT_BUY_ACCOUNT>0.00001:
             if price <= config.WAIT_BUY_PRICE:
@@ -303,9 +310,9 @@ class MainUI():
                 if ret[0]:
                     log_config.output2ui("Wait to buy succeed! wait buy price={}, amount={}, actural price={}, amount={}".format(config.WAIT_BUY_PRICE, config.WAIT_BUY_ACCOUNT, price, ret[1]), 6)
                     logger.warning("Wait to buy succeed! wait buy price={}, amount={}, actural price={}, amount={}".format(config.WAIT_BUY_PRICE, config.WAIT_BUY_ACCOUNT, price, ret[1]))
-                    config.WAIT_BUY_ACCOUNT = config.WAIT_BUY_ACCOUNT - ret[1]
                     log_config.send_mail("挂单买入: wait buy price={}, amount={}, actural price={}, amount={}".format(
                             config.WAIT_BUY_PRICE, config.WAIT_BUY_ACCOUNT, price, ret[1]))
+                    config.WAIT_BUY_ACCOUNT = config.WAIT_BUY_ACCOUNT - ret[1]
 
 
         if config.WAIT_SELL_PRICE>0 and config.WAIT_SELL_ACCOUNT>0.00001:
@@ -317,9 +324,9 @@ class MainUI():
                             config.WAIT_SELL_PRICE, config.WAIT_SELL_ACCOUNT, price, ret[1]), 7)
                     logger.warning("Wait to sell succeed! wait sell price={}, amount={}, actural price={}, amount={}".format(
                             config.WAIT_SELL_PRICE, config.WAIT_SELL_ACCOUNT, price, ret[1]))
-                    config.WAIT_SELL_ACCOUNT = config.WAIT_SELL_ACCOUNT - ret[1]
                     log_config.send_mail("挂单卖出: wait sell price={}, amount={}, actural price={}, amount={}".format(
                             config.WAIT_SELL_PRICE, config.WAIT_SELL_ACCOUNT, price, ret[1]))
+                    config.WAIT_SELL_ACCOUNT = config.WAIT_SELL_ACCOUNT - ret[1]
 
     def update_coin(self, price=None):
         """
@@ -507,18 +514,30 @@ class MainUI():
         th.start()
         self.gress_bar_verify_user.start(text="Verifying user identity, please wait a moment...")
 
-    def set_up_config(self):
+    def set_up_account(self):
         from popup_account import PopupAccountConfig
         pop = PopupAccountConfig(self._user_info, "Verify identity")
         self.root.wait_window(pop)
         if not self._user_info.get("ok", False):
             return
+
+        emails = self._user_info.get("emails", "").strip().split("\n")
+        wechats = self._user_info.get("wechats", "").strip().split("\n")
+        for email in emails:
+            if email and len(email) > 5 and "@" in email:
+                config.EMAILS.append(email)
+
+        for wechat in wechats:
+            if wechat and len(wechat) > 5:
+                config.WECHATS.append(wechat)
+
         logger.info("{}".format(self._user_info))
         log_config.output2ui("{}".format(self._user_info))
         self.price_text.set("")
         self.bal_text.set("")
         self.coin_text.set("")
         self.verify_user_information()
+
         # self.top = Toplevel(self.root)
         # label = Label(self.top, text="ACCESS_KEY")
         # label.pack()
@@ -548,14 +567,18 @@ class MainUI():
 
     def set_up_system(self):
         from popup_system import PopupSystem
-        value_dict = {"is_email": config.EMAIL_NOTIFY, "is_alarm": config.ALARM, "trade_min": config.TRADE_MIN_LIMIT_VALUE,
+        value_dict = {"is_email": config.EMAIL_NOTIFY, "is_alarm": config.ALARM_NOTIFY, "is_alarm_trade": config.ALARM_TRADE_DEFAULT,
+                      "trade_min": config.TRADE_MIN_LIMIT_VALUE, "alarm_time": config.ALARM_TIME,
                       "trade_max": config.TRADE_MAX_LIMIT_VALUE, "wait_buy_price": config.WAIT_BUY_PRICE,
                       "wait_buy_account": config.WAIT_BUY_ACCOUNT, "wait_sell_price":config.WAIT_SELL_PRICE, "wait_sell_account":config.WAIT_SELL_ACCOUNT}
         pop = PopupSystem(value_dict)
         self.root.wait_window(pop)
         if pop.is_ok:
             config.EMAIL_NOTIFY = value_dict["is_email"]
-            config.ALARM = value_dict["is_alarm"]
+            config.ALARM_NOTIFY = value_dict["is_alarm"]
+            config.ALARM_TRADE_DEFAULT = value_dict["is_alarm_trade"]
+            config.ALARM_TIME = value_dict["alarm_time"]
+
             config.TRADE_MIN_LIMIT_VALUE = value_dict["trade_min"]
             config.TRADE_MAX_LIMIT_VALUE = value_dict["trade_max"]
             config.WAIT_BUY_PRICE = value_dict["wait_buy_price"]

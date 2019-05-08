@@ -12,13 +12,14 @@ import threading
 RUNING = True
 
 class PopupTrade(Toplevel):
-    def __init__(self, message="交易提醒", show_time=60, title="Trad Alarm"):
+    def __init__(self, message="交易提醒", show_time=60, title="Trade Alarm"):
         Toplevel.__init__(self)
         self.alarm_th = None
         self.is_run = True
         self.message = message
         self.show_time = show_time
-        self.is_ok = True
+        self.is_ok = False
+        self.is_cancel = False
         global RUNING
         RUNING = True
         self.setup_ui()
@@ -49,18 +50,19 @@ class PopupTrade(Toplevel):
                 time.sleep(1)
                 timeout -= 1
             self.destroy()
+
         self.alarm_th = threading.Thread(target=alarm_th, args=(self.show_time, ))
         self.alarm_th.setDaemon(True)
         self.alarm_th.start()
 
     def on_ok(self):
-        self.is_ok= True
+        self.is_ok = True
         global RUNING
         RUNING = False
         self.destroy()
 
     def on_cancel(self):
-        self.is_ok = False
+        self.is_cancel = True
         global RUNING
         RUNING = False
         self.destroy()

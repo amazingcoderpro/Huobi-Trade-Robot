@@ -61,7 +61,7 @@ class HuobiREST:
             logging.info("RESTAPI, GET: {}".format(url))
             log_config.output2ui("RESTAPI, GET: {}".format(url))
             response = requests.get(url, post_data, headers=headers, timeout=self._timeout)
-            logger.debug("RESTAPI _http_get url:{}\n post_data:{}\n response: {}".format(url, post_data, response.json()))
+            # logger.debug("RESTAPI _http_get url:{}\n post_data:{}\n response: {}".format(url, post_data, response.json()))
             # log_config.output2ui("RESTAPI _http_get url:{}\n post_data:{}\n response: {}".format(url, post_data, response.json()))
             return response.status_code, response.json()
         except Exception as e:
@@ -82,7 +82,7 @@ class HuobiREST:
             post_data = json.dumps(params)
             logger.info("RESTAPI, POST: {}".format(url))
             response = requests.post(url, post_data, headers=headers, timeout=self._timeout)
-            logger.debug("RESTAPI _http_post, url:{}\n post_data:{}\n response: {}".format(url, post_data, response.json()))
+            # logger.debug("RESTAPI _http_post, url:{}\n post_data:{}\n response: {}".format(url, post_data, response.json()))
             # log_config.output2ui(
             #     "RESTAPI _http_post, url:{}\n post_data:{}\n response: {}".format(url, post_data, response.json()))
             return response.status_code, response.json()

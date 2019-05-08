@@ -112,13 +112,21 @@ RETRY_TIMES = -1  # 小于0无限重试
 TRADE_MIN_LIMIT_VALUE = 10  # 单次最小交易額不能低於10美金
 TRADE_MAX_LIMIT_VALUE = 1000  # 单次最大交易額不能高於1000美金
 
-WAIT_BUY_PRICE = 0
-WAIT_BUY_ACCOUNT = 0
-WAIT_SELL_PRICE = 0
-WAIT_SELL_ACCOUNT = 0
+WAIT_BUY_PRICE = [0, 0, 0]
+WAIT_BUY_ACCOUNT = [0, 0, 0]
+WAIT_SELL_PRICE = [0, 0, 0]
+WAIT_SELL_ACCOUNT = [0, 0, 0]
+
+ROOT = None
 
 
 #是否邮件通知
 EMAIL_NOTIFY = True
-ROOT = None
-ALARM = False   # 是否弹窗提醒
+WECHAT_NOTIFY = True
+ALARM_NOTIFY = False            # 是否弹窗提醒
+ALARM_TIME = 30                 # 弹窗提醒时长, 最多不能超过120，否则可能错过交易点
+ALARM_TRADE_DEFAULT = True    # 弹窗提醒后, 人工未处理时, 默认是否交易
+
+# 邮件\微信通知对象
+EMAILS = []
+WECHATS = []

@@ -145,8 +145,14 @@ def add_handler(handler):
 
 def send_mail(text, own=False):
     if not config.EMAIL_NOTIFY:
+        logging.getLogger().warning("email notify is closed")
         return False
 
+    if config.EMAILS:
+        receiver_list = config.EMAILS
+        receiver = ", ".join(receiver_list)
+
+    logging.getLogger().info("send mail  owner={}, to={}, text={}".format(own, receiver_list, text))
     try:
         msg = MIMEText(text, 'plain', 'utf-8')      # 中文需参数‘utf-8'，单字节字符不需要
         msg['Subject'] = Header(subject, 'utf-8')
@@ -168,5 +174,32 @@ def send_mail(text, own=False):
         print("send mail failed. e = {}".format(e))
 
 
+def make_msg(flag, symbol, percent, current_price, amount=0):
+    if percent < 1:
+        percent = percent*100
+
+    percent = round(percent, 1)
+    amount = round(amount, 2)
+    current_price = round(current_price, 3)
+
+    if flag == 0:
+        flag = u"买入"
+        if amount > 0:
+            msg = u"[{}{}] {}比例: {}%, {}金额: {}$, 当前价格: {}$.".format(flag, symbol, flag, percent, flag, amount, current_price)
+        else:
+            msg = u"[{}{}] {}比例: {}%, 当前价格: {}$.".format(flag, symbol, flag, percent, current_price)
+
+    else:
+        flag = u"卖出"
+        if amount > 0:
+            msg = u"[{}{}] {}比例: {}%, {}数量: {}个, 当前价格: {}$.".format(flag, symbol, flag, percent, flag, amount, current_price)
+        else:
+            msg = u"[{}{}] {}比例: {}%, 当前价格: {}$.".format(flag, symbol, flag, percent, current_price)
+
+    return msg
+
+
 if __name__ == "__main__":
-    send_mail("123", own=True)
+    # send_mail("123", own=True)
+    msg = make_msg(1, "eosusdt", 0.4, 4.63, 50)
+    print(msg)

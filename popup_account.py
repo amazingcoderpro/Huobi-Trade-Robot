@@ -3,28 +3,41 @@
 # Created by Charles on 2018/6/30
 # Function: 
 
-from tkinter import Toplevel, Label, Button, Entry, StringVar, LEFT, RIGHT, Checkbutton, Frame, messagebox, OptionMenu, IntVar
+from tkinter import Toplevel, Label, Button, Entry, StringVar, LEFT, RIGHT, Checkbutton, Frame, messagebox, OptionMenu, IntVar,Text, END
 
 
 class PopupAccountConfig(Toplevel):
     def __init__(self, value_dict, title="Account Configuration"):
         Toplevel.__init__(self)
         self.value_dict = value_dict
-        self.access_key = StringVar()
         self.ckb_save_val = IntVar()
         self.ckb_save = None
         self.get_key()
+
+        self.access_key = StringVar()
         self.access_key.set(self.value_dict.get("access_key", ""))
+
         self.secret_key = StringVar()
         self.secret_key.set(self.value_dict.get("secret_key", ""))
+
         self.trade = StringVar()
         self.trade.set(self.value_dict.get("trade", "ethusdt"))
+
         self.ws_site = StringVar()
         self.ws_site.set(self.value_dict.get("ws_site", "BR"))
+
         self.rest_site = StringVar()
         self.rest_site.set(self.value_dict.get("rest_site", "BR"))
+
+        self.txt_emails = None
+        self.emails = value_dict.get("emails", "")
+
+        self.txt_wechats = None
+        self.wechats = value_dict.get("wechats", "")
+
         self.setup_ui()
         self.title(title)
+
 
     def setup_ui(self):
         row1 = Frame(self)
@@ -43,23 +56,41 @@ class PopupAccountConfig(Toplevel):
 
         row3 = Frame(self)
         row3.pack(fill="x", ipadx=1, ipady=1)
-        Label(row3, text="TRADE: ", width=15).pack(side=LEFT)
+        Label(row3, text="TRADE: ", width=10).pack(side=LEFT)
         lst_trade = ['ethusdt', 'btcusdt', 'eosusdt', 'xrpusdt', 'eoseth']
         # self.trade.set(lst_trade[0])
         OptionMenu(row3, self.trade, *lst_trade).pack(side=LEFT)
 
-        row3 = Frame(self)
-        row3.pack(fill="x", ipadx=1, ipady=1)
-        Label(row3, text="WebSocket Site: ", width=15).pack(side=LEFT)
+        # row3 = Frame(self)
+        # row3.pack(fill="x", ipadx=1, ipady=1)
+        Label(row3, text="WS: ", width=10).pack(side=LEFT)
         lst_site = ['BR', 'PRO', 'HX']
-        # self.ws_site.set(lst_site[0])
         OptionMenu(row3, self.ws_site, *lst_site).pack(side=LEFT)
 
-        row3 = Frame(self)
-        row3.pack(fill="x", ipadx=1, ipady=1)
-        Label(row3, text="RestAPI Site: ", width=15).pack(side=LEFT)
-        # self.rest_site.set(lst_site[0])
+        # row3 = Frame(self)
+        # row3.pack(fill="x", ipadx=1, ipady=1)
+        Label(row3, text="RestAPI: ", width=10).pack(side=LEFT)
         OptionMenu(row3, self.rest_site, *lst_site).pack(side=LEFT)
+
+        row3 = Frame(self)
+        row3.pack(fill="x")
+        Label(row3, text=u"收件箱地址(多个邮箱地址请换行输入): ", width=30).pack(side=LEFT)
+
+        row3 = Frame(self)
+        row3.pack(fill="x")
+        # Entry(row3, textvariable=self.emails, width=15).pack(side=LEFT)
+        self.txt_emails = Text(row3, height=4, width=40)
+        self.txt_emails.insert(END, self.emails)
+        self.txt_emails.pack(ipadx=2)
+
+        row3 = Frame(self)
+        row3.pack(fill="x")
+        Label(row3, text=u"微信号(多个微信号请换行输入): ", width=30).pack(side=LEFT)
+        row3 = Frame(self)
+        row3.pack(fill="x")
+        self.txt_wechats = Text(row3, height=4, width=40)
+        self.txt_wechats.insert(END, self.wechats)
+        self.txt_wechats.pack(ipadx=2)
 
         row3 = Frame(self)
         row3.pack(fill="x")
@@ -80,6 +111,10 @@ class PopupAccountConfig(Toplevel):
         self.value_dict["trade"] = trade
         self.value_dict["ws_site"] = ws_site
         self.value_dict["rest_site"] = rest_site
+
+        self.value_dict["emails"] = self.txt_emails.get(1.0, END)
+        self.value_dict["wechats"] = self.txt_wechats.get(1.0, END)
+
         self.value_dict["ok"] = True
         self.save_key()
         self.destroy()
@@ -90,6 +125,8 @@ class PopupAccountConfig(Toplevel):
                 str_key = f.read()
                 self.value_dict["access_key"] = str_key.split("++++")[0].strip().replace("\n", "")
                 self.value_dict["secret_key"] = str_key.split("++++")[1].strip().replace("\n", "")
+                self.value_dict["emails"] = str_key.split("++++")[2].strip().replace(" ", "")
+                self.value_dict["wechats"] = str_key.split("++++")[3].strip().replace(" ", "")
         except Exception as e:
             pass
 
@@ -97,7 +134,7 @@ class PopupAccountConfig(Toplevel):
         try:
             is_save = self.ckb_save_val.get()
             if is_save:
-                str_key = "{}++++{}".format(self.value_dict["access_key"], self.value_dict["secret_key"])
+                str_key = "{}++++{}++++{}++++{}".format(self.value_dict["access_key"], self.value_dict["secret_key"], self.value_dict["emails"], self.value_dict["wechats"])
                 with open("temp.hbk", 'w') as f:
                     f.write(str_key)
         except Exception as e:
