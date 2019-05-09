@@ -22,18 +22,18 @@ class PopupAccountConfig(Toplevel):
         self.secret_key.set(self.value_dict.get("secret_key", ""))
 
         self.trade = StringVar()
-        self.trade.set(self.value_dict.get("trade", "ethusdt"))
+        self.trade.set(self.value_dict.get("trade", "eosusdt"))
 
         self.ws_site = StringVar()
-        self.ws_site.set(self.value_dict.get("ws_site", "BR"))
+        self.ws_site.set(self.value_dict.get("ws_site", "PRO"))
 
         self.rest_site = StringVar()
-        self.rest_site.set(self.value_dict.get("rest_site", "BR"))
+        self.rest_site.set(self.value_dict.get("rest_site", "PRO"))
 
         self.txt_emails = None
-        print(value_dict.get("emails", []))
+        # print(value_dict.get("emails", []))
         self.emails = "\n".join(value_dict.get("emails", []))
-        print(self.emails)
+        # print(self.emails)
 
         self.txt_wechats = None
         self.wechats = "\n".join(value_dict.get("wechats", []))

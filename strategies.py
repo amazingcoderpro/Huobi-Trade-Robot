@@ -1256,18 +1256,20 @@ def update_balance(is_first=False):
             bal0 = get_balance(s0, result_type=2)
             str_balance = ""
             if bal0:
-                str_balance += "{}:{}/{}".format(s0.upper(), round(bal0.get("trade", 0), 3),
-                                                 round(bal0.get("frozen", 0), 3))
+                str_balance += "{}/{}".format(round(bal0.get("trade", 0), 4),
+                                                 round(bal0.get("frozen", 0), 4))
             bal1 = get_balance(s1, result_type=2)
             if bal1:
-                str_balance += ", {}:{}/{}".format(s1.upper(), round(bal1.get("trade", 0), 3),
-                                                   round(bal1.get("frozen", 0), 3))
+                str_balance += ", {}/{}".format(round(bal1.get("trade", 0), 2),
+                                                   round(bal1.get("frozen", 0), 2))
             logger.info("update_balance = {}".format(str_balance))
             process.REALTIME_BALANCE.put(str_balance)
             log_config.output2ui("update balance--{}".format(str_balance), 8)
+            return bal0.get("trade", 0), bal0.get("frozen", 0), bal1.get("trade", 0), bal1.get("frozen", 0)
 
     except Exception as e:
         logger.exception("update_balance e= {}".format(e))
+        return 0,0,0,0
 
 
 # result_type=0--trade, 1--frozen, 2--all

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Created by Charles on 2018/6/18
 # Function:
-
+import time
 from tkinter import Frame, Tk, Label, Button, Checkbutton, IntVar, StringVar, Text, END, Toplevel, Entry, messagebox
 from tkinter.scrolledtext import ScrolledText
 import queue
@@ -17,6 +17,7 @@ from tkinter.messagebox import askyesno
 import log_config
 import huobi
 import config
+import wechat_helper
 logger = logging.getLogger(__name__)
 CURRENT_PRICE = 1
 
@@ -68,65 +69,63 @@ class MainUI():
         self.strategy_setting_button = Button(root, text="Strategy Config", command=self.set_up_strategy, width=20)
         self.system_setting_button = Button(root, text="System Config", command=self.set_up_system, width=20)
 
-
-        self.label_pop = Label(root, text="POP: ", width=5)
-
+        self.label_pop = Label(root, text="实时价格: ", width=15)
         self.price_text = StringVar()
         self.price_text.set("")
         self.price_label = Label(root, textvariable=self.price_text, foreground='red', background="gray",
-                                 font=("", 14, 'bold'), width=22)
+                                 font=("", 12, 'bold'), width=25)
         # self.price_label.pack()
 
-        self.label_bal = Label(root, text="Balance: ", width=7)
+        self.label_bal = Label(root, text="当前账户余额(币,金): ", width=15)
         self.bal_text = StringVar()
         self.bal_text.set("")
         self.bal_label = Label(root, textvariable=self.bal_text, foreground='red', background="gray",
-                               font=("", 14, 'bold'), width=40)
+                               font=("", 12, 'bold'), width=25)
 
-        self.label_coin = Label(root, text="Total: ", width=5)
+        self.label_coin = Label(root, text="当前账户总资产: ", width=15)
         self.coin_text = StringVar()
         self.coin_text.set("")
         self.coin_label = Label(root, textvariable=self.coin_text, foreground='red', background="gray",
-                                font=("", 14, 'bold'), width=22)
+                                font=("", 12, 'bold'), width=30)
 
-        self.label_profit = Label(root, text="Profit(C/M): ", width=8)
+        self.label_profit = Label(root, text="盈利情况(币/金本位): ", width=18)
         self.profit_text = StringVar()
         self.profit_text.set("")
         self.profit_label = Label(root, textvariable=self.profit_text, foreground='red', background="gray",
-                                  font=("", 14, 'bold'), width=30)
-        self.clean_profit_button = Button(root, text="Clean", command=self.clean_profit, width=10)
+                                  font=("", 12, 'bold'), width=25)
+        self.clean_profit_button = Button(root, text="重置", command=self.reset_profit, width=8)
 
         # row6 = Frame(root)
         # row6.pack(fill="x", ipadx=1, ipady=1)
 
-        self.label_kdj = Label(root, text="KDJ_15M: ", width=8)
+        self.label_kdj = Label(root, text="15分钟KDJ: ", width=15)
         self.kdj_text = StringVar()
         self.kdj_text.set("")
         self.kdj_label = Label(root, textvariable=self.kdj_text, foreground='red', background="gray",
-                               font=("", 12, 'bold'), width=20)
+                               font=("", 12, 'bold'), width=25)
 
-        self.label_uml = Label(root, text="BOLL: ", width=6)
+        self.label_uml = Label(root, text="布林线: ", width=15)
         self.uml_text = StringVar()
         self.uml_text.set("")
         self.uml_label = Label(root, textvariable=self.uml_text, foreground='red', background="gray",
-                               font=("", 12, 'bold'), width=50)
+                               font=("", 12, 'bold'), width=40)
 
-        self.label_uml = Label(root, text="初价／初总额: ", width=6)
-        self.uml_text = StringVar()
-        self.uml_text.set("")
-        self.uml_label = Label(root, textvariable=self.uml_text, foreground='red', background="gray",
-                               font=("", 12, 'bold'), width=50)
+        # 初始信息
+        self.label_origin = Label(root, text="初始价格/币数/USDT/总价值: ", width=25)
+        self.origin_text = StringVar()
+        self.origin_text.set("")
+        self.origin_label = Label(root, textvariable=self.origin_text, foreground='red', background="gray",
+                               font=("", 12, 'bold'), width=30)
 
+        self.label_now = Label(root, text="大盘涨跌幅/账户涨跌幅: ", width=22)
+        self.now_text = StringVar()
+        self.now_text.set("")
+        self.now_label = Label(root, textvariable=self.now_text, foreground='red', background="gray",
+                               font=("", 12, 'bold'), width=30)
 
-        # self.label_worth = Label(root, text="Worth: ", width=5)
-        # self.worth_text = StringVar()
-        # self.worth_text.set("Worth")
-        # self.worth_label = Label(root, textvariable=self.worth_text, foreground='blue', background="gray",
-        #                          font=("", 14, 'bold'), width=12)
-
-        self.label_run_log = Label(root, text="run log: ", width=10)
+        self.label_run_log = Label(root, text="运行日志: ", width=10)
         self.log_text = ScrolledText(root, width=60, height=26)
-        self.label_trade_log = Label(root, text="trade log: ", width=10)
+        self.label_trade_log = Label(root, text="交易日志: ", width=10)
         self.trade_text = ScrolledText(root, width=60, height=26)
         # self.log_text.pack()
         # 创建一个TAG，其前景色为红色
@@ -159,29 +158,37 @@ class MainUI():
         self.label_pop.grid(row=0, column=1)
         self.price_label.grid(row=0, column=2)
 
-        self.label_bal.grid(row=0, column=3)
-        self.bal_label.grid(row=0, column=4, columnspan=2)
+        self.label_origin.grid(row=0, column=3)
+        self.origin_label.grid(row=0, column=4)
 
-        self.label_coin.grid(row=1, column=1)
-        self.coin_label.grid(row=1, column=2)
+
+        self.label_bal.grid(row=1, column=1)
+        self.bal_label.grid(row=1, column=2)#columnspan=2
+
+        self.label_coin.grid(row=1, column=3)
+        self.coin_label.grid(row=1, column=4)
         # self.label_worth.grid(row=0, column=7)
         # self.worth_label.grid(row=0, column=8)
 
-        self.label_profit.grid(row=1, column=3)
-        self.profit_label.grid(row=1, column=4)
-        self.clean_profit_button.grid(row=1, column=5)
+        self.label_profit.grid(row=2, column=1)
+        self.profit_label.grid(row=2, column=2)
+
+        self.label_now.grid(row=2, column=3)
+        self.now_label.grid(row=2, column=4)
+
+        self.clean_profit_button.grid(row=2, column=5)
 
         # k d 指标位置
         # row6.grid(row=2, column=1)
-        self.label_kdj.grid(row=2, column=1)
-        self.kdj_label.grid(row=2, column=2)
-        self.label_uml.grid(row=2, column=3)
-        self.uml_label.grid(row=2, column=4, columnspan=2)
+        self.label_kdj.grid(row=3, column=1)
+        self.kdj_label.grid(row=3, column=2)
+        self.label_uml.grid(row=3, column=3)
+        self.uml_label.grid(row=3, column=4)    #columnspan=2
 
-        self.label_run_log.grid(row=3, column=1)
-        self.log_text.grid(row=4, column=1, rowspan=5, columnspan=3)
-        self.label_trade_log.grid(row=3, column=4)
-        self.trade_text.grid(row=4, column=4, rowspan=5, columnspan=3)
+        self.label_run_log.grid(row=4, column=1)
+        self.log_text.grid(row=5, column=1, rowspan=5, columnspan=3)
+        self.label_trade_log.grid(row=4, column=4)
+        self.trade_text.grid(row=5, column=4, rowspan=5, columnspan=3)
 
         self.start_button.config(state="disabled")
         self.register_button.config(state="disabled")
@@ -236,6 +243,7 @@ class MainUI():
         self.verify_identity_button.config(state="disabled")
         self.working = True
 
+
     def stop_work(self):
         logger.info("stop_work!")
         log_config.output2ui("stop_work!")
@@ -250,6 +258,7 @@ class MainUI():
         # self.verify_identity_button.config(state="normal")
         self.init_history_button.config(state="normal")
         self.verify_identity_button.config(state="normal")
+
         log_config.output2ui("Stop work successfully!", 8)
         self.working = False
 
@@ -261,6 +270,7 @@ class MainUI():
         self.start_check_strategy_button.config(state="disabled")
         self.stop_check_strategy_button.config(state="normal")
         log_config.output2ui("Start check strategy successfully!", 8)
+
 
     def stop_check_strategy(self):
         logger.warning("stop_check_strategy...")
@@ -357,27 +367,32 @@ class MainUI():
                 price = float(price)
 
             bal_text = self.bal_text.get()
-            coin_str = bal_text.split(",")[0].split(":")[1].split("/")
-            dollar_str = bal_text.split(",")[1].split(":")[1].split("/")
+            coin_str = bal_text.split(",")[0].split("/")
+            dollar_str = bal_text.split(",")[1].split("/")
             if len(coin_str) > 0 and len(dollar_str) > 0:
                 coin_trade = float(coin_str[0])
                 coin_frozen = float(coin_str[1])
 
                 dollar_trade = float(dollar_str[0])
                 dollar_frozen = float(dollar_str[1])
-                total_coin_value = round(coin_trade + coin_frozen + (dollar_trade + dollar_frozen) / price, 3)
-                total_dollar_value = round((coin_trade + coin_frozen) * price + dollar_trade + dollar_frozen, 3)
-                self.coin_text.set("{}/{}".format(total_coin_value, total_dollar_value))
-                if not process.ORG_COIN:
-                    process.ORG_COIN = total_coin_value
-                    process.ORG_DOLLAR = total_dollar_value
+                total_coin_value = coin_trade + coin_frozen + (dollar_trade + dollar_frozen) / price
+                total_dollar_value = (coin_trade + coin_frozen) * price + dollar_trade + dollar_frozen
+                self.coin_text.set("{}/{}".format(round(total_coin_value, 4), round(total_dollar_value, 2)))
+                if not process.ORG_COIN_TOTAL:
+                    process.ORG_COIN_TOTAL = total_coin_value
+                    process.ORG_DOLLAR_TOTAL = total_dollar_value
+                    process.ORG_PRICE = price
+                    # 更新总额, 初始化更新一次即可
+                    self.origin_text.set("{}/{}/{}/{}".format(price, round(coin_trade + coin_frozen,4), round(dollar_trade + dollar_frozen, 2), round(total_dollar_value, 2)))
 
-                profit_coin = round(total_coin_value - process.ORG_COIN, 3)
-                profit_dollar = round(total_dollar_value - process.ORG_DOLLAR, 3)
+                profit_coin = round(total_coin_value - process.ORG_COIN_TOTAL, 3)
+                profit_dollar = round(total_dollar_value - process.ORG_DOLLAR_TOTAL, 3)
                 self.profit_text.set("{}/{}".format(profit_coin, profit_dollar))
+
+                #更新大盘涨跌幅和当前账户的涨跌幅
+                self.now_text.set("{}/{}".format(round((price-process.ORG_PRICE)/process.ORG_PRICE, 3), round((total_dollar_value - process.ORG_DOLLAR_TOTAL) / process.ORG_DOLLAR_TOTAL, 3)))
         except Exception as e:
-            pass
-            # logger.exception("update_coin e={}".format(e))
+            logger.exception("update_coin e={}".format(e))
 
     def update_ui(self):
         # # 每1000毫秒触发自己，形成递归，相当于死循环
@@ -455,6 +470,15 @@ class MainUI():
                     logger.exception("update_uml exception....")
                     log_config.output2ui("update_uml exception....", 3)
 
+        def notify_profit_info():
+            if self.working and config.WECHAT_NOTIFY:
+                global CURRENT_PRICE
+                bal0, bal0_f, bal1, bal1_f = strategies.update_balance()
+                total = (bal0+bal0_f)*CURRENT_PRICE+bal1+bal1_f
+                wechat_helper.send_to_wechat("系统运行中, 启动时价格={}, 当前价格={}, \n实时营利情况：大盘涨跌幅={}%, 当前账户涨跌幅={}%".format(process.ORG_PRICE, CURRENT_PRICE, round((CURRENT_PRICE-process.ORG_PRICE)/process.ORG_PRICE, 2), round((total-process.ORG_DOLLAR_TOTAL)/process.ORG_DOLLAR_TOTAL, 2)), config.OWNNER_WECHATS)
+                time.sleep(3600)
+            time.sleep(60)
+
         th = threading.Thread(target=update_price, args=(self.price_text,))
         th.setDaemon(True)
         th.start()
@@ -472,6 +496,11 @@ class MainUI():
         th = threading.Thread(target=update_kdj, args=(self.kdj_text,))
         th.setDaemon(True)
         th.start()
+
+        th = threading.Thread(target=notify_profit_info)
+        th.setDaemon(True)
+        th.start()
+
         return True
 
     def close_window(self):
@@ -536,13 +565,20 @@ class MainUI():
 
         emails = self._user_info.get("emails", "").strip().split("\n")
         wechats = self._user_info.get("wechats", "").strip().split("\n")
+        config.EMAILS = []
         for email in emails:
             if email and len(email) > 5 and "@" in email:
                 config.EMAILS.append(email)
 
+        config.WECHATS = []
         for wechat in wechats:
-            if wechat and len(wechat) > 5:
+            if wechat and len(wechat) > 2:
                 config.WECHATS.append(wechat)
+
+        if config.EMAIL_NOTIFY and config.WECHATS:
+            print("需要扫码登录微信！")
+            log_config.output2ui("需要扫码登录微信！")
+            wechat_helper.login_wechat()
 
         logger.info("{}".format(self._user_info))
         log_config.output2ui("{}".format(self._user_info))
@@ -550,6 +586,7 @@ class MainUI():
         self.bal_text.set("")
         self.coin_text.set("")
         self.verify_user_information()
+
 
         # self.top = Toplevel(self.root)
         # label = Label(self.top, text="ACCESS_KEY")
@@ -599,9 +636,10 @@ class MainUI():
             config.WAIT_SELL_PRICE = value_dict["wait_sell_price"]
             config.WAIT_SELL_ACCOUNT = value_dict["wait_sell_account"]
 
-    def clean_profit(self):
-        process.ORG_COIN = None
+    def reset_profit(self):
+        process.ORG_COIN_TOTAL = None
         self.profit_text.set("0/0")
+        self.origin_text.set("0/0/0/0")
 
 
 if __name__ == '__main__':
@@ -610,8 +648,8 @@ if __name__ == '__main__':
     my_gui = MainUI(root)
     config.ROOT = root
     root.protocol('WM_DELETE_WINDOW', my_gui.close_window)
-    my_gui.center_window(1250, 600)
-    root.maxsize(1250, 600)
+    my_gui.center_window(1350, 610)
+    root.maxsize(1350, 610)
     # root.minsize(320, 240)
     # root.iconbitmap('spider_128px_1169260_easyicon.net.ico')
     my_gui.update_ui()
