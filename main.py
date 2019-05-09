@@ -471,13 +471,14 @@ class MainUI():
                     log_config.output2ui("update_uml exception....", 3)
 
         def notify_profit_info():
-            if self.working and config.WECHAT_NOTIFY:
-                global CURRENT_PRICE
-                bal0, bal0_f, bal1, bal1_f = strategies.update_balance()
-                total = (bal0+bal0_f)*CURRENT_PRICE+bal1+bal1_f
-                wechat_helper.send_to_wechat("系统运行中, 启动时价格={}, 当前价格={}, \n实时营利情况：大盘涨跌幅={}%, 当前账户涨跌幅={}%".format(process.ORG_PRICE, CURRENT_PRICE, round((CURRENT_PRICE-process.ORG_PRICE)/process.ORG_PRICE, 2), round((total-process.ORG_DOLLAR_TOTAL)/process.ORG_DOLLAR_TOTAL, 2)), config.OWNNER_WECHATS)
-                time.sleep(3600)
-            time.sleep(60)
+            while 1:
+                if self.working and config.WECHAT_NOTIFY:
+                    global CURRENT_PRICE
+                    bal0, bal0_f, bal1, bal1_f = strategies.update_balance()
+                    total = (bal0+bal0_f)*CURRENT_PRICE+bal1+bal1_f
+                    wechat_helper.send_to_wechat("系统运行中, 启动时价格={}, 当前价格={}, \n实时营利情况：大盘涨跌幅={}%, 当前账户涨跌幅={}%".format(process.ORG_PRICE, CURRENT_PRICE, round((CURRENT_PRICE-process.ORG_PRICE)/process.ORG_PRICE, 2), round((total-process.ORG_DOLLAR_TOTAL)/process.ORG_DOLLAR_TOTAL, 2)), config.OWNNER_WECHATS)
+                    time.sleep(3600)
+                time.sleep(60)
 
         th = threading.Thread(target=update_price, args=(self.price_text,))
         th.setDaemon(True)
