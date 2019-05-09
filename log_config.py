@@ -18,7 +18,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
 import config
-
+import wechat_helper
 # formatter
 FORMATTER = "%(asctime)s [%(threadName)s] [%(filename)s:%(funcName)s:%(lineno)d] " \
             "%(levelname)s %(message)s"
@@ -41,7 +41,7 @@ LOG_BACKUP_COUNT = 10                                    # backup counts
 MAIL_SERVER = 'smtp.163.com'
 MAIL_PORT = 25
 FROM_ADDR = 'wcadaydayup@163.com'
-TO_ADDRS = "wcadaydayup@163.com;wuchangandaydayup@163.com"
+TO_ADDRS = "wcadaydayup@163.com"
 SUBJECT = 'Huobi Trade Application Runtime Error'
 CREDENTIALS = ('wcadaydayup@163.com', '998zhiyao998')
 
@@ -58,15 +58,6 @@ UI_LOG_LEVEL = 1
 # email notify sell/buy
 sender = 'wcadaydayup@163.com'
 sender_password = "998zhiyao998"
-receiver = "wcadaydayup@163.com, 1447385994@qq.com"
-rceiver_list = ["wcadaydayup@163.com", "1447385994@qq.com"]
-"""
-"bbb201@126.com", "2879230281@qq.com", "371606063@qq.com", "790840993@qq.com",
-                "383362849@qq.com", "351172940@qq.com", "182089859@qq.com", "278995617@qq.com", "2931429366@qq.com"
-"""
-receiver_own = "wcadaydayup@163.com"#bbb201@126.com,
-rceiver_list_own = ["wcadaydayup@163.com"]#"bbb201@126.com",
-
 subject = 'Huobi Trade Notify'
 smtpserver = 'smtp.163.com'
 from_name = 'Huobi Trade Developer'
@@ -144,62 +135,75 @@ def add_handler(handler):
 
 
 def send_mail(text, own=False):
-    if not config.EMAIL_NOTIFY:
-        logging.getLogger().warning("email notify is closed")
-        return False
+    receiver_list = []
+    receiver_str = ""
+    if own:
+        receiver_list = config.OWNER_EMAILS
+        receiver_str = ", ".join(receiver_list)
+    else:
+        if config.EMAIL_NOTIFY and config.EMAILS:
+            receiver_list = config.EMAILS
+            receiver_str = ", ".join(receiver_list)
 
-    if config.EMAILS:
-        receiver_list = config.EMAILS
-        receiver = ", ".join(receiver_list)
+    if not receiver_list or not receiver_str:
+        logging.getLogger().warning("send email cancelled. receive list is empty! own={}, text={}".format(own, text))
+    else:
+        logging.getLogger().info("send mail  owner={}, to={}, text={}".format(own, receiver_list, text))
+        try:
+            msg = MIMEText(text, 'plain', 'utf-8')      # 中文需参数‘utf-8'，单字节字符不需要
+            msg['Subject'] = Header(subject, 'utf-8')
+            msg['From'] = '{}<{}>'.format(from_name, sender)
+            msg['To'] = receiver_str
 
-    logging.getLogger().info("send mail  owner={}, to={}, text={}".format(own, receiver_list, text))
-    try:
-        msg = MIMEText(text, 'plain', 'utf-8')      # 中文需参数‘utf-8'，单字节字符不需要
-        msg['Subject'] = Header(subject, 'utf-8')
-        msg['From'] = '{}<{}>'.format(from_name, sender)
-        if own:
-            msg['To'] = receiver_own
-        else:
-            msg['To'] = receiver
+            smtp = smtplib.SMTP_SSL(smtpserver)
+            smtp.login(sender, sender_password)
+            smtp.sendmail(sender, receiver_list, msg.as_string())
+            smtp.close()
+        except Exception as e:
+            logging.getLogger().exception("send mail failed. e = {}".format(e))
 
-        smtp = smtplib.SMTP_SSL(smtpserver)
-        smtp.login(sender, sender_password)
-        if own:
-            smtp.sendmail(sender, rceiver_list_own, msg.as_string())
-        else:
-            smtp.sendmail(sender, rceiver_list, msg.as_string())
-        smtp.close()
-    except Exception as e:
-        logging.getLogger().exception(str(e))
-        print("send mail failed. e = {}".format(e))
+    # 发送微信
+    if own:
+        wechat_helper.send_to_wechat(msg, config.OWNNER_WECHATS)
+    else:
+        if config.WECHAT_NOTIFY:
+            wechat_helper.send_to_wechat(msg, config.WECHATS)
+    return True
 
 
-def make_msg(flag, symbol, percent, current_price, amount=0):
-    if percent < 1:
-        percent = percent*100
+def make_msg(flag, symbol, current_price, percent=0, amount=0, last_price=0, params="***"):
+    if percent == 0:
+        percent = "***"
+    else:
+        if percent < 1:
+            percent = percent * 100
+        percent = round(percent, 2)
 
-    percent = round(percent, 1)
-    amount = round(amount, 2)
+    if amount <= 0:
+        amount = "***"
+    else:
+        amount = round(amount, 4)
+
+    if last_price <= 0:
+        last_price = "***"
+    else:
+        last_price = round(last_price, 3)
+
     current_price = round(current_price, 3)
 
     if flag == 0:
         flag = u"买入"
-        if amount > 0:
-            msg = u"[{}{}] {}比例: {}%, {}金额: {}$, 当前价格: {}$.".format(flag, symbol, flag, percent, flag, amount, current_price)
-        else:
-            msg = u"[{}{}] {}比例: {}%, 当前价格: {}$.".format(flag, symbol, flag, percent, current_price)
-
+        msg = u"[{}{}] {}比例: {}%, {}金额: {}$, 当前价格: {}$. \n买入依据: {}".format(flag, symbol, flag, percent, flag, amount, current_price, params)
     else:
         flag = u"卖出"
-        if amount > 0:
-            msg = u"[{}{}] {}比例: {}%, {}数量: {}个, 当前价格: {}$.".format(flag, symbol, flag, percent, flag, amount, current_price)
-        else:
-            msg = u"[{}{}] {}比例: {}%, 当前价格: {}$.".format(flag, symbol, flag, percent, current_price)
+        msg = u"[{}{}] {}比例: {}%, {}数量: {}个, 当前价格: {}$, 买入价格: {}$. \n卖出依据: {}".format(flag, symbol, flag, percent, flag, amount, current_price, last_price, params)
 
+    logging.getLogger().info("make_msg return={}".format(msg))
     return msg
 
 
 if __name__ == "__main__":
     # send_mail("123", own=True)
     msg = make_msg(1, "eosusdt", 0.4, 4.63, 50)
-    print(msg)
+    wechat_helper.send_to_wechat(msg, ["Justkidding"])
+    # wechat.send_to_wechat(msg)

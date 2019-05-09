@@ -10,9 +10,10 @@ class PopupAccountConfig(Toplevel):
     def __init__(self, value_dict, title="Account Configuration"):
         Toplevel.__init__(self)
         self.value_dict = value_dict
+        self.get_key()
+
         self.ckb_save_val = IntVar()
         self.ckb_save = None
-        self.get_key()
 
         self.access_key = StringVar()
         self.access_key.set(self.value_dict.get("access_key", ""))
@@ -30,10 +31,12 @@ class PopupAccountConfig(Toplevel):
         self.rest_site.set(self.value_dict.get("rest_site", "BR"))
 
         self.txt_emails = None
-        self.emails = value_dict.get("emails", "")
+        print(value_dict.get("emails", []))
+        self.emails = "\n".join(value_dict.get("emails", []))
+        print(self.emails)
 
         self.txt_wechats = None
-        self.wechats = value_dict.get("wechats", "")
+        self.wechats = "\n".join(value_dict.get("wechats", []))
 
         self.setup_ui()
         self.title(title)
@@ -85,7 +88,7 @@ class PopupAccountConfig(Toplevel):
 
         row3 = Frame(self)
         row3.pack(fill="x")
-        Label(row3, text=u"微信号(多个微信号请换行输入): ", width=30).pack(side=LEFT)
+        Label(row3, text=u"微信昵称(多个微信昵称请换行输入): ", width=30).pack(side=LEFT)
         row3 = Frame(self)
         row3.pack(fill="x")
         self.txt_wechats = Text(row3, height=4, width=40)
@@ -125,8 +128,6 @@ class PopupAccountConfig(Toplevel):
                 str_key = f.read()
                 self.value_dict["access_key"] = str_key.split("++++")[0].strip().replace("\n", "")
                 self.value_dict["secret_key"] = str_key.split("++++")[1].strip().replace("\n", "")
-                self.value_dict["emails"] = str_key.split("++++")[2].strip().replace(" ", "")
-                self.value_dict["wechats"] = str_key.split("++++")[3].strip().replace(" ", "")
         except Exception as e:
             pass
 

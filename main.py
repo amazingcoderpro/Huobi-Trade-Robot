@@ -89,7 +89,7 @@ class MainUI():
         self.coin_label = Label(root, textvariable=self.coin_text, foreground='red', background="gray",
                                 font=("", 14, 'bold'), width=22)
 
-        self.label_profit = Label(root, text="Profit: ", width=7)
+        self.label_profit = Label(root, text="Profit(C/M): ", width=8)
         self.profit_text = StringVar()
         self.profit_text.set("")
         self.profit_label = Label(root, textvariable=self.profit_text, foreground='red', background="gray",
@@ -110,6 +110,13 @@ class MainUI():
         self.uml_text.set("")
         self.uml_label = Label(root, textvariable=self.uml_text, foreground='red', background="gray",
                                font=("", 12, 'bold'), width=50)
+
+        self.label_uml = Label(root, text="初价／初总额: ", width=6)
+        self.uml_text = StringVar()
+        self.uml_text.set("")
+        self.uml_label = Label(root, textvariable=self.uml_text, foreground='red', background="gray",
+                               font=("", 12, 'bold'), width=50)
+
 
         # self.label_worth = Label(root, text="Worth: ", width=5)
         # self.worth_text = StringVar()
@@ -296,37 +303,41 @@ class MainUI():
         if not price or not self.working:
             return False
 
-        # buy_prices = config.WAIT_BUY_PRICE.split("/")
-        # buy_amounts = config.WAIT_BUY_ACCOUNT.split("/")
-        # len_short = len(buy_prices) if len(buy_prices)<=len(buy_amounts) else len(buy_amounts)
-        # for i in range(len_short):
-        #     buy_price = buy_prices[i]
-        #     buy_amount = buy_amounts[i]
+        buy_prices = config.WAIT_BUY_PRICE
+        buy_amounts = config.WAIT_BUY_ACCOUNT
+        sell_prices = config.WAIT_SELL_PRICE
+        sell_amounts = config.WAIT_SELL_ACCOUNT
 
-        # logger.info("wait buy {}/{}, wait sell {}/{}, current price={}".format(config.WAIT_BUY_PRICE, config.WAIT_BUY_ACCOUNT, config.WAIT_SELL_PRICE, config.WAIT_SELL_ACCOUNT,price))
-        if config.WAIT_BUY_PRICE>0 and config.WAIT_BUY_ACCOUNT>0.00001:
-            if price <= config.WAIT_BUY_PRICE:
-                ret = strategies.buy_market(config.NEED_TOBE_SUB_SYMBOL[0], amount=config.WAIT_BUY_ACCOUNT, record=False, current_price=price)
-                if ret[0]:
-                    log_config.output2ui("Wait to buy succeed! wait buy price={}, amount={}, actural price={}, amount={}".format(config.WAIT_BUY_PRICE, config.WAIT_BUY_ACCOUNT, price, ret[1]), 6)
-                    logger.warning("Wait to buy succeed! wait buy price={}, amount={}, actural price={}, amount={}".format(config.WAIT_BUY_PRICE, config.WAIT_BUY_ACCOUNT, price, ret[1]))
-                    log_config.send_mail("挂单买入: wait buy price={}, amount={}, actural price={}, amount={}".format(
-                            config.WAIT_BUY_PRICE, config.WAIT_BUY_ACCOUNT, price, ret[1]))
-                    config.WAIT_BUY_ACCOUNT = config.WAIT_BUY_ACCOUNT - ret[1]
+        symbol = config.NEED_TOBE_SUB_SYMBOL[0]
+        for i, buy_price in enumerate(buy_prices):
+            # 循环遍历挂单买
+            buy_amount = buy_amounts[i]
+            if buy_price > 0 and buy_amount > config.TRADE_MIN_LIMIT_VALUE:
+                if price <= buy_price:
+                    ret = strategies.buy_market(symbol, amount=buy_amount, record=True, current_price=price)
+                    if ret[0]:
+                        msg = "挂单买入{}成功: 挂单价格={}$, 挂单金额={}$, 实际价格={}$, 实际买入金额={}$".format(symbol, buy_price, buy_amount, price, ret[1])
+                        log_config.output2ui(msg, 6)
+                        logger.warning("Wait to buy succeed! wait buy price={}, amount={}, actural price={}, amount={}"
+                                       .format(buy_price, buy_amount, price, ret[1]))
+                        log_config.send_mail(msg, own=True)
+                        log_config.send_mail(log_config.make_msg(0, symbol, price))
+                        config.WAIT_BUY_ACCOUNT[i] = buy_amount - ret[1]
 
-
-        if config.WAIT_SELL_PRICE>0 and config.WAIT_SELL_ACCOUNT>0.00001:
-            if price >= config.WAIT_SELL_PRICE:
-                ret = strategies.sell_market(config.NEED_TOBE_SUB_SYMBOL[0], amount=config.WAIT_SELL_ACCOUNT, record=False, current_price=price)
-                if ret[0]:
-                    log_config.output2ui(
-                        "Wait to sell succeed! wait sell price={}, amount={}, actural price={}, amount={}".format(
-                            config.WAIT_SELL_PRICE, config.WAIT_SELL_ACCOUNT, price, ret[1]), 7)
-                    logger.warning("Wait to sell succeed! wait sell price={}, amount={}, actural price={}, amount={}".format(
-                            config.WAIT_SELL_PRICE, config.WAIT_SELL_ACCOUNT, price, ret[1]))
-                    log_config.send_mail("挂单卖出: wait sell price={}, amount={}, actural price={}, amount={}".format(
-                            config.WAIT_SELL_PRICE, config.WAIT_SELL_ACCOUNT, price, ret[1]))
-                    config.WAIT_SELL_ACCOUNT = config.WAIT_SELL_ACCOUNT - ret[1]
+            # 循环遍历挂单卖
+            sell_price = sell_prices[i]
+            sell_amount = sell_amounts[i]
+            if sell_price > 0 and sell_amount > 0.00001:
+                if price >= sell_price:
+                    ret = strategies.sell_market(symbol, amount=sell_amount, record=False, current_price=price)
+                    if ret[0]:
+                        msg = "挂单卖出{}: 挂单价格={}, 挂单个数={}, 实际价格={}, 实际挂单买入个数={}".format(symbol,
+                                sell_price, sell_amount, price, ret[1])
+                        log_config.output2ui(msg, 7)
+                        logger.warning(msg)
+                        log_config.send_mail(msg, own=True)
+                        log_config.send_mail(log_config.make_msg(1, symbol, price))
+                        config.WAIT_SELL_ACCOUNT[i] = sell_amount - ret[1]
 
     def update_coin(self, price=None):
         """
@@ -516,6 +527,8 @@ class MainUI():
 
     def set_up_account(self):
         from popup_account import PopupAccountConfig
+        self._user_info["emails"] = config.EMAILS
+        self._user_info["wechats"] = config.WECHATS
         pop = PopupAccountConfig(self._user_info, "Verify identity")
         self.root.wait_window(pop)
         if not self._user_info.get("ok", False):
