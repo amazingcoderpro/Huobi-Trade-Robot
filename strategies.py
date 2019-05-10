@@ -274,6 +274,7 @@ def boll_strategy():
             buy_percent, sell_percent, price, upper, middle, lower, pdiff1, pdiff2))
     global G_BOLL_BUY
     if buy_percent > 0:
+        buy_percent *= config.RISK
         # msg = "[BUY]boll_strategy buy {} percent: {}, current price={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(symbol, buy_percent, price, upper, middle, lower, pdiff1, pdiff2)
         msg = "[买入{}]boll 买入比例={}%, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
             buy_percent * 100, 2), round(price, 3), round(upper, 2), round(middle, 2),
@@ -303,6 +304,7 @@ def boll_strategy():
 
     # if sell_percent > 0 and G_BOLL_BUY > 0:
     if sell_percent > 0:
+        sell_percent *= config.RISK
         msg = "[卖出{}]boll 卖出比例={}%, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(sell_percent*100, 2), round(price,3), round(upper,2), round(middle,2), round(lower,2), round(pdiff1,2), round(pdiff2,2))
         if not trade_alarm(msg):
             return False
@@ -402,6 +404,7 @@ def kdj_strategy_buy(currency=[], max_trade=1):
             log_config.output2ui("is_buy_big_than_sell return True")
             percent += 0.1
 
+        percent *= config.RISK
         msg_show = "[买入{}]kdj_{} 买入比例={}%, 当前价格={}, 阶段最低价格={}, 指标K={}, D={}, 回暖幅度={}%".format(
             symbol, peroid, round(percent * 100, 2), round(current_price, 3), round(min_price, 3),
             round(cur_k, 2), round(cur_d, 2), round(actual_up_percent * 100, 2))
@@ -473,6 +476,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
             or (last_k_2 >= need_k and last_d_2 >= need_d):
         percent = kdj_sell_params.get("sell_percent", 0.4)
 
+        percent *= config.RISK
         msg_show = "[卖出{}]kdj_{} 卖出比例={}%, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}．".format(
             symbol, peroid, round(percent * 100, 2), round(current_price, 3), round(max_price, 3),
             round(actual_down_percent * 100, 2), round(cur_k, 2), round(cur_d, 2), )
@@ -823,6 +827,7 @@ def vol_price_fly():
     #     return False
 
     percent = vol_price_fly_params["buy_percent"]
+    percent *= config.RISK
     msg = "[BUY]vol_price_fly buy {} percent={}, current price={}".format(symbol, percent, current_price)
     if not trade_alarm(msg):
         return False
@@ -867,14 +872,13 @@ def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", cur
     if amount <= 0:
         if percent > 0:
             if balance and balance > 0:
-                amount = round(balance * percent*config.RISK, 2)
+                amount = round(balance * percent, 2)
             else:
                 return False, amount
         else:
             return False, 0
     else:
         # 余额不足
-        amount *= config.RISK   # 乘上风险系数
         if amount > balance:
             amount = balance*0.95
 
@@ -936,14 +940,13 @@ def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
     if amount <= 0:
         if percent > 0:
             if balance and balance > 0:
-                amount = round(balance * percent * config.RISK, 4)
+                amount = round(balance * percent, 4)
             else:
                 return False, amount
         else:
             return False, 0
     else:
         # 余币不足
-        amount *= config.RISK
         if amount > balance:
             amount = balance*0.95
 
@@ -1340,6 +1343,7 @@ def buy_low():
         buy_percent += 0.3
 
     if buy_percent > 0:
+        buy_percent *= config.RISK
         msg = "[买入{}]抄底 买入比例={}%, 当前价格={}, 最近5/20/60周期内最低价={}/{}/{}.".format(
             symbol, round(buy_percent*100, 2), round(current_price, 3), round(min_price_5, 3), round(min_price_20, 3), round(min_price_60, 3))
 
@@ -1391,6 +1395,7 @@ def sell_high():
         sell_percent += 0.3
 
     if sell_percent > 0:
+        sell_percent *= config.RISK
         msg = "[卖出{}]高抛 卖出比例={}%,　当前价格={}, 最近5/20/60周期内最高价={}/{}/{}.".format(
             symbol, round(sell_percent * 100, 2), round(current_price, 3), round(max_price_5, 3),
             round(max_price_20, 3), round(max_price_60, 3))

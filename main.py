@@ -346,7 +346,7 @@ class MainUI():
                     ret = strategies.sell_market(symbol, amount=sell_amount, record=False, current_price=price)
                     if ret[0]:
                         config.WAIT_SELL_ACCOUNT[i] = sell_amount - ret[1]
-                        msg = "挂单卖出{}: 挂单价格={}, 挂单个数={}, 实际价格={}, 实际挂单买入个数={}".format(symbol,
+                        msg = "挂单卖出{}: 挂单价格={}, 挂单个数={}个, 实际价格={}, 实际挂单卖出个数={}个".format(symbol,
                                 sell_price, sell_amount, price, ret[1])
                         log_config.output2ui(msg, 7)
                         logger.warning(msg)
