@@ -499,7 +499,7 @@ class MainUI():
                                                  u"\n大盘涨跌幅={}%"
                                                  u"\n当前账户涨跌幅={}%"
                                                  u"\n是否跑羸大盘:{}"
-                                                 .format(config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK, process.START_TIME.strftime("%Y%m/%d/, %H:%M:%S"), datetime.datetime.now().strftime("%Y%m/%d/, %H:%M:%S"), round(process.ORG_PRICE,3), round(CURRENT_PRICE,3),
+                                                 .format(config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK, process.START_TIME.strftime("%Y/%m/%d, %H:%M:%S"), datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S"), round(process.ORG_PRICE,3), round(CURRENT_PRICE,3),
                                                          round(process.ORG_COIN_TRADE, 4), round(process.ORG_COIN_FROZEN, 4), round(bal0, 4), round(bal0_f, 4),
                                                          round(process.ORG_DOLLAR_TRADE, 4), round(process.ORG_DOLLAR_FROZEN, 4),round(bal1, 2),round(bal1_f, 2),
                                                          round(total,2), dapan_profit, account_profit, is_win), config.OWNNER_WECHATS)
