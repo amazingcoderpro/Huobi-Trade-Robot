@@ -414,7 +414,7 @@ def kdj_strategy_buy(currency=[], max_trade=1):
 
         ret = buy_market(symbol, percent=percent, current_price=current_price)
         if ret[0]:
-            msg_show = "[买入{}]kdj_{} 买入比例={}%, 买入金额数={}$, 当前价格={}, 阶段最低价格={}, 指标K={}, D={}, 回暖幅度={}%".format(
+            msg_show = "[买入{}]kdj_{} 买入比例={}%, 买入金额={}$, 当前价格={}, 阶段最低价格={}, 指标K={}, D={}, 回暖幅度={}%".format(
                 symbol, peroid, round(percent * 100, 2), round(ret[1], 3), round(current_price, 3), round(min_price, 3),
                 round(cur_k, 2), round(cur_d, 2), round(actual_up_percent * 100, 2))
             logger.info(msg_show)
@@ -835,7 +835,7 @@ def vol_price_fly():
     ret = buy_market(symbol, percent=percent, strategy_type="vol_price_fly", current_price=current_price)
     if ret[0]:
         logger.info("[BUY SUCCESS]vol_price_fly buy {} percent={}, amount={}, current price={}".format(symbol, percent, ret[1], current_price))
-        msg_show = "[买入{}]量价齐升 买入比例={}%, 买入金额数={}$, 当前价格={}".format(symbol, round(percent*100, 2), round(ret[1],2), round(current_price, 3))
+        msg_show = "[买入{}]量价齐升 买入比例={}%, 买入金额={}$, 当前价格={}".format(symbol, round(percent*100, 2), round(ret[1],2), round(current_price, 3))
         log_config.output2ui(msg_show, 6)
         log_config.send_mail(msg_show, own=True)
         log_config.send_mail(log_config.make_msg(0, symbol, current_price=current_price, percent=percent))

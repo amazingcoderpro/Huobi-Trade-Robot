@@ -110,3 +110,4 @@ venv.bak/
 bin/
 logs/
 temp.hbk
+itchat.pkl

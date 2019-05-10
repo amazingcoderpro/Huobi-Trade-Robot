@@ -10,6 +10,7 @@ just call init_log_config before your use the module of logging that build-in py
 
 import os
 import logging
+import threading
 from datetime import datetime
 from logging import handlers
 import queue
@@ -135,40 +136,48 @@ def add_handler(handler):
 
 
 def send_mail(text, own=False):
-    receiver_list = []
-    receiver_str = ""
-    if own:
-        receiver_list = config.OWNER_EMAILS
-        receiver_str = ", ".join(receiver_list)
-    else:
-        if config.EMAIL_NOTIFY and config.EMAILS:
-            receiver_list = config.EMAILS
+    def async_send_mail(text, owe=False):
+        # 发送微信
+        ret = True
+        logging.getLogger("start to send wechat. own={}".format(own))
+        if own:
+            ret = wechat_helper.send_to_wechat(text, config.OWNNER_WECHATS)
+        else:
+            if config.WECHAT_NOTIFY:
+                ret = wechat_helper.send_to_wechat(text, config.WECHATS)
+        return ret
+
+        # 发送邮件
+        receiver_list = []
+        receiver_str = ""
+        if own:
+            receiver_list = config.OWNER_EMAILS
             receiver_str = ", ".join(receiver_list)
+        else:
+            if config.EMAIL_NOTIFY and config.EMAILS:
+                receiver_list = config.EMAILS
+                receiver_str = ", ".join(receiver_list)
 
-    if not receiver_list or not receiver_str:
-        logging.getLogger().warning("send email cancelled. receive list is empty! own={}, text={}".format(own, text))
-    else:
-        logging.getLogger().info("send mail owner={}, to={}, text={}".format(own, receiver_list, text))
-        try:
-            msg = MIMEText(text, 'plain', 'utf-8')      # 中文需参数‘utf-8'，单字节字符不需要
-            msg['Subject'] = Header(subject, 'utf-8')
-            msg['From'] = '{}<{}>'.format(from_name, sender)
-            msg['To'] = receiver_str
+        if not receiver_list or not receiver_str:
+            logging.getLogger().warning("send email cancelled. receive list is empty! own={}, text={}".format(own, text))
+        else:
+            logging.getLogger().info("send mail owner={}, to={}, text={}".format(own, receiver_list, text))
+            try:
+                msg = MIMEText(text, 'plain', 'utf-8')      # 中文需参数‘utf-8'，单字节字符不需要
+                msg['Subject'] = Header(subject, 'utf-8')
+                msg['From'] = '{}<{}>'.format(from_name, sender)
+                msg['To'] = receiver_str
 
-            smtp = smtplib.SMTP_SSL(smtpserver)
-            smtp.login(sender, sender_password)
-            smtp.sendmail(sender, receiver_list, msg.as_string())
-            smtp.close()
-        except Exception as e:
-            logging.getLogger().exception("send mail failed. e = {}".format(e))
+                smtp = smtplib.SMTP_SSL(smtpserver)
+                smtp.login(sender, sender_password)
+                smtp.sendmail(sender, receiver_list, msg.as_string())
+                smtp.close()
+            except Exception as e:
+                logging.getLogger().exception("send mail failed. e = {}".format(e))
 
-    # 发送微信
-    if own:
-        wechat_helper.send_to_wechat(msg, config.OWNNER_WECHATS)
-    else:
-        if config.WECHAT_NOTIFY:
-            wechat_helper.send_to_wechat(msg, config.WECHATS)
-    return True
+    th = threading.Thread(target=async_send_mail, args=(text, own))
+    th.setDaemon(True)
+    th.start()
 
 
 def make_msg(flag, symbol, current_price, percent=0, amount=0, last_price=0, params="***"):
@@ -196,7 +205,12 @@ def make_msg(flag, symbol, current_price, percent=0, amount=0, last_price=0, par
         msg = u"[{}{}] {}比例: {}%, {}金额: {}$, 当前价格: {}$. \n买入依据: {}".format(flag, symbol, flag, percent, flag, amount, current_price, params)
     else:
         flag = u"卖出"
-        msg = u"[{}{}] {}比例: {}%, {}数量: {}个, 当前价格: {}$, 买入价格: {}$. \n卖出依据: {}".format(flag, symbol, flag, percent, flag, amount, current_price, last_price, params)
+        if last_price>0:
+            msg = u"[{}{}] {}比例: {}%, {}数量: {}个, 当前价格: {}$. \n卖出依据: {}".format(flag, symbol, flag, percent, flag, amount, current_price, last_price, params)
+        else:
+            msg = u"[{}{}] {}比例: {}%, {}数量: {}个, 当前价格: {}$, 之前买入价格: {}$. \n卖出依据: {}".format(flag, symbol, flag, percent,
+                                                                                          flag, amount, current_price,
+                                                                                          last_price, params)
 
     logging.getLogger().info("make_msg return={}".format(msg))
     return msg

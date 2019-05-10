@@ -15,11 +15,11 @@ def login_wechat():
 
 
 def send_to_wechat(msg, nick_names=None):
-    rooms = itchat.get_chatrooms(update=True)
-
-    # 如是要room是空代表登录失效
-    if not rooms:
+    try:
+        rooms = itchat.get_chatrooms(update=True)
+    except:
         login_wechat()
+        rooms = itchat.get_chatrooms(update=True)
 
     if not nick_names:
         res = itchat.send(msg=msg)
@@ -46,7 +46,7 @@ def send_to_wechat(msg, nick_names=None):
                             break
 
         if not find_names:
-            logger.error(f"find_names is empty!!, input names={nick_names}")
+            logger.error(f"find names is empty!!, input names={nick_names}")
             return False
         else:
             if len(find_names) == len(nick_names):
@@ -57,7 +57,7 @@ def send_to_wechat(msg, nick_names=None):
         ret = True
         for name in find_names:
             try:
-                res = itchat.send(toUserName=name, msg=msg)
+                res = itchat.send(msg=msg, toUserName=name)
                 if res.get("BaseResponse", {}).get("Ret", -1) == 0:
                     logger.info(f"send to wechat success,to user={name}, res={res},  msg=\n{msg}")
                 else:
@@ -75,4 +75,4 @@ if __name__ == '__main__':
 
     # login_wechat()
     print(1)
-    send_to_wechat("我这边是公司办的，我没跑，好像想不用个人跑．", ["二环小栗旬"])
+    send_to_wechat(u"我这边是公司办的，我没跑，好像想不用个人跑．", ["二环小栗旬"])
