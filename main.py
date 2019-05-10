@@ -485,6 +485,8 @@ class MainUI():
             while 1:
                 time.sleep(60)
                 if self.working and config.WECHAT_NOTIFY:
+                    logger.info("notify_profit_info to users......")
+                    log_config.output2ui("notify_profit_info to users......")
                     global CURRENT_PRICE
                     bal0, bal0_f, bal1, bal1_f = strategies.update_balance()
                     total = (bal0+bal0_f)*CURRENT_PRICE+bal1+bal1_f

@@ -139,7 +139,7 @@ def send_mail(text, own=False):
     def async_send_mail(text, owe=False):
         # 发送微信
         ret = True
-        logging.getLogger("start to send wechat. own={}".format(own))
+        logging.getLogger().info("start to send wechat. own={}".format(own))
         if own:
             ret = wechat_helper.send_to_wechat(text, config.OWNNER_WECHATS)
         else:
