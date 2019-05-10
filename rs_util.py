@@ -59,7 +59,7 @@ class HuobiREST:
         post_data = urllib.parse.urlencode(params)
         try:
             logging.info("RESTAPI, GET: {}".format(url))
-            log_config.output2ui("RESTAPI, GET: {}".format(url))
+            # log_config.output2ui("RESTAPI, GET: {}".format(url))
             response = requests.get(url, post_data, headers=headers, timeout=self._timeout)
             # logger.debug("RESTAPI _http_get url:{}\n post_data:{}\n response: {}".format(url, post_data, response.json()))
             # log_config.output2ui("RESTAPI _http_get url:{}\n post_data:{}\n response: {}".format(url, post_data, response.json()))

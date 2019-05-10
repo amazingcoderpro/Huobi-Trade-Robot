@@ -30,11 +30,11 @@ BUY_RECORD = []
 SELL_RECORD = []
 TRADE_RECORD = []
 
-move_stop_profit_params = {"check": 1, "msf_min": 0.02, "msf_back": 0.25}
+move_stop_profit_params = {"check": 1, "msf_min": 0.02, "msf_back": 0.20}
 stop_loss_params = {"check": 1, "percent": 0.02}
 kdj_buy_params = {"check": 1, "k": 20, "d": 22, "buy_percent": 0.4, "up_percent": 0.004, "peroid": "15min"}
 kdj_sell_params = {"check": 1, "k": 82, "d": 78, "sell_percent": 0.4, "down_percent": 0.004, "peroid": "15min"}
-vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 3, "price_up_limit": 0.03, "buy_percent": 0.5,
+vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 2, "price_up_limit": 0.02, "buy_percent": 0.5,
                         "peroid": "5min"}
 boll_strategy_params = {"check": 1, "peroid": "15min", "open_diff1_percent": 0.012, "open_diff2_percent": 0.012,
                         "close_diff1_percent": 0.0025, "close_diff2_percent": 0.0025, "open_down_percent": -0.03,
@@ -341,8 +341,8 @@ def kdj_strategy_buy(currency=[], max_trade=1):
     log_config.output2ui("current k={}, d={}, current_price={}".format(cur_k, cur_d, current_price))
 
     # kd不能大于40
-    if cur_k >25 or cur_d>25:
-        logger.info("cur_k or cur_d > 25")
+    if cur_k >25*config.RISK or cur_d>25*config.RISK:
+        logger.info("cur_k or cur_d > {}".format(25*config.RISK))
         return False
 
     #回暖幅度超过0.008
@@ -352,6 +352,7 @@ def kdj_strategy_buy(currency=[], max_trade=1):
         return False
 
     up_percent = kdj_buy_params.get("up_percent", 0.008)
+    up_percent *= (1/config.RISK)
     actual_up_percent = round((current_price - min_price) / min_price, 4)
     logger.info("kdj buy min_price={}, current_price={},  need up_percent={} actual up_percent = {}".format(min_price,
                                                                                                             current_price,
@@ -365,8 +366,10 @@ def kdj_strategy_buy(currency=[], max_trade=1):
     # 最近三个周期内出现过kd小于20
     last_k, last_d, last_j = get_kdj(market, 1)
     last_k_2, last_d_2, last_j_2 = get_kdj(market, 2)
-    need_k = kdj_buy_params.get("k", 20)
-    need_d = kdj_buy_params.get("d", 22)
+    need_k = kdj_buy_params.get("k", 20)*config.RISK
+    need_d = kdj_buy_params.get("d", 22)*config.RISK
+    need_k = 15 if need_k<15 else need_k
+    need_d = 18 if need_d<18 else need_d
     if (cur_k <= need_k and cur_d <= need_d) \
             or (last_k <= need_k and last_d <= need_d) \
             or (last_k_2 <= need_k and last_d_2 <= need_d):
@@ -435,9 +438,11 @@ def kdj_strategy_sell(currency=[], max_trade=1):
     logger.info("current k={}, d={}, current_price={}".format(cur_k, cur_d, current_price))
     log_config.output2ui("current k={}, d={}, current_price={}".format(cur_k, cur_d, current_price))
 
-    #kd要大于50
-    if cur_k<70 or cur_d<70:
-        logger.info("cur_k or cur_d < 80")
+    #kd要大于70
+    kd = 70 * config.RISK
+    kd = 85 if kd>85 else kd
+    if cur_k < kd or cur_d < kd:
+        logger.info("cur_k or cur_d < {}".format(kd))
         return False
 
     #回撤超过0.008
@@ -446,7 +451,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
     if not max_price or max_price<= 0:
         return False
 
-    down_percent = kdj_sell_params.get("down_percent", 0.008)
+    down_percent = kdj_sell_params.get("down_percent", 0.008)*config.RISK
     actual_down_percent = round((max_price - current_price) / max_price, 4)
     logger.info(
         "kdj sell max_price={}, current_price={}, need down_percent={}, actual_down_percent={}".format(max_price,
@@ -459,8 +464,10 @@ def kdj_strategy_sell(currency=[], max_trade=1):
     # 最近三个周期内出现过kd大于80
     last_k, last_d, last_j = get_kdj(market, 1)
     last_k_2, last_d_2, last_j_2 = get_kdj(market, 2)
-    need_k = kdj_sell_params.get("k", 85)
-    need_d = kdj_sell_params.get("d", 80)
+    need_k = kdj_sell_params.get("k", 85)*config.RISK
+    need_d = kdj_sell_params.get("d", 80)*config.RISK
+    need_k = 90 if need_k>90 else need_k
+    need_d = 85 if need_d > 85 else need_d
     if (cur_k >= need_d and cur_d >= need_d) \
             or (last_k >= need_k and last_d >= need_d) \
             or (last_k_2 >= need_k and last_d_2 >= need_d):
@@ -557,18 +564,20 @@ def stop_loss(percent=0.03):
         current_price = get_current_price(symbol)
 
         loss_percent = (last_price - current_price) / last_price
-        if loss_percent >= stop_loss_params["percent"]:
+        limit_loss = stop_loss_params["percent"]*config.RISK
+        limit_loss = 0.1 if limit_loss > 0.1 else limit_loss    #再激进也不能亏10个点都不止损
+        if loss_percent >= limit_loss:
             msg = "[SELL] stop loss execute, sell {}, loss percent={}, config loss percent={}, last_buy_price={}, last_buy_amount={}, current_price={}".format(
-                    symbol, loss_percent, stop_loss_params["percent"], last_price, last_buy_amount, current_price)
+                    symbol, loss_percent, limit_loss, last_price, last_buy_amount, current_price)
             if not trade_alarm(msg):
                 return False
 
             logger.info(
                 "stop loss execute, loss percent={}, config loss percent={}, last_buy_price={}, last_buy_amount={}, current_price={}".format(
-                    loss_percent, stop_loss_params["percent"], last_price, last_buy_amount, current_price))
+                    loss_percent, limit_loss, last_price, last_buy_amount, current_price))
             log_config.output2ui(
                 "stop loss execute, loss percent={}, config loss percent={}, last_buy_price={}, last_buy_amount={}, current_price={}".format(
-                    loss_percent, stop_loss_params["percent"], last_price, last_buy_amount, current_price))
+                    loss_percent, limit_loss, last_price, last_buy_amount, current_price))
 
             ret = sell_market(symbol, last_buy_amount, current_price=current_price)
             if ret[0]:
@@ -619,14 +628,12 @@ def move_stop_profit():
         # if max_price < last_price * 1.02:
         # 上涨超过两个点
         max_upper = (max_price-last_price)/last_price
-        logger.info("move_stop_profit, profit upper={}, msf_min={}".format(max_upper, move_stop_profit_params.get("msf_min", 0.02)))
+        limit_max_upper = config.RISK*move_stop_profit_params.get("msf_min", 0.02)
+        limit_max_upper = 0.015 if limit_max_upper < 0.015 else limit_max_upper
+        logger.info("move_stop_profit, profit upper={}, msf_min={}".format(max_upper, limit_max_upper))
 
-        if trade.get("strategy_type", "") == "vol_price_fly":
-            if max_upper < 0.5 * move_stop_profit_params.get("msf_min", 0.02):
-                continue
-        else:
-            if max_upper < move_stop_profit_params.get("msf_min", 0.02):
-                continue
+        if max_upper < limit_max_upper:
+            continue
 
         # 当前回撤幅度
         down_back_percent = round((max_price - current_price) / (max_price - last_price), 3)
@@ -639,12 +646,14 @@ def move_stop_profit():
                 last_price, max_price, current_price, max_upper, down_back_percent, last_buy_amount,
                 move_stop_profit_params["msf_back"]))
 
-        # 回撤幅度超过25％（涨幅在2个点以内的）, 如果超过两个点，则要求回撤幅度需要缩小，以保证更多的盈利
-        if down_back_percent < move_stop_profit_params.get("msf_back", 0.25) * (0.02/max_upper):
+        # 回撤幅度超过25％（涨幅在2个点以内的）, 如果超过两个点，则要求回撤幅度需要缩小，以保证更多的盈利, 激进者可以承受更大的风险
+        if down_back_percent < move_stop_profit_params.get("msf_back", 0.20) * (0.02/max_upper) * config.RISK:
             continue
 
         # 盈利小于１个点不卖
-        if profit < 0.01:
+        limit_profit = 0.012*config.RISK
+        limit_profit = 0.001 if limit_profit < 0.001 else limit_profit
+        if profit < limit_profit:
             continue
 
         msg = "[SELL]Move stop profit be trigger sell {},  current price={}, last_price={}, max_price={} max_upper={}, profit={}% down_back_percent={}%".format(
@@ -702,7 +711,7 @@ def vol_price_fly():
     peroid = vol_price_fly_params.get("peroid", 1)
     market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], peroid)
     symbol = market.split(".")[1]
-    multiple = vol_price_fly_params.get("vol_percent", 1.5)
+    multiple = vol_price_fly_params.get("vol_percent", 1.2) * (1/config.RISK)
     peroid_5min = 1
     if peroid == "5min":
         peroid_5min = 1
@@ -769,17 +778,17 @@ def vol_price_fly():
     last_peroid_0 = get_trade_vol_from_local(symbol, 0, 1).get("trade_vol", 0)
     last_peroid_1 = get_trade_vol_from_local(symbol, 1, 1).get("trade_vol", 0)
     last_peroid_2 = get_trade_vol_from_local(symbol, 2, 1).get("trade_vol", 0)
-    high_than_last = vol_price_fly_params.get("high_than_last", 3)
+    high_than_last = vol_price_fly_params.get("high_than_last", 2) * (1/config.RISK)
     local_21 = get_trade_vol_from_local(symbol, 3, 7 * 1).get("trade_vol", 0)
     if not all([last_peroid_0, last_peroid_1, last_peroid_2, local_21]):
         return False
 
-    if last_peroid_0 < last_peroid_1*high_than_last and last_peroid_1<high_than_last*last_peroid_2:
-        logger.info("current vol not bigger than 3*last vol. current trade vol={}, last vol={}".format(last_peroid_0, last_peroid_1))
+    if not last_peroid_0 >= last_peroid_1*high_than_last:#or not last_peroid_1>=high_than_last*last_peroid_2
+        logger.info("current vol not bigger than {}*last vol. current trade vol={}, last vol={}".format(high_than_last, last_peroid_0, last_peroid_1))
         return False
 
     last_peroid_21 = local_21 / 7
-    if last_peroid_0 < 1.1*last_peroid_21:
+    if not last_peroid_0 >= 1.1*last_peroid_21:
         logger.info("current vol not bigger than 1.1*last vollast_peroid_21. current trade vol={}, last_peroid_21={}".format(last_peroid_0, last_peroid_21))
         return False
 
@@ -797,7 +806,8 @@ def vol_price_fly():
                                                                                         vol_price_fly_params[
                                                                                             "price_up_limit"]))
 
-    if (current_price > close_before_2 * (1 + vol_price_fly_params.get("price_up_limit", 0.02))) or (current_price < close_before_2 * (1 + 0.01)):
+    #or not last_peroid_1>=high_than_last*last_peroid_2
+    if (current_price > close_before_2 * (1 + vol_price_fly_params.get("price_up_limit", 0.02)*config.RISK)):
         logger.info("vol_price_fly current_price={} > close_before_2={} * {}".format(current_price, close_before_2,
                                                                                      1 + vol_price_fly_params.get(
                                                                                          "price_up_limit", 0.02)))
@@ -857,15 +867,17 @@ def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", cur
     if amount <= 0:
         if percent > 0:
             if balance and balance > 0:
-                amount = round(balance * percent, 2)
+                amount = round(balance * percent*config.RISK, 2)
             else:
                 return False, amount
         else:
             return False, 0
     else:
         # 余额不足
+        amount *= config.RISK   # 乘上风险系数
         if amount > balance:
             amount = balance*0.95
+
 
     # 市价amount代表买多少钱的
     if amount < config.TRADE_MIN_LIMIT_VALUE:
@@ -924,13 +936,14 @@ def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
     if amount <= 0:
         if percent > 0:
             if balance and balance > 0:
-                amount = round(balance * percent, 4)
+                amount = round(balance * percent * config.RISK, 4)
             else:
                 return False, amount
         else:
             return False, 0
     else:
         # 余币不足
+        amount *= config.RISK
         if amount > balance:
             amount = balance*0.95
 
@@ -1013,7 +1026,7 @@ def get_open(market, before=1):
         print(len(df))
         open_price = df.loc[len(df) - 1 - before, "open"]
     except Exception as e:
-        logger.exception("get_open")
+        logger.exception("get_open, e={}".format(e))
         print(len(df))
         open_price = df.loc[len(df) - 1 - before - 1, "open"]
     return open_price
@@ -1284,7 +1297,7 @@ def get_balance(currency, access_key=None, secret_key=None, retry=2, result_type
         if balance[0] == 200 and balance[1]:
             balance_data = balance[1]
             logger.info("balance = {}".format(balance_data))
-            log_config.output2ui("balance = {}".format(balance_data))
+            # log_config.output2ui("balance = {}".format(balance_data))
             if result_type == 0:
                 return balance_data.get("trade", -1)
             elif result_type == 1:

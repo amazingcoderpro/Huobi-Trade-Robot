@@ -118,7 +118,7 @@ WAIT_SELL_PRICE = [0, 0, 0]
 WAIT_SELL_ACCOUNT = [0, 0, 0]
 
 ROOT = None
-
+RISK = 1.0
 
 #是否邮件通知
 EMAIL_NOTIFY = True
@@ -128,8 +128,8 @@ ALARM_TIME = 30                 # 弹窗提醒时长, 最多不能超过120，�
 ALARM_TRADE_DEFAULT = True    # 弹窗提醒后, 人工未处理时, 默认是否交易
 
 # 邮件\微信通知对象
-EMAILS = ["2879230281@qq.com", "371606063@qq.com", "790840993@qq.com", "383362849@qq.com", "351172940@qq.com", "182089859@qq.com", "278995617@qq.com", "2931429366@qq.com"]
-WECHATS = [u"信链众创量化1.0版", "SUN"]
+EMAILS = ["wcadaydayup@163.com", "2879230281@qq.com", "371606063@qq.com", "790840993@qq.com", "383362849@qq.com", "351172940@qq.com", "182089859@qq.com", "278995617@qq.com", "2931429366@qq.com"]
+WECHATS = [u"信链众创量化1.0版", u"SUN"]
 OWNER_EMAILS = ["wcadaydayup@163.com", "1447385994@qq.com", "bbb201@126.com"]
-OWNNER_WECHATS = ["Justkidding", u"长城1211"]
+OWNNER_WECHATS = [u"Justkidding", u"长城1211"]
 

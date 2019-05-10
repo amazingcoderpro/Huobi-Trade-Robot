@@ -30,14 +30,6 @@ class PopupAccountConfig(Toplevel):
         self.rest_site = StringVar()
         self.rest_site.set(self.value_dict.get("rest_site", "PRO"))
 
-        self.txt_emails = None
-        # print(value_dict.get("emails", []))
-        self.emails = "\n".join(value_dict.get("emails", []))
-        # print(self.emails)
-
-        self.txt_wechats = None
-        self.wechats = "\n".join(value_dict.get("wechats", []))
-
         self.setup_ui()
         self.title(title)
 
@@ -75,25 +67,6 @@ class PopupAccountConfig(Toplevel):
         Label(row3, text="RestAPI: ", width=10).pack(side=LEFT)
         OptionMenu(row3, self.rest_site, *lst_site).pack(side=LEFT)
 
-        row3 = Frame(self)
-        row3.pack(fill="x")
-        Label(row3, text=u"收件箱地址(多个邮箱地址请换行输入): ", width=30).pack(side=LEFT)
-
-        row3 = Frame(self)
-        row3.pack(fill="x")
-        # Entry(row3, textvariable=self.emails, width=15).pack(side=LEFT)
-        self.txt_emails = Text(row3, height=4, width=40)
-        self.txt_emails.insert(END, self.emails)
-        self.txt_emails.pack(ipadx=2)
-
-        row3 = Frame(self)
-        row3.pack(fill="x")
-        Label(row3, text=u"微信昵称(多个微信昵称请换行输入): ", width=30).pack(side=LEFT)
-        row3 = Frame(self)
-        row3.pack(fill="x")
-        self.txt_wechats = Text(row3, height=4, width=40)
-        self.txt_wechats.insert(END, self.wechats)
-        self.txt_wechats.pack(ipadx=2)
 
         row3 = Frame(self)
         row3.pack(fill="x")
@@ -114,9 +87,6 @@ class PopupAccountConfig(Toplevel):
         self.value_dict["trade"] = trade
         self.value_dict["ws_site"] = ws_site
         self.value_dict["rest_site"] = rest_site
-
-        self.value_dict["emails"] = self.txt_emails.get(1.0, END)
-        self.value_dict["wechats"] = self.txt_wechats.get(1.0, END)
 
         self.value_dict["ok"] = True
         self.save_key()

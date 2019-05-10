@@ -34,7 +34,7 @@ class MainUI():
         self._strategy_dict = {}
         root.title("Huobi Trade")
         log_config.init_log_config(use_mail=False)
-
+        self.first_login = True
         self._hb = None
         self._strategy_pool = StrategyPool()
         # self.ckb_macd_val = IntVar()
@@ -82,13 +82,13 @@ class MainUI():
         self.bal_label = Label(root, textvariable=self.bal_text, foreground='red', background="gray",
                                font=("", 12, 'bold'), width=25)
 
-        self.label_coin = Label(root, text="当前账户总资产: ", width=15)
+        self.label_coin = Label(root, text="当前账户总资产(按币/金): ", width=20)
         self.coin_text = StringVar()
         self.coin_text.set("")
         self.coin_label = Label(root, textvariable=self.coin_text, foreground='red', background="gray",
                                 font=("", 12, 'bold'), width=30)
 
-        self.label_profit = Label(root, text="盈利情况(币/金本位): ", width=18)
+        self.label_profit = Label(root, text="盈利情况(币/金本位): ", width=20)
         self.profit_text = StringVar()
         self.profit_text.set("")
         self.profit_label = Label(root, textvariable=self.profit_text, foreground='red', background="gray",
@@ -144,9 +144,9 @@ class MainUI():
 
         self.verify_identity_button.grid(row=0, column=0)
         self.init_history_button.grid(row=1, column=0)
-        self.start_button.grid(row=2, column=0)
+        self.system_setting_button.grid(row=2, column=0)
         self.strategy_setting_button.grid(row=3, column=0)
-        self.system_setting_button.grid(row=4, column=0)
+        self.start_button.grid(row=4, column=0)
 
         self.register_button.grid(row=5, column=0)
         self.start_check_strategy_button.grid(row=6, column=0)
@@ -311,6 +311,7 @@ class MainUI():
 
     def wait_buy_sell(self, price):
         if not price or not self.working:
+            logger.info("wait_buy_sell not be trigger!")
             return False
 
         buy_prices = config.WAIT_BUY_PRICE
@@ -326,13 +327,15 @@ class MainUI():
                 if price <= buy_price:
                     ret = strategies.buy_market(symbol, amount=buy_amount, record=True, current_price=price)
                     if ret[0]:
+                        config.WAIT_BUY_ACCOUNT[i] = buy_amount - ret[1]
                         msg = "挂单买入{}成功: 挂单价格={}$, 挂单金额={}$, 实际价格={}$, 实际买入金额={}$".format(symbol, buy_price, buy_amount, price, ret[1])
                         log_config.output2ui(msg, 6)
                         logger.warning("Wait to buy succeed! wait buy price={}, amount={}, actural price={}, amount={}"
                                        .format(buy_price, buy_amount, price, ret[1]))
                         log_config.send_mail(msg, own=True)
                         log_config.send_mail(log_config.make_msg(0, symbol, price))
-                        config.WAIT_BUY_ACCOUNT[i] = buy_amount - ret[1]
+
+
 
             # 循环遍历挂单卖
             sell_price = sell_prices[i]
@@ -341,13 +344,14 @@ class MainUI():
                 if price >= sell_price:
                     ret = strategies.sell_market(symbol, amount=sell_amount, record=False, current_price=price)
                     if ret[0]:
+                        config.WAIT_SELL_ACCOUNT[i] = sell_amount - ret[1]
                         msg = "挂单卖出{}: 挂单价格={}, 挂单个数={}, 实际价格={}, 实际挂单买入个数={}".format(symbol,
                                 sell_price, sell_amount, price, ret[1])
                         log_config.output2ui(msg, 7)
                         logger.warning(msg)
                         log_config.send_mail(msg, own=True)
                         log_config.send_mail(log_config.make_msg(1, symbol, price))
-                        config.WAIT_SELL_ACCOUNT[i] = sell_amount - ret[1]
+
 
     def update_coin(self, price=None):
         """
@@ -379,6 +383,10 @@ class MainUI():
                 total_dollar_value = (coin_trade + coin_frozen) * price + dollar_trade + dollar_frozen
                 self.coin_text.set("{}/{}".format(round(total_coin_value, 4), round(total_dollar_value, 2)))
                 if not process.ORG_COIN_TOTAL:
+                    process.ORG_COIN_TRADE = coin_trade
+                    process.ORG_COIN_FROZEN = coin_frozen
+                    process.ORG_DOLLAR_TRADE = dollar_trade
+                    process.ORG_DOLLAR_FROZEN = dollar_frozen
                     process.ORG_COIN_TOTAL = total_coin_value
                     process.ORG_DOLLAR_TOTAL = total_dollar_value
                     process.ORG_PRICE = price
@@ -390,7 +398,7 @@ class MainUI():
                 self.profit_text.set("{}/{}".format(profit_coin, profit_dollar))
 
                 #更新大盘涨跌幅和当前账户的涨跌幅
-                self.now_text.set("{}/{}".format(round((price-process.ORG_PRICE)/process.ORG_PRICE, 3), round((total_dollar_value - process.ORG_DOLLAR_TOTAL) / process.ORG_DOLLAR_TOTAL, 3)))
+                self.now_text.set("{}% / {}%".format(round((price-process.ORG_PRICE)*100/process.ORG_PRICE, 2), round((total_dollar_value - process.ORG_DOLLAR_TOTAL)*100 / process.ORG_DOLLAR_TOTAL, 3)))
         except Exception as e:
             logger.exception("update_coin e={}".format(e))
 
@@ -472,13 +480,30 @@ class MainUI():
 
         def notify_profit_info():
             while 1:
+                time.sleep(60)
                 if self.working and config.WECHAT_NOTIFY:
                     global CURRENT_PRICE
                     bal0, bal0_f, bal1, bal1_f = strategies.update_balance()
                     total = (bal0+bal0_f)*CURRENT_PRICE+bal1+bal1_f
-                    wechat_helper.send_to_wechat("系统运行中, 启动时价格={}, 当前价格={}, \n实时营利情况：大盘涨跌幅={}%, 当前账户涨跌幅={}%".format(process.ORG_PRICE, CURRENT_PRICE, round((CURRENT_PRICE-process.ORG_PRICE)/process.ORG_PRICE, 2), round((total-process.ORG_DOLLAR_TOTAL)/process.ORG_DOLLAR_TOTAL, 2)), config.OWNNER_WECHATS)
-                    time.sleep(3600)
-                time.sleep(60)
+                    dapan_profit = round((CURRENT_PRICE - process.ORG_PRICE) * 100 / process.ORG_PRICE, 2)
+                    account_profit = round((total - process.ORG_DOLLAR_TOTAL) * 100 / process.ORG_DOLLAR_TOTAL, 2)
+                    is_win = u"是" if account_profit>dapan_profit else u"否"
+                    ret = wechat_helper.send_to_wechat(u"Huobi Trade系统运行中, 币种:{}"
+                                                 u"\n启动时价格:{}\n当前价格:{}"
+                                                 u"\n启动时持币量:可用{},冻结{}\n当前持币量:可用{},冻结{}"
+                                                 u"\n启动时持金量:可用{},冻结{}\n当前持金量:可用{},冻结{}"
+                                                 u"\n当前账户总资产:${}"
+                                                 u"\n大盘涨跌幅={}%"
+                                                 u"\n当前账户涨跌幅={}%"
+                                                 u"\n是否跑羸大盘:{}"
+                                                 .format(config.NEED_TOBE_SUB_SYMBOL[0].upper(), round(process.ORG_PRICE,3), round(CURRENT_PRICE,3),
+                                                         round(process.ORG_COIN_TRADE, 4), round(process.ORG_COIN_FROZEN, 4), round(bal0, 4), round(bal0_f, 4),
+                                                         round(process.ORG_DOLLAR_TRADE, 4), round(process.ORG_DOLLAR_FROZEN, 4),round(bal1, 2),round(bal1_f, 2),
+                                                         round(total,2), dapan_profit, account_profit, is_win), config.OWNNER_WECHATS)
+                    if ret:
+                        time.sleep(3600)
+                    else:
+                        time.sleep(60)
 
         th = threading.Thread(target=update_price, args=(self.price_text,))
         th.setDaemon(True)
@@ -557,29 +582,11 @@ class MainUI():
 
     def set_up_account(self):
         from popup_account import PopupAccountConfig
-        self._user_info["emails"] = config.EMAILS
-        self._user_info["wechats"] = config.WECHATS
         pop = PopupAccountConfig(self._user_info, "Verify identity")
         self.root.wait_window(pop)
         if not self._user_info.get("ok", False):
             return
 
-        emails = self._user_info.get("emails", "").strip().split("\n")
-        wechats = self._user_info.get("wechats", "").strip().split("\n")
-        config.EMAILS = []
-        for email in emails:
-            if email and len(email) > 5 and "@" in email:
-                config.EMAILS.append(email)
-
-        config.WECHATS = []
-        for wechat in wechats:
-            if wechat and len(wechat) > 2:
-                config.WECHATS.append(wechat)
-
-        if config.EMAIL_NOTIFY and config.WECHATS:
-            print("需要扫码登录微信！")
-            log_config.output2ui("需要扫码登录微信！")
-            wechat_helper.login_wechat()
 
         logger.info("{}".format(self._user_info))
         log_config.output2ui("{}".format(self._user_info))
@@ -616,12 +623,19 @@ class MainUI():
         self.root.wait_window(pop)
         print(strategies.kdj_buy_params)
 
+
     def set_up_system(self):
+        def login_wechat():
+            print("需要扫码登录微信！")
+            wechat_helper.login_wechat()
+
         from popup_system import PopupSystem
         value_dict = {"is_email": config.EMAIL_NOTIFY, "is_alarm": config.ALARM_NOTIFY, "is_alarm_trade": config.ALARM_TRADE_DEFAULT,
                       "trade_min": config.TRADE_MIN_LIMIT_VALUE, "alarm_time": config.ALARM_TIME,
                       "trade_max": config.TRADE_MAX_LIMIT_VALUE, "wait_buy_price": config.WAIT_BUY_PRICE,
-                      "wait_buy_account": config.WAIT_BUY_ACCOUNT, "wait_sell_price":config.WAIT_SELL_PRICE, "wait_sell_account":config.WAIT_SELL_ACCOUNT}
+                      "wait_buy_account": config.WAIT_BUY_ACCOUNT, "wait_sell_price":config.WAIT_SELL_PRICE, "wait_sell_account":config.WAIT_SELL_ACCOUNT,
+                      "risk": config.RISK, "emails": config.EMAILS, "wechats": config.WECHATS}
+
         pop = PopupSystem(value_dict)
         self.root.wait_window(pop)
         if pop.is_ok:
@@ -636,9 +650,32 @@ class MainUI():
             config.WAIT_BUY_ACCOUNT = value_dict["wait_buy_account"]
             config.WAIT_SELL_PRICE = value_dict["wait_sell_price"]
             config.WAIT_SELL_ACCOUNT = value_dict["wait_sell_account"]
+            config.RISK = value_dict["risk"]
+            emails = value_dict.get("emails", "").strip().split("\n")
+            wechats = value_dict.get("wechats", "").strip().split("\n")
+            log_config.output2ui("system config:\n{}！".format(value_dict))
+            is_login = value_dict.get("login_wechat", 0)
+            config.EMAILS = []
+            for email in emails:
+                if email and len(email) > 5 and "@" in email:
+                    config.EMAILS.append(email)
+
+            config.WECHATS = []
+            for wechat in wechats:
+                if wechat and len(wechat) > 2:
+                    config.WECHATS.append(wechat)
+
+            if config.EMAIL_NOTIFY and config.WECHATS and is_login:
+                log_config.output2ui("需要扫码登录微信！")
+                self.first_login = False
+                th = threading.Thread(target=login_wechat)
+                th.setDaemon(True)
+                th.start()
 
     def reset_profit(self):
         process.ORG_COIN_TOTAL = None
+        self.bal_text.set("")
+        strategies.update_balance()
         self.profit_text.set("0/0")
         self.origin_text.set("0/0/0/0")
 

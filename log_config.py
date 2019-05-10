@@ -148,7 +148,7 @@ def send_mail(text, own=False):
     if not receiver_list or not receiver_str:
         logging.getLogger().warning("send email cancelled. receive list is empty! own={}, text={}".format(own, text))
     else:
-        logging.getLogger().info("send mail  owner={}, to={}, text={}".format(own, receiver_list, text))
+        logging.getLogger().info("send mail owner={}, to={}, text={}".format(own, receiver_list, text))
         try:
             msg = MIMEText(text, 'plain', 'utf-8')      # 中文需参数‘utf-8'，单字节字符不需要
             msg['Subject'] = Header(subject, 'utf-8')

@@ -15,7 +15,7 @@ def login_wechat():
 
 
 def send_to_wechat(msg, nick_names=None):
-    rooms = itchat.get_chatrooms()
+    rooms = itchat.get_chatrooms(update=True)
 
     # 如是要room是空代表登录失效
     if not rooms:
@@ -31,14 +31,14 @@ def send_to_wechat(msg, nick_names=None):
                 if len(find_names) == len(nick_names):
                     break
         else:
-            fs = itchat.get_friends()
+            fs = itchat.get_friends(update=True)
             for f in fs:
                 if f["NickName"] in nick_names:
                     find_names.append(f["UserName"])
                     if len(find_names) == len(nick_names):
                         break
             else:
-                cts = itchat.get_contact()
+                cts = itchat.get_contact(update=True)
                 for c in cts:
                     if c["NickName"] in nick_names:
                         find_names.append(c["UserName"])
@@ -50,18 +50,24 @@ def send_to_wechat(msg, nick_names=None):
             return False
         else:
             if len(find_names) == len(nick_names):
-                logger.info(f"find all input names, find names={find_names}")
+                logger.info(f"find all input names, find names={find_names}, input names={nick_names}")
             else:
                 logger.info(f"find part input names, find names={find_names}, input names={nick_names}")
 
+        ret = True
         for name in find_names:
-            res = itchat.send(toUserName=name, msg=msg)
-            if res.get("BaseResponse", {}).get("Ret", -1) == 0:
-                logger.info(f"send to wechat success,to user={name}, res={res},  msg=\n{msg}")
-                return True
-            else:
-                logger.info(f"send to wechat failed,to user={name}, res={res},  msg=\n{msg}")
-                return False
+            try:
+                res = itchat.send(toUserName=name, msg=msg)
+                if res.get("BaseResponse", {}).get("Ret", -1) == 0:
+                    logger.info(f"send to wechat success,to user={name}, res={res},  msg=\n{msg}")
+                else:
+                    logger.info(f"send to wechat failed,to user={name}, res={res},  msg=\n{msg}")
+            except Exception as e:
+                logger.exception("send wechat exception, e={}".format(e))
+                ret = False
+                continue
+
+        return ret
 
 
 if __name__ == '__main__':

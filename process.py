@@ -29,8 +29,13 @@ KLINE_DATA = {}
 REALTIME_PRICE = queue.Queue()
 REALTIME_BALANCE = queue.Queue()
 TRADE_VOL_HISTORY = {}
-ORG_COIN_TOTAL = None
-ORG_DOLLAR_TOTAL = None
+ORG_COIN_TRADE = None
+ORG_COIN_FROZEN = None
+ORG_DOLLAR_TRADE = None
+ORG_DOLLAR_FROZEN = None
+
+ORG_COIN_TOTAL = None    # 总价值币量, 所有资产换成币
+ORG_DOLLAR_TOTAL = None  # 总价值金量, 所有资产换成usdt
 ORG_PRICE = None
 REALTIME_KDJ_5MIN = queue.Queue()
 REALTIME_KDJ_30MIN = queue.Queue()

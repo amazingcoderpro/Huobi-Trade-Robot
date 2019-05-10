@@ -3,7 +3,7 @@
 # Created by Charles on 2019/5/7
 # Function:
 
-from tkinter import Toplevel, Label, Button, Entry, StringVar, IntVar, Checkbutton, LEFT, RIGHT, Frame, messagebox, OptionMenu, DoubleVar
+from tkinter import Toplevel, Label, Button, Entry, StringVar, IntVar, Checkbutton, LEFT, RIGHT, Frame, messagebox, OptionMenu, DoubleVar,Text, END
 import log_config
 import logging
 logger = logging.getLogger(__name__)
@@ -13,8 +13,8 @@ class PopupSystem(Toplevel):
         Toplevel.__init__(self)
         self.is_ok = False
         self.value_dict = value_dict
-        is_email, is_wechat, is_alarm, trade_min, trade_max, wait_buy_price, \
-        wait_buy_account, wait_sell_price, wait_sell_amount, alarm_time, alarm_trade = value_dict.get("is_email", True), value_dict.get("is_wechat", True), value_dict.get("is_alarm", False), \
+        risk_factor, is_email, is_wechat, is_alarm, trade_min, trade_max, wait_buy_price, \
+        wait_buy_account, wait_sell_price, wait_sell_amount, alarm_time, alarm_trade = value_dict.get("risk", 1.0), value_dict.get("is_email", True), value_dict.get("is_wechat", True), value_dict.get("is_alarm", False), \
                                                    value_dict.get("trade_min", 10), value_dict.get("trade_max", 1000), value_dict.get("wait_buy_price"), \
                                                               value_dict.get("wait_buy_account"), value_dict.get("wait_sell_price"), value_dict.get("wait_sell_account"), value_dict.get("alarm_time", 30), value_dict.get("is_alarm_trade", True)
 
@@ -38,7 +38,17 @@ class PopupSystem(Toplevel):
         self.alarm_trade = StringVar()
         self.alarm_trade.set('YES' if alarm_trade else 'NO')
 
+        self.txt_emails = None
+        self.emails = "\n".join(value_dict.get("emails", []))
 
+        self.txt_wechats = None
+        self.wechats = "\n".join(value_dict.get("wechats", []))
+
+        self.ckb_save_val = IntVar()
+        self.ckb_save = None
+
+        self.risk_factor = DoubleVar()
+        self.risk_factor.set(risk_factor)
 
         self.wait_buy_price1 = DoubleVar()
         self.wait_buy_price1.set(wait_buy_price[0])
@@ -69,6 +79,14 @@ class PopupSystem(Toplevel):
         self.wait_sell_price3.set(wait_sell_price[2])
         self.wait_sell_account3 = DoubleVar()
         self.wait_sell_account3.set(wait_sell_amount[2])
+
+        self.txt_emails = None
+        # print(value_dict.get("emails", []))
+        self.emails = "\n".join(value_dict.get("emails", []))
+        # print(self.emails)
+
+        self.txt_wechats = None
+        self.wechats = "\n".join(value_dict.get("wechats", []))
 
         self.setup_ui()
         self.title(title)
@@ -102,6 +120,32 @@ class PopupSystem(Toplevel):
 
         Label(row3, text=u"单次最大交易额(美金)<: ", width=18).pack(side=LEFT)
         Entry(row3, textvariable=self.trade_max, width=15).pack(side=LEFT)
+
+        row3 = Frame(self)
+        row3.pack(fill="x")
+        Label(row3, text=u"风险系数(取值范围0.5-2.0, 越小越稳健, 越大越激进): ", width=40).pack(side=LEFT)
+        Entry(row3, textvariable=self.risk_factor, width=5).pack(side=LEFT)
+
+        row3 = Frame(self)
+        row3.pack(fill="x")
+        Label(row3, text=u"收件箱地址(多个邮箱地址请换行输入): ", width=30).pack(side=LEFT)
+        row3 = Frame(self)
+        row3.pack(fill="x")
+        # Entry(row3, textvariable=self.emails, width=15).pack(side=LEFT)
+        self.txt_emails = Text(row3, height=4, width=40)
+        self.txt_emails.insert(END, self.emails)
+        self.txt_emails.pack(ipadx=2)
+
+        row3 = Frame(self)
+        row3.pack(fill="x")
+        Label(row3, text=u"微信昵称(多个微信昵称请换行输入): ", width=30).pack(side=LEFT)
+        self.ckb_save = Checkbutton(row3, text='立即登录', variable=self.ckb_save_val, onvalue=1, offvalue=0).pack()
+
+        row3 = Frame(self)
+        row3.pack(fill="x")
+        self.txt_wechats = Text(row3, height=4, width=40)
+        self.txt_wechats.insert(END, self.wechats)
+        self.txt_wechats.pack(ipadx=2)
 
         row4 = Frame(self)
         row4.pack(fill="x")
@@ -189,6 +233,11 @@ class PopupSystem(Toplevel):
             wait_sell_account2 = float(self.wait_sell_account2.get())
             wait_sell_price3 = float(self.wait_sell_price3.get())
             wait_sell_account3 = float(self.wait_sell_account3.get())
+            is_login = self.ckb_save_val.get()
+
+            risk = float(self.risk_factor.get())
+            if risk < 0.1 or risk > 10:
+                risk = 1.0
 
         except Exception as e:
             messagebox.showwarning("Warning", "All parameters must be numeric and cannot be null!")  # 提出警告对话窗
@@ -206,6 +255,11 @@ class PopupSystem(Toplevel):
         self.value_dict["wait_buy_account"] = [wait_buy_account1, wait_buy_account2, wait_buy_account3]
         self.value_dict["wait_sell_price"] = [wait_sell_price1, wait_sell_price2, wait_sell_price3]
         self.value_dict["wait_sell_account"] = [wait_sell_account1, wait_sell_account2, wait_sell_account3]
+
+        self.value_dict["risk"] = risk
+        self.value_dict["emails"] = self.txt_emails.get(1.0, END)
+        self.value_dict["wechats"] = self.txt_wechats.get(1.0, END)
+        self.value_dict["login_wechat"] = is_login
 
         self.is_ok = True
         # messagebox.showinfo("Info", "System settings change have taken effect！")

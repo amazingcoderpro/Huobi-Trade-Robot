@@ -105,9 +105,9 @@ class Strategy:
             log_config.output2ui("check strategy:{} catch exception: {}".format(self._name, e), 4)
         else:
             if ret:
-                logger.warning("strategy be triggered, name={}".format(self._name))
                 if self._name != "kdj_15min_update":
-                    log_config.output2ui("strategy be triggered, name={}".format(self._name), 2)
+                    log_config.output2ui("----strategy be triggered, name={}".format(self._name), 2)
+                    logger.warning("----strategy be triggered, name={}".format(self._name))
 
                 self._last_execute_time = int(time.time())  #策略被执行了
                 if self._is_after_execute_pause:
@@ -121,7 +121,6 @@ class Strategy:
     def should_be_check(self):
         # logger.debug("should_be_check...")
         if self._state != 1:
-            # logger.debug("should_be_check return false, state={}".format(self._state))
             return False
 
         if self._execute_times == 0:
