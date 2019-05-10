@@ -490,7 +490,7 @@ class MainUI():
                     dapan_profit = round((CURRENT_PRICE - process.ORG_PRICE) * 100 / process.ORG_PRICE, 2)
                     account_profit = round((total - process.ORG_DOLLAR_TOTAL) * 100 / process.ORG_DOLLAR_TOTAL, 2)
                     is_win = u"是" if account_profit>=dapan_profit else u"否"
-                    ret = wechat_helper.send_to_wechat(u"Huobi Trade系统运行中, 币种:{}"
+                    ret = wechat_helper.send_to_wechat(u"Huobi Trade系统运行中, 币种:{}, 用户风险系数:{}"
                                                        u"\n启动时间:{}\n当前时间:{}"
                                                  u"\n启动时价格:{}\n当前价格:{}"
                                                  u"\n启动时持币量:可用{},冻结{}\n当前持币量:可用{},冻结{}"
@@ -499,7 +499,7 @@ class MainUI():
                                                  u"\n大盘涨跌幅={}%"
                                                  u"\n当前账户涨跌幅={}%"
                                                  u"\n是否跑羸大盘:{}"
-                                                 .format(config.NEED_TOBE_SUB_SYMBOL[0].upper(), process.START_TIME.strftime("%Y%m/%d/, %H:%M:%S"), datetime.datetime.now().strftime("%Y%m/%d/, %H:%M:%S"), round(process.ORG_PRICE,3), round(CURRENT_PRICE,3),
+                                                 .format(config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK, process.START_TIME.strftime("%Y%m/%d/, %H:%M:%S"), datetime.datetime.now().strftime("%Y%m/%d/, %H:%M:%S"), round(process.ORG_PRICE,3), round(CURRENT_PRICE,3),
                                                          round(process.ORG_COIN_TRADE, 4), round(process.ORG_COIN_FROZEN, 4), round(bal0, 4), round(bal0_f, 4),
                                                          round(process.ORG_DOLLAR_TRADE, 4), round(process.ORG_DOLLAR_FROZEN, 4),round(bal1, 2),round(bal1_f, 2),
                                                          round(total,2), dapan_profit, account_profit, is_win), config.OWNNER_WECHATS)
