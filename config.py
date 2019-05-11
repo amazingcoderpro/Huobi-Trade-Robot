@@ -129,7 +129,7 @@ ALARM_TRADE_DEFAULT = True    # 弹窗提醒后, 人工未处理时, 默认是�
 
 # 邮件\微信通知对象
 EMAILS = ["wcadaydayup@163.com", "2879230281@qq.com", "371606063@qq.com", "790840993@qq.com", "383362849@qq.com", "351172940@qq.com", "182089859@qq.com", "278995617@qq.com", "2931429366@qq.com"]
-WECHATS = [u"信链众创量化1.0版", u"SUN"]
+WECHATS = [u"信链众创量化1.0版"]
 OWNER_EMAILS = ["wcadaydayup@163.com", "1447385994@qq.com", "bbb201@126.com"]
 OWNNER_WECHATS = [u"Justkidding", u"长城1211"]
 

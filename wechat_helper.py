@@ -15,6 +15,7 @@ def login_wechat():
 
 
 def send_to_wechat(msg, nick_names=None):
+    msg = str(msg)
     try:
         rooms = itchat.get_chatrooms(update=True)
     except:

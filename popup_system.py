@@ -44,8 +44,8 @@ class PopupSystem(Toplevel):
         self.txt_wechats = None
         self.wechats = "\n".join(value_dict.get("wechats", []))
 
-        self.ckb_save_val = IntVar()
-        self.ckb_save = None
+        self.ckb_login_wechat_now = IntVar()
+        self.ckb_lwn = None
 
         self.risk_factor = DoubleVar()
         self.risk_factor.set(risk_factor)
@@ -139,7 +139,7 @@ class PopupSystem(Toplevel):
         row3 = Frame(self)
         row3.pack(fill="x")
         Label(row3, text=u"微信昵称(多个微信昵称请换行输入): ", width=30).pack(side=LEFT)
-        self.ckb_save = Checkbutton(row3, text='立即登录', variable=self.ckb_save_val, onvalue=1, offvalue=0).pack()
+        self.ckb_lwn = Checkbutton(row3, text='立即登录', variable=self.ckb_login_wechat_now, onvalue=1, offvalue=0).pack()
 
         row3 = Frame(self)
         row3.pack(fill="x")
@@ -233,7 +233,7 @@ class PopupSystem(Toplevel):
             wait_sell_account2 = float(self.wait_sell_account2.get())
             wait_sell_price3 = float(self.wait_sell_price3.get())
             wait_sell_account3 = float(self.wait_sell_account3.get())
-            is_login = self.ckb_save_val.get()
+            login_wechat_now = self.ckb_login_wechat_now.get()
 
             risk = float(self.risk_factor.get())
             if risk < 0.1 or risk > 10:
@@ -259,7 +259,7 @@ class PopupSystem(Toplevel):
         self.value_dict["risk"] = risk
         self.value_dict["emails"] = self.txt_emails.get(1.0, END)
         self.value_dict["wechats"] = self.txt_wechats.get(1.0, END)
-        self.value_dict["login_wechat"] = is_login
+        self.value_dict["login_wechat_now"] = login_wechat_now
 
         self.is_ok = True
         # messagebox.showinfo("Info", "System settings change have taken effect！")

@@ -333,8 +333,8 @@ class MainUI():
                         log_config.output2ui(msg, 6)
                         logger.warning("Wait to buy succeed! wait buy price={}, amount={}, actural price={}, amount={}"
                                        .format(buy_price, buy_amount, price, ret[1]))
-                        log_config.send_mail(msg, own=True)
-                        log_config.send_mail(log_config.make_msg(0, symbol, price))
+                        log_config.notify_user(msg, own=True)
+                        log_config.notify_user(log_config.make_msg(0, symbol, price))
 
 
 
@@ -350,8 +350,8 @@ class MainUI():
                                 sell_price, sell_amount, price, ret[1])
                         log_config.output2ui(msg, 7)
                         logger.warning(msg)
-                        log_config.send_mail(msg, own=True)
-                        log_config.send_mail(log_config.make_msg(1, symbol, price))
+                        log_config.notify_user(msg, own=True)
+                        log_config.notify_user(log_config.make_msg(1, symbol, price))
 
 
     def update_coin(self, price=None):
@@ -486,7 +486,7 @@ class MainUI():
                 time.sleep(60)
                 if self.working and config.WECHAT_NOTIFY:
                     logger.info("notify_profit_info to users......")
-                    log_config.output2ui("notify_profit_info to users......")
+                    log_config.output2ui("notify_profit_info to users......", 8)
                     global CURRENT_PRICE
                     bal0, bal0_f, bal1, bal1_f = strategies.update_balance()
                     total = (bal0+bal0_f)*CURRENT_PRICE+bal1+bal1_f
@@ -496,38 +496,37 @@ class MainUI():
                     is_win = u"是" if account_profit>=dapan_profit else u"否"
                     msg_own = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n启动时价格:{}" \
                               u"\n当前价格:{}" \
-                              u"\n启动时持币量:可用{},冻结{},仓位:{}%" \
-                              u"\n当前持币量:可用{},冻结{},仓位:{}%" \
+                              u"\n启动时持币量:可用{},冻结{},仓位{}%" \
+                              u"\n当前持币量:可用{},冻结{},仓位{}%" \
                               u"\n启动时持金量:可用{},冻结{}" \
                               u"\n当前持金量:可用{},冻结{}" \
                               u"\n当前账户总价值:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n是否跑羸大盘:{}".format(
                         config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
                         process.START_TIME.strftime("%Y/%m/%d, %H:%M:%S"),
-                        datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S"), round(process.ORG_PRICE, 3),
-                        round(CURRENT_PRICE, 3),
+                        datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S"), round(process.ORG_PRICE, 2),
+                        round(CURRENT_PRICE, 2),
                         round(process.ORG_COIN_TRADE, 4), round(process.ORG_COIN_FROZEN, 4),
                         round(process.ORG_CHICANG * 100, 2), round(bal0, 4), round(bal0_f, 4), round(chicang * 100, 2),
                         round(process.ORG_DOLLAR_TRADE, 2), round(process.ORG_DOLLAR_FROZEN, 2), round(bal1, 2), round(bal1_f, 2),
                         round(total, 2), dapan_profit, account_profit, is_win)
 
-                    msg_other = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n启动时价格:{}\n当前价格:{}\n启动时持币量:可用{},冻结{},仓位:{}%\n当前持币量:可用{},冻结{},仓位:{}%\n启动时持金量:可用{},冻结{}\n当前持金量:可用{},冻结{}\n当前账户总资产:${}\n当前仓位:{}%\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n是否跑羸大盘:{}".format(config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
+                    msg_other = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n启动时价格:{}\n当前价格:{}\n启动时持币量:可用{},冻结{},仓位{}%\n当前持币量:可用{},冻结{},仓位{}%\n启动时持金量:可用{},冻结{}\n当前持金量:可用{},冻结{}\n当前账户总资产:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n是否跑羸大盘:{}"\
+                        .format(config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
                             process.START_TIME.strftime("%Y/%m/%d, %H:%M:%S"),
                             datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S"),
-                            round(process.ORG_PRICE, 3), round(CURRENT_PRICE, 3),
+                            round(process.ORG_PRICE, 2), round(CURRENT_PRICE, 2),
                             "***", "***", round(process.ORG_CHICANG * 100, 2), "***", "***", round(chicang * 100, 2),
                             "***", "***", "***", "***",
                             "***",
                             dapan_profit,
                             account_profit,
                             is_win)
-                    ret = log_config.send_mail(msg_own, own=True)
-                    ret = log_config.send_mail(msg_other)
-
-                    if ret:
-                        time.sleep(3600)
+                    ret1 = log_config.notify_user(msg_own, own=True)
+                    ret2 = log_config.notify_user(msg_other)
+                    if not all([ret1, ret2]):
+                        time.sleep(60)
                     else:
-                        time.sleep(180)
-
+                        time.sleep(3600)
 
         th = threading.Thread(target=update_price, args=(self.price_text,))
         th.setDaemon(True)
@@ -611,7 +610,6 @@ class MainUI():
         if not self._user_info.get("ok", False):
             return
 
-
         logger.info("{}".format(self._user_info))
         log_config.output2ui("{}".format(self._user_info))
         self.price_text.set("")
@@ -678,7 +676,7 @@ class MainUI():
             emails = value_dict.get("emails", "").strip().split("\n")
             wechats = value_dict.get("wechats", "").strip().split("\n")
             log_config.output2ui("system config:\n{}！".format(value_dict))
-            is_login = value_dict.get("login_wechat", 0)
+            is_login = value_dict.get("login_wechat_now", 0)
             config.EMAILS = []
             for email in emails:
                 if email and len(email) > 5 and "@" in email:

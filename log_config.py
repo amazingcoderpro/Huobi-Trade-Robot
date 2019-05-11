@@ -135,18 +135,25 @@ def add_handler(handler):
     logging.getLogger().addHandler(handler)
 
 
-def send_mail(text, own=False):
-    def async_send_mail(text, owe=False):
+def notify_user(msg, own=False):
+    def send_wechat(msg, own=False):
         # 发送微信
         ret = True
         logging.getLogger().info("start to send wechat. own={}".format(own))
-        if own:
-            ret = wechat_helper.send_to_wechat(text, config.OWNNER_WECHATS)
-        else:
-            if config.WECHAT_NOTIFY:
-                ret = wechat_helper.send_to_wechat(text, config.WECHATS)
+        try:
+            if own:
+                ret = wechat_helper.send_to_wechat(msg, config.OWNNER_WECHATS)
+            else:
+                if config.WECHAT_NOTIFY:
+                    ret = wechat_helper.send_to_wechat(msg, config.WECHATS)
+        except Exception as e:
+            logging.getLogger().exception("send_wechat e={}".format(e))
+            ret = False
+
         return ret
 
+    def send_mail(msg, own=False):
+        ret = True
         # 发送邮件
         receiver_list = []
         receiver_str = ""
@@ -159,25 +166,30 @@ def send_mail(text, own=False):
                 receiver_str = ", ".join(receiver_list)
 
         if not receiver_list or not receiver_str:
-            logging.getLogger().warning("send email cancelled. receive list is empty! own={}, text={}".format(own, text))
+            logging.getLogger().warning("send email cancelled. receive list is empty! own={}, text={}".format(own, msg))
         else:
-            logging.getLogger().info("send mail owner={}, to={}, text={}".format(own, receiver_list, text))
+            logging.getLogger().info("send mail owner={}, to={}, text={}".format(own, receiver_list, msg))
             try:
-                msg = MIMEText(text, 'plain', 'utf-8')      # 中文需参数‘utf-8'，单字节字符不需要
-                msg['Subject'] = Header(subject, 'utf-8')
-                msg['From'] = '{}<{}>'.format(from_name, sender)
-                msg['To'] = receiver_str
+                email = MIMEText(msg, 'plain', 'utf-8')      # 中文需参数‘utf-8'，单字节字符不需要
+                email['Subject'] = Header(subject, 'utf-8')
+                email['From'] = '{}<{}>'.format(from_name, sender)
+                email['To'] = receiver_str
 
                 smtp = smtplib.SMTP_SSL(smtpserver)
                 smtp.login(sender, sender_password)
-                smtp.sendmail(sender, receiver_list, msg.as_string())
+                smtp.sendmail(sender, receiver_list, email.as_string())
                 smtp.close()
             except Exception as e:
                 logging.getLogger().exception("send mail failed. e = {}".format(e))
+                ret = False
 
-    th = threading.Thread(target=async_send_mail, args=(text, own))
+        return ret
+
+    th = threading.Thread(target=send_wechat, args=(msg, own))
     th.setDaemon(True)
     th.start()
+
+    return send_mail(msg, own)
 
 
 def make_msg(flag, symbol, current_price, percent=0, amount=0, last_price=0, params="***"):
@@ -217,7 +229,7 @@ def make_msg(flag, symbol, current_price, percent=0, amount=0, last_price=0, par
 
 
 if __name__ == "__main__":
-    # send_mail("123", own=True)
+    # notify_user("123", own=True)
     msg = make_msg(1, "eosusdt", 0.4, 4.63, 50)
     wechat_helper.send_to_wechat(msg, ["Justkidding"])
     # wechat.send_to_wechat(msg)

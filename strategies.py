@@ -293,10 +293,10 @@ def boll_strategy():
 
             logger.info(msg)
             log_config.output2ui(msg, 7)
-            log_config.send_mail(msg, own=True)
-            log_config.send_mail(log_config.make_msg(0, symbol,current_price=price, percent=buy_percent))
+            log_config.notify_user(msg, own=True)
+            log_config.notify_user(log_config.make_msg(0, symbol, current_price=price, percent=buy_percent))
 
-            # log_config.send_mail(
+            # log_config.notify_user(
             #     "[BUY SUCCESS]buy {} percent: {}, current price: {}".format(symbol, buy_percent, price))
 
             G_BOLL_BUY += 1
@@ -318,9 +318,9 @@ def boll_strategy():
 
             logger.info(msg)
             log_config.output2ui(msg, 7)
-            log_config.send_mail(msg, own=True)
-            log_config.send_mail(log_config.make_msg(1, symbol, current_price=price, percent=sell_percent))
-            # log_config.send_mail("[SELL SUCCESS]sell {} percent: {}, current price: {}".format(symbol, sell_percent, price))
+            log_config.notify_user(msg, own=True)
+            log_config.notify_user(log_config.make_msg(1, symbol, current_price=price, percent=sell_percent))
+            # log_config.notify_user("[SELL SUCCESS]sell {} percent: {}, current price: {}".format(symbol, sell_percent, price))
             G_BOLL_BUY -= 1
             return True
 
@@ -419,8 +419,8 @@ def kdj_strategy_buy(currency=[], max_trade=1):
                 round(cur_k, 2), round(cur_d, 2), round(actual_up_percent * 100, 2))
             logger.info(msg_show)
             log_config.output2ui(msg_show, 6)
-            log_config.send_mail(msg_show, own=True)
-            log_config.send_mail(log_config.make_msg(0, symbol, current_price=current_price, percent=percent))
+            log_config.notify_user(msg_show, own=True)
+            log_config.notify_user(log_config.make_msg(0, symbol, current_price=current_price, percent=percent))
         logger.info("-----BUY_RECORD = {}".format(BUY_RECORD))
         return True
     return False
@@ -492,9 +492,9 @@ def kdj_strategy_sell(currency=[], max_trade=1):
 
             logger.info(msg_show)
             log_config.output2ui(msg_show, 7)
-            log_config.send_mail(msg_show, own=True)
-            log_config.send_mail(log_config.make_msg(1, symbol, current_price=current_price, percent=percent))
-            # log_config.send_mail("[SELL SUCCESS]sell {} percent: {}, current price: {}".format(symbol, percent, current_price))
+            log_config.notify_user(msg_show, own=True)
+            log_config.notify_user(log_config.make_msg(1, symbol, current_price=current_price, percent=percent))
+            # log_config.notify_user("[SELL SUCCESS]sell {} percent: {}, current price: {}".format(symbol, percent, current_price))
         return True
 
     return False
@@ -597,8 +597,8 @@ def stop_loss(percent=0.03):
                         round(current_price,3), round(loss_percent*100, 2))
 
                 log_config.output2ui(msg_show, 7)
-                log_config.send_mail(msg_show, own=True)
-                log_config.send_mail(log_config.make_msg(1, symbol, current_price=current_price))
+                log_config.notify_user(msg_show, own=True)
+                log_config.notify_user(log_config.make_msg(1, symbol, current_price=current_price))
     return trigger
 
 
@@ -700,8 +700,8 @@ def move_stop_profit():
                                                                                                                                current_price - last_price),
                                                                                                                    3))
             log_config.output2ui(msg_show, 7)
-            log_config.send_mail(msg_show, own=True)
-            log_config.send_mail(log_config.make_msg(1, symbol, current_price=current_price, last_price=last_price))
+            log_config.notify_user(msg_show, own=True)
+            log_config.notify_user(log_config.make_msg(1, symbol, current_price=current_price, last_price=last_price))
             BUY_RECORD.remove(trade)
 
     return trigger
@@ -783,19 +783,21 @@ def vol_price_fly():
     last_peroid_1 = get_trade_vol_from_local(symbol, 1, 1).get("trade_vol", 0)
     last_peroid_2 = get_trade_vol_from_local(symbol, 2, 1).get("trade_vol", 0)
     high_than_last = vol_price_fly_params.get("high_than_last", 2) * (1/config.RISK)
-    local_21 = get_trade_vol_from_local(symbol, 3, 7 * 1).get("trade_vol", 0)
+    local_21 = get_trade_vol_from_local(symbol, 3, 7 * 3).get("trade_vol", 0)
     if not all([last_peroid_0, last_peroid_1, last_peroid_2, local_21]):
         return False
 
-    if not last_peroid_0 >= last_peroid_1*high_than_last:#or not last_peroid_1>=high_than_last*last_peroid_2
+    if not last_peroid_0 >= last_peroid_1*high_than_last or not last_peroid_1>=high_than_last*last_peroid_2:
         logger.info("current vol not bigger than {}*last vol. current trade vol={}, last vol={}".format(high_than_last, last_peroid_0, last_peroid_1))
         return False
 
-    last_peroid_21 = local_21 / 7
+
+    last_peroid_21 = local_21 / (7*3)
     if not last_peroid_0 >= 1.1*last_peroid_21:
         logger.info("current vol not bigger than 1.1*last vollast_peroid_21. current trade vol={}, last_peroid_21={}".format(last_peroid_0, last_peroid_21))
         return False
 
+    logger.info("vol_price_fly last_peroid_0={}, last_peroid_1={}, last_peroid_2={}, last_peroid_21={}, high_than_last={}".format(last_peroid_0, last_peroid_1, last_peroid_2, last_peroid_21, high_than_last))
 
     # 当前价格不能超过前面第三个周期的收盘价*（1+规定涨幅）
     current_price = get_current_price(symbol)
@@ -810,7 +812,6 @@ def vol_price_fly():
                                                                                         vol_price_fly_params[
                                                                                             "price_up_limit"]))
 
-    #or not last_peroid_1>=high_than_last*last_peroid_2
     if (current_price > close_before_2 * (1 + vol_price_fly_params.get("price_up_limit", 0.02)*config.RISK)):
         logger.info("vol_price_fly current_price={} > close_before_2={} * {}".format(current_price, close_before_2,
                                                                                      1 + vol_price_fly_params.get(
@@ -821,10 +822,13 @@ def vol_price_fly():
                                                                                  "price_up_limit", 0.02)))
         return False
 
-    # if close_before1 < close_before_2:
-    #     logger.info("close_before1={} < close_before_2={} ".format(close_before1, close_before_2))
-    #     log_config.output2ui("close_before1={} < close_before_2={} ".format(close_before1, close_before_2))
-    #     return False
+    if current_price < close_before_2:
+        logger.info("current_price={} < close_before_2={} ".format(current_price, close_before_2))
+        log_config.output2ui("current_price={} < close_before_2={} ".format(current_price, close_before_2))
+        return False
+
+    if current_price < get_open(market, before=1):
+        return False
 
     percent = vol_price_fly_params["buy_percent"]
     percent *= config.RISK
@@ -837,8 +841,8 @@ def vol_price_fly():
         logger.info("[BUY SUCCESS]vol_price_fly buy {} percent={}, amount={}, current price={}".format(symbol, percent, ret[1], current_price))
         msg_show = "[买入{}]量价齐升 买入比例={}%, 买入金额={}$, 当前价格={}".format(symbol, round(percent*100, 2), round(ret[1],2), round(current_price, 3))
         log_config.output2ui(msg_show, 6)
-        log_config.send_mail(msg_show, own=True)
-        log_config.send_mail(log_config.make_msg(0, symbol, current_price=current_price, percent=percent))
+        log_config.notify_user(msg_show, own=True)
+        log_config.notify_user(log_config.make_msg(0, symbol, current_price=current_price, percent=percent))
 
     return ret
 
@@ -1340,7 +1344,7 @@ def buy_low():
         buy_percent += 0.2
 
     if current_price*1.01 < min_price_60:
-        buy_percent += 0.3
+        buy_percent += 0.2
 
     if buy_percent > 0:
         buy_percent *= config.RISK
@@ -1358,9 +1362,9 @@ def buy_low():
 
             logger.info(msg)
             log_config.output2ui(msg, 6)
-            log_config.send_mail(msg, own=True)
-            log_config.send_mail(log_config.make_msg(0, symbol, current_price=current_price, percent=buy_percent))
-            # log_config.send_mail(
+            log_config.notify_user(msg, own=True)
+            log_config.notify_user(log_config.make_msg(0, symbol, current_price=current_price, percent=buy_percent))
+            # log_config.notify_user(
             #     "[BUY SUCCESS]buy {} percent: {}, current price: {}".format(symbol, buy_percent, current_price))
         logger.info("-----BUY_RECORD = {}".format(BUY_RECORD))
         return True
@@ -1392,7 +1396,7 @@ def sell_high():
         sell_percent += 0.2
 
     if current_price >= max_price_60 * 1.01:
-        sell_percent += 0.3
+        sell_percent += 0.2
 
     if sell_percent > 0:
         sell_percent *= config.RISK
@@ -1413,8 +1417,8 @@ def sell_high():
 
             logger.info(msg)
             log_config.output2ui(msg, 7)
-            log_config.send_mail(msg, owe=True)
-            log_config.send_mail(log_config.make_msg(1, symbol, current_price=current_price, percent=sell_percent))
+            log_config.notify_user(msg, owe=True)
+            log_config.notify_user(log_config.make_msg(1, symbol, current_price=current_price, percent=sell_percent))
         logger.info("-----SELL_RECORD = {}".format(SELL_RECORD))
         return True
     else:
