@@ -335,7 +335,7 @@ class MainUI():
                             config.WAIT_BUY_ACCOUNT[i] = buy_amount - ret[1]
                             success = True
                         elif ret[0] == 2:
-                            msg += "-交易被取消, 此次交易额未达到设置的最低交易额限制()$!".format(config.TRADE_MIN_LIMIT_VALUE)
+                            msg += "-交易被取消, 取消原因: {}!".format(ret[2])
                         elif ret[0] == 3:
                             msg += "-交易失败, 失败原因:{}！".format(ret[2])
                         log_config.output2ui(msg, 6)
@@ -361,7 +361,7 @@ class MainUI():
                             config.WAIT_SELL_ACCOUNT[i] = sell_amount - ret[1]
                             success = True
                         elif ret[0] == 2:
-                            msg += "-交易被取消, 此次交易额未达到设置的最低交易额限制()$!".format(config.TRADE_MIN_LIMIT_VALUE)
+                            "-交易被取消, 取消原因: {}!".format(ret[2])
                         elif ret[0] == 3:
                             msg += "-交易失败, 失败原因:{}！".format(ret[2])
                         log_config.output2ui(msg, 7)

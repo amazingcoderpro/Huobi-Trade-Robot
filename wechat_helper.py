@@ -67,11 +67,11 @@ def send_to_wechat(msg, nick_names=None):
         try:
             res = itchat.send(msg=msg, toUserName=name)
             if res.get("BaseResponse", {}).get("Ret", -1) == 0:
-                logger.info(f"send to wechat success,to user={name}, res={res},  msg=\n{msg}")
+                logger.info(f"send to wechat success,to user={name}, res={res}")
             else:
                 logger.info(f"send to wechat failed,to user={name}, res={res},  msg=\n{msg}")
         except Exception as e:
-            logger.exception("send wechat exception, e={}".format(e))
+            logger.exception("send wechat exception, e={}, msg=\n{}".format(e, msg))
             ret = False
             continue
 

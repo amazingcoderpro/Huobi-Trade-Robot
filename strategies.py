@@ -297,7 +297,7 @@ def boll_strategy():
                 success = True
                 G_BOLL_BUY += 1
             elif ret[0] == 2:
-                msg += "-交易被取消, 此次交易额未达到设置的最低交易额限制({}$)!".format(config.TRADE_MIN_LIMIT_VALUE)
+                msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
                 msg += "-交易失败, 失败原因:{}！".format(ret[2])
 
@@ -328,7 +328,7 @@ def boll_strategy():
                 G_BOLL_BUY -= 1
                 success = True
             elif ret[0] == 2:
-                msg += "-交易被取消, 此次交易额未达到设置的最低交易额限制({}$)!".format(config.TRADE_MIN_LIMIT_VALUE)
+                msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
                 msg += "-交易失败, 失败原因:{}！".format(ret[2])
 
@@ -356,9 +356,22 @@ def kdj_strategy_buy(currency=[], max_trade=1):
     logger.info("current k={}, d={}, current_price={}".format(cur_k, cur_d, current_price))
     log_config.output2ui("current k={}, d={}, current_price={}".format(cur_k, cur_d, current_price))
 
+    #是否需要降低门槛
+    should_loose = False
+
     # kd不能大于40
-    if cur_k >25*config.RISK or cur_d>25*config.RISK:
-        logger.info("cur_k or cur_d > {}".format(25*config.RISK))
+    limit_kd = 40*config.RISK
+    #　如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
+    if config.LIMIT_MIN_POSITION > 0.001:
+        bal0, bal0_f, bal1, bal1_f = update_balance()
+        total = (bal0 + bal0_f) * current_price + bal1 + bal1_f
+        current_chicang = ((bal0 + bal0_f) * current_price) / total  # 当前持仓比
+        if current_chicang < config.LIMIT_MIN_POSITION:
+            should_loose = True
+            limit_kd *= 1.1
+
+    if cur_k > limit_kd or cur_d > limit_kd:
+        logger.info("cur_k or cur_d > {}".format(limit_kd))
         return False
 
     #回暖幅度超过0.008
@@ -369,6 +382,10 @@ def kdj_strategy_buy(currency=[], max_trade=1):
 
     up_percent = kdj_buy_params.get("up_percent", 0.008)
     up_percent *= (1/config.RISK)
+    # 　如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
+    if should_loose:
+        up_percent *= 0.9
+
     actual_up_percent = round((current_price - min_price) / min_price, 4)
     logger.info("kdj buy min_price={}, current_price={},  need up_percent={} actual up_percent = {}".format(min_price,
                                                                                                             current_price,
@@ -384,8 +401,13 @@ def kdj_strategy_buy(currency=[], max_trade=1):
     last_k_2, last_d_2, last_j_2 = get_kdj(market, 2)
     need_k = kdj_buy_params.get("k", 20)*config.RISK
     need_d = kdj_buy_params.get("d", 22)*config.RISK
-    need_k = 15 if need_k<15 else need_k
-    need_d = 18 if need_d<18 else need_d
+    need_k = 15 if need_k < 15 else need_k
+    need_d = 18 if need_d < 18 else need_d
+    # 　如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
+    if should_loose:
+        need_k *= 1.2
+        need_d *= 1.2
+
     if (cur_k <= need_k and cur_d <= need_d) \
             or (last_k <= need_k and last_d <= need_d) \
             or (last_k_2 <= need_k and last_d_2 <= need_d):
@@ -437,7 +459,7 @@ def kdj_strategy_buy(currency=[], max_trade=1):
                 msg += "-交易成功！"
                 success = True
             elif ret[0] == 2:
-                msg += "-交易被取消, 此次交易额未达到设置的最低交易额限制({}$)!".format(config.TRADE_MIN_LIMIT_VALUE)
+                msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
                 msg += "-交易失败, 失败原因:{}！".format(ret[2])
 
@@ -519,7 +541,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
                 msg += "-交易成功！"
                 success = True
             elif ret[0] == 2:
-                msg += "-交易被取消, 此次交易额未达到设置的最低交易额限制({}$)!".format(config.TRADE_MIN_LIMIT_VALUE)
+                msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
                 msg += "-交易失败, 失败原因:{}！".format(ret[2])
 
@@ -633,7 +655,7 @@ def stop_loss(percent=0.03):
                     msg += "-交易成功！"
                     success = True
                 elif ret[0] == 2:
-                    msg += "-交易被取消, 此次交易额未达到设置的最低交易额限制({}$)!".format(config.TRADE_MIN_LIMIT_VALUE)
+                    msg += "-交易被取消, 取消原因: {}!".format(ret[2])
                 elif ret[0] == 3:
                     msg += "-交易失败, 失败原因:{}！".format(ret[2])
 
@@ -753,7 +775,7 @@ def move_stop_profit():
                 success = True
                 BUY_RECORD.remove(trade)
             elif ret[0] == 2:
-                msg += "-交易被取消, 此次交易额未达到设置的最低交易额限制({}$)!".format(config.TRADE_MIN_LIMIT_VALUE)
+                msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
                 msg += "-交易失败, 失败原因:{}！".format(ret[2])
 
@@ -775,6 +797,18 @@ def vol_price_fly():
     market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], peroid)
     symbol = market.split(".")[1]
     multiple = vol_price_fly_params.get("vol_percent", 1.2) * (1/config.RISK)
+    mul_21 = 1.1
+    #　如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
+    if config.LIMIT_MIN_POSITION > 0.001:
+        bal0, bal0_f, bal1, bal1_f = update_balance()
+        current_price = get_current_price(symbol)
+        total = (bal0 + bal0_f) * current_price + bal1 + bal1_f
+        current_chicang = ((bal0 + bal0_f) * current_price) / total  # 当前持仓比
+        if current_chicang < config.LIMIT_MIN_POSITION:
+            should_loose = True
+            multiple *= 0.9
+            mul_21 *= 0.9
+
     peroid_5min = 1
     if peroid == "5min":
         peroid_5min = 1
@@ -852,7 +886,7 @@ def vol_price_fly():
 
 
     last_peroid_21 = local_21 / 7
-    if not last_peroid_0 >= 1.1*last_peroid_21:
+    if not last_peroid_0 >= mul_21*last_peroid_21:
         logger.info("current vol not bigger than 1.1*last vollast_peroid_21. current trade vol={}, last_peroid_21={}".format(last_peroid_0, last_peroid_21))
         return False
 
@@ -904,7 +938,7 @@ def vol_price_fly():
             msg += "-交易成功！"
             success = True
         elif ret[0] == 2:
-            msg += "-交易被取消, 此次交易额未达到设置的最低交易额限制({}$)!".format(config.TRADE_MIN_LIMIT_VALUE)
+            msg += "-交易被取消, 取消原因: {}!".format(ret[2])
         elif ret[0] == 3:
             msg += "-交易失败, 失败原因:{}！".format(ret[2])
 
@@ -961,10 +995,9 @@ def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", cur
         if balance > config.TRADE_MIN_LIMIT_VALUE:
             amount = config.TRADE_MIN_LIMIT_VALUE
         else:
-            logger.info(
-                "order to buy {} amount {}, current price={}, balance={}, total balance less than {}$. trade cancel!".format(
-                    symbol, amount, current_price, balance, config.TRADE_MIN_LIMIT_VALUE))
-            return 2, amount, "Trade buy have been cancelled. Balance less than the trade_min_limit()".format(config.TRADE_MIN_LIMIT_VALUE)
+            msg = "买入时余额不足, 当前可交易金额：{}.".format(balance)
+            logger.warning(msg)
+            return 2, amount, msg
 
     # 超限时按最大钱或当前所有余钱数买
     if amount > config.TRADE_MAX_LIMIT_VALUE:
@@ -1019,31 +1052,48 @@ def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
             return 0, 0, "sell percent less than zero."
 
     if amount > balance:
-        amount = balance*0.95
+        amount = balance*0.99
 
     # 市价卖时表示卖多少币
     if current_price:
+        #　判断卖出时和卖出后的持仓比例是否满足用户设置的最低持仓比例，如果不满足则需要取消卖出，或者减少卖出量
+        if config.LIMIT_MIN_POSITION>0.0001 and config.FORCE_POSITION:
+            bal0, bal0_f, bal1, bal1_f = update_balance()
+            total = (bal0 + bal0_f) * current_price + bal1 + bal1_f
+            current_chicang = ((bal0 + bal0_f) * current_price) / total     #当前持仓比
+            limit_chicang_coin = config.LIMIT_MIN_POSITION * total / current_price  #要求的最低持仓币数
+            if current_chicang <= config.LIMIT_MIN_POSITION:
+                msg = "当前持仓比为{}%, 已经小于用户指定的强制最低持仓比{}%".format(round(current_chicang*100, 2), round(config.LIMIT_MIN_POSITION*100, 2))
+                logger.warning(msg)
+                return 2, amount, msg
+            elif balance-amount < limit_chicang_coin:
+                logger.warning("卖出后仓位将低于最小持仓比，需要减少卖出量，原计划卖出{}, 调整后卖出{}".format(amount, balance-limit_chicang_coin))
+                amount = balance-limit_chicang_coin
+
         total_value = amount*current_price
         if total_value < config.TRADE_MIN_LIMIT_VALUE:
             # 如果余币够的话，按最小交易额卖
             if balance*current_price > config.TRADE_MIN_LIMIT_VALUE:
                 amount = config.TRADE_MIN_LIMIT_VALUE/current_price
             else:
-                logger.warning("sell {} amount {}, current price={}, balance={},total value={} less than {}$. trade cancel!".format(symbol, amount, current_price, balance, amount*current_price, config.TRADE_MIN_LIMIT_VALUE))
-                return 2, amount, "Trade sell have been cancelled. Balance less than the trade_min_limit()".format(config.TRADE_MIN_LIMIT_VALUE)
+                msg = "卖出时余币不足, 当前可交易币量{}个, 价值：{}$.".format(balance, round(balance*current_price, 2))
+                logger.warning(msg)
+                return 2, amount, msg
         elif total_value > config.TRADE_MAX_LIMIT_VALUE:
             amount = round(config.TRADE_MAX_LIMIT_VALUE/current_price, 4)
             if amount > balance:
-                amount = balance*0.95
+                amount = balance*0.99
+
+
 
     amount = round(amount, 4)
     logger.warning(
-        "sell {} amount {}(个), current price={}, balance={}(个), total value={}$, min trade={}$, max trade={}$!".format(symbol,
+        "sell {} amount {}(个), current price={}, balance={}(个), total value={}$, min trade={}$, max trade={}$!record={}".format(symbol,
                                                                                                              amount,
                                                                                                              current_price,
                                                                                                              balance,
                                                                                                              total_value,
-                                                                                                             config.TRADE_MIN_LIMIT_VALUE, config.TRADE_MAX_LIMIT_VALUE))
+                                                                                                             config.TRADE_MIN_LIMIT_VALUE, config.TRADE_MAX_LIMIT_VALUE, record))
     hrs = HuobiREST(config.CURRENT_REST_MARKET_URL, config.CURRENT_REST_TRADE_URL, config.ACCESS_KEY, config.SECRET_KEY, config.PRIVATE_KEY)
     ret = hrs.send_order(amount=amount, source="api", symbol=symbol, _type="sell-market")
     # (True, '6766866273')
@@ -1416,6 +1466,15 @@ def buy_low():
     # 比最低价还低1％以上，且最近三个周期都在跌
     percent_factor = 0
     low_percent = 1.008 + (config.RISK-1)/100
+
+    #　如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
+    if config.LIMIT_MIN_POSITION > 0.001:
+        bal0, bal0_f, bal1, bal1_f = update_balance()
+        total = (bal0 + bal0_f) * current_price + bal1 + bal1_f
+        current_chicang = ((bal0 + bal0_f) * current_price) / total  # 当前持仓比
+        if current_chicang < config.LIMIT_MIN_POSITION:
+            low_percent*=0.90
+
     if current_price*low_percent < min_price_5 and get_open(market, 1) > get_close(market, 1) \
             and get_open(market, 2) > get_close(market, 2) and get_open(market, 3) > get_close(market, 3):
         percent_factor = (min_price_5 - current_price) / min_price_60 / (low_percent-1)
@@ -1429,7 +1488,6 @@ def buy_low():
         buy_percent += 0.3
 
     # 判断是不是还在跌,如果是，暂时不买
-
     if min_price > 0 and current_price < min_price*1.004:
         logger.warning("buy low current price={}, min price={}, no buy".format(current_price, min_price))
         return False
@@ -1458,7 +1516,7 @@ def buy_low():
                 msg += "-交易成功！"
                 success = True
             elif ret[0] == 2:
-                msg += "-交易被取消, 此次交易额未达到设置的最低交易额限制({}$)!".format(config.TRADE_MIN_LIMIT_VALUE)
+                msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
                 msg += "-交易失败, 失败原因:{}！".format(ret[2])
 
@@ -1537,7 +1595,7 @@ def sell_high():
                 msg += "-交易成功！"
                 success = True
             elif ret[0] == 2:
-                msg += "-交易被取消, 此次交易额未达到设置的最低交易额限制({}$)!".format(config.TRADE_MIN_LIMIT_VALUE)
+                msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
                 msg += "-交易失败, 失败原因:{}！".format(ret[2])
 
