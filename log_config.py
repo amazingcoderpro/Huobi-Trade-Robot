@@ -113,6 +113,9 @@ def output2ui(msg, level=UI_LOG_LEVEL):
     msg_dict = {"level": UI_LOG_LEVEL_LIST[level], "msg": format_msg}
     REALTIME_LOG.put(msg_dict)
 
+    if level in [6, 7]:
+        config.TRADE_ALL_LOG.append("[{}]--{}".format(datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S"), msg))
+
     # if level >= 6:
     #     import smtplib
     #     smtp = smtplib.SMTP("smtp.163.com")
@@ -171,7 +174,11 @@ def notify_user(msg, own=False):
             logging.getLogger().info("send mail owner={}, to={}, text={}".format(own, receiver_list, msg))
             try:
                 email = MIMEText(msg, 'plain', 'utf-8')      # 中文需参数‘utf-8'，单字节字符不需要
-                email['Subject'] = Header(subject, 'utf-8')
+                if own:
+                    new_subject = subject+"[VIP]"
+                else:
+                    new_subject = subject
+                email['Subject'] = Header(new_subject, 'utf-8')
                 email['From'] = '{}<{}>'.format(from_name, sender)
                 email['To'] = receiver_str
 
@@ -193,36 +200,41 @@ def notify_user(msg, own=False):
 
 
 def make_msg(flag, symbol, current_price, percent=0, amount=0, last_price=0, params="***"):
-    if percent == 0:
-        percent = "***"
-    else:
-        if percent < 1:
-            percent = percent * 100
-        percent = round(percent, 2)
-
-    if amount <= 0:
-        amount = "***"
-    else:
-        amount = round(amount, 4)
-
-    if last_price <= 0:
-        last_price = "***"
-    else:
-        last_price = round(last_price, 3)
-
-    current_price = round(current_price, 3)
-
-    if flag == 0:
-        flag = u"买入"
-        msg = u"[{}{}] {}比例: {}%, {}金额: {}$, 当前价格: {}$. \n买入依据: {}".format(flag, symbol, flag, percent, flag, amount, current_price, params)
-    else:
-        flag = u"卖出"
-        if last_price>0:
-            msg = u"[{}{}] {}比例: {}%, {}数量: {}个, 当前价格: {}$. \n卖出依据: {}".format(flag, symbol, flag, percent, flag, amount, current_price, last_price, params)
+    msg = "unknown"
+    try:
+        if percent == 0:
+            percent = "***"
         else:
-            msg = u"[{}{}] {}比例: {}%, {}数量: {}个, 当前价格: {}$, 之前买入价格: {}$. \n卖出依据: {}".format(flag, symbol, flag, percent,
-                                                                                          flag, amount, current_price,
-                                                                                          last_price, params)
+            if percent < 1:
+                percent = percent * 100
+            percent = round(percent, 2)
+
+        if amount <= 0:
+            amount = "***"
+        else:
+            amount = round(amount, 4)
+
+        if last_price > 0:
+            last_price = round(last_price, 3)
+
+        current_price = round(current_price, 3)
+
+        if flag == 0:
+            flag = u"买入"
+            msg = u"[{}{}] {}比例: {}%, {}金额: {}$, 当前价格: {}$. \n买入依据: {}".format(flag, symbol, flag, percent, flag, amount, current_price, params)
+        else:
+            flag = u"卖出"
+            if last_price:
+                msg = u"[{}{}] {}比例: {}%, {}数量: {}个, 当前价格: {}$, 之前买入价格: {}$. \n卖出依据: {}".format(flag, symbol, flag, percent,
+                                                                                              flag, amount, current_price,
+                                                                                              last_price, params)
+            else:
+                msg = u"[{}{}] {}比例: {}%, {}数量: {}个, 当前价格: {}$. \n卖出依据: {}".format(flag, symbol, flag, percent, flag,
+                                                                                   amount, current_price, last_price,
+                                                                                   params)
+
+    except Exception as e:
+        logging.getLogger().info("make_msg e={}".format(e))
 
     logging.getLogger().info("make_msg return={}".format(msg))
     return msg

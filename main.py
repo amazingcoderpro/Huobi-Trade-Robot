@@ -328,11 +328,18 @@ class MainUI():
                 if price <= buy_price:
                     ret = strategies.buy_market(symbol, amount=buy_amount, record=True, current_price=price)
                     if ret[0]:
-                        config.WAIT_BUY_ACCOUNT[i] = buy_amount - ret[1]
-                        msg = "挂单买入{}成功: 挂单价格={}$, 挂单金额={}$, 实际价格={}$, 实际买入金额={}$".format(symbol, buy_price, buy_amount, price, ret[1])
+                        msg = "挂单买入{}成功: 挂单价格={}$, 挂单金额={}$, 实际价格={}$, 实际买入金额={}$.".format(symbol, buy_price, buy_amount, price, ret[1])
+                        success = False
+                        if ret[0] == 1:
+                            msg += "-交易成功！"
+                            config.WAIT_BUY_ACCOUNT[i] = buy_amount - ret[1]
+                            success = True
+                        elif ret[0] == 2:
+                            msg += "-交易被取消, 此次交易额未达到设置的最低交易额限制()$!".format(config.TRADE_MIN_LIMIT_VALUE)
+                        elif ret[0] == 3:
+                            msg += "-交易失败, 失败原因:{}！".format(ret[2])
                         log_config.output2ui(msg, 6)
-                        logger.warning("Wait to buy succeed! wait buy price={}, amount={}, actural price={}, amount={}"
-                                       .format(buy_price, buy_amount, price, ret[1]))
+                        logger.warning(msg)
                         log_config.notify_user(msg, own=True)
                         log_config.notify_user(log_config.make_msg(0, symbol, price))
 
@@ -346,8 +353,17 @@ class MainUI():
                     ret = strategies.sell_market(symbol, amount=sell_amount, record=False, current_price=price)
                     if ret[0]:
                         config.WAIT_SELL_ACCOUNT[i] = sell_amount - ret[1]
-                        msg = "挂单卖出{}: 挂单价格={}, 挂单个数={}个, 实际价格={}, 实际挂单卖出个数={}个".format(symbol,
+                        msg = "挂单卖出{}: 挂单价格={}, 挂单个数={}个, 实际价格={}, 实际挂单卖出个数={}个.".format(symbol,
                                 sell_price, sell_amount, price, ret[1])
+                        success = False
+                        if ret[0] == 1:
+                            msg += "-交易成功！"
+                            config.WAIT_SELL_ACCOUNT[i] = sell_amount - ret[1]
+                            success = True
+                        elif ret[0] == 2:
+                            msg += "-交易被取消, 此次交易额未达到设置的最低交易额限制()$!".format(config.TRADE_MIN_LIMIT_VALUE)
+                        elif ret[0] == 3:
+                            msg += "-交易失败, 失败原因:{}！".format(ret[2])
                         log_config.output2ui(msg, 7)
                         logger.warning(msg)
                         log_config.notify_user(msg, own=True)
@@ -500,7 +516,7 @@ class MainUI():
                               u"\n当前持币量:可用{},冻结{},仓位{}%" \
                               u"\n启动时持金量:可用{},冻结{}" \
                               u"\n当前持金量:可用{},冻结{}" \
-                              u"\n当前账户总价值:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n是否跑羸大盘:{}".format(
+                              u"\n当前账户总价值:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}".format(
                         config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
                         process.START_TIME.strftime("%Y/%m/%d, %H:%M:%S"),
                         datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S"), round(process.ORG_PRICE, 2),
@@ -508,9 +524,9 @@ class MainUI():
                         round(process.ORG_COIN_TRADE, 4), round(process.ORG_COIN_FROZEN, 4),
                         round(process.ORG_CHICANG * 100, 2), round(bal0, 4), round(bal0_f, 4), round(chicang * 100, 2),
                         round(process.ORG_DOLLAR_TRADE, 2), round(process.ORG_DOLLAR_FROZEN, 2), round(bal1, 2), round(bal1_f, 2),
-                        round(total, 2), dapan_profit, account_profit, is_win)
+                        round(total, 2), dapan_profit, account_profit, round(total - process.ORG_DOLLAR_TOTAL, 2), is_win)
 
-                    msg_other = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n启动时价格:{}\n当前价格:{}\n启动时持币量:可用{},冻结{},仓位{}%\n当前持币量:可用{},冻结{},仓位{}%\n启动时持金量:可用{},冻结{}\n当前持金量:可用{},冻结{}\n当前账户总资产:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n是否跑羸大盘:{}"\
+                    msg_other = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n启动时价格:{}\n当前价格:{}\n启动时持币量:可用{},冻结{},仓位{}%\n当前持币量:可用{},冻结{},仓位{}%\n启动时持金量:可用{},冻结{}\n当前持金量:可用{},冻结{}\n当前账户总资产:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}"\
                         .format(config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
                             process.START_TIME.strftime("%Y/%m/%d, %H:%M:%S"),
                             datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S"),
@@ -519,7 +535,7 @@ class MainUI():
                             "***", "***", "***", "***",
                             "***",
                             dapan_profit,
-                            account_profit,
+                            account_profit,"***",
                             is_win)
                     ret1 = log_config.notify_user(msg_own, own=True)
                     ret2 = log_config.notify_user(msg_other)

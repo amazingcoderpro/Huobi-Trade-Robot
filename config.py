@@ -133,3 +133,4 @@ WECHATS = [u"信链众创量化1.0版"]
 OWNER_EMAILS = ["wcadaydayup@163.com", "1447385994@qq.com", "bbb201@126.com"]
 OWNNER_WECHATS = [u"Justkidding", u"长城1211"]
 
+TRADE_ALL_LOG = []

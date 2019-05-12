@@ -23,15 +23,20 @@ def send_to_wechat(msg, nick_names=None):
         rooms = itchat.get_chatrooms(update=True)
 
     if not nick_names:
-        res = itchat.send(msg=msg)
+        try:
+            itchat.send(msg=msg)
+        except:
+            return False
+        return True
+
+    find_names = []
+    for r in rooms:
+        if r["NickName"] in nick_names:
+            find_names.append(r["UserName"])
+            if len(find_names) == len(nick_names):
+                break
     else:
-        find_names = []
-        for r in rooms:
-            if r["NickName"] in nick_names:
-                find_names.append(r["UserName"])
-                if len(find_names) == len(nick_names):
-                    break
-        else:
+        try:
             fs = itchat.get_friends(update=True)
             for f in fs:
                 if f["NickName"] in nick_names:
@@ -45,30 +50,32 @@ def send_to_wechat(msg, nick_names=None):
                         find_names.append(c["UserName"])
                         if len(find_names) == len(nick_names):
                             break
+        except:
+            pass
 
-        if not find_names:
-            logger.error(f"find names is empty!!, input names={nick_names}")
-            return False
+    if not find_names:
+        logger.error(f"find names is empty!!, input names={nick_names}")
+        return False
+    else:
+        if len(find_names) == len(nick_names):
+            logger.info(f"find all input names, find names={find_names}, input names={nick_names}")
         else:
-            if len(find_names) == len(nick_names):
-                logger.info(f"find all input names, find names={find_names}, input names={nick_names}")
+            logger.info(f"find part input names, find names={find_names}, input names={nick_names}")
+
+    ret = True
+    for name in find_names:
+        try:
+            res = itchat.send(msg=msg, toUserName=name)
+            if res.get("BaseResponse", {}).get("Ret", -1) == 0:
+                logger.info(f"send to wechat success,to user={name}, res={res},  msg=\n{msg}")
             else:
-                logger.info(f"find part input names, find names={find_names}, input names={nick_names}")
+                logger.info(f"send to wechat failed,to user={name}, res={res},  msg=\n{msg}")
+        except Exception as e:
+            logger.exception("send wechat exception, e={}".format(e))
+            ret = False
+            continue
 
-        ret = True
-        for name in find_names:
-            try:
-                res = itchat.send(msg=msg, toUserName=name)
-                if res.get("BaseResponse", {}).get("Ret", -1) == 0:
-                    logger.info(f"send to wechat success,to user={name}, res={res},  msg=\n{msg}")
-                else:
-                    logger.info(f"send to wechat failed,to user={name}, res={res},  msg=\n{msg}")
-            except Exception as e:
-                logger.exception("send wechat exception, e={}".format(e))
-                ret = False
-                continue
-
-        return ret
+    return ret
 
 
 if __name__ == '__main__':
