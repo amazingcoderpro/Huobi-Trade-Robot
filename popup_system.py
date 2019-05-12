@@ -13,8 +13,8 @@ class PopupSystem(Toplevel):
         Toplevel.__init__(self)
         self.is_ok = False
         self.value_dict = value_dict
-        risk_factor, is_email, is_wechat, is_alarm, trade_min, trade_max, wait_buy_price, \
-        wait_buy_account, wait_sell_price, wait_sell_amount, alarm_time, alarm_trade = value_dict.get("risk", 1.0), value_dict.get("is_email", True), value_dict.get("is_wechat", True), value_dict.get("is_alarm", False), \
+        position, force_position, risk_factor, is_email, is_wechat, is_alarm, trade_min, trade_max, wait_buy_price, \
+        wait_buy_account, wait_sell_price, wait_sell_amount, alarm_time, alarm_trade = value_dict.get("position", 0), value_dict.get("force_position", 0), value_dict.get("risk", 1.0), value_dict.get("is_email", True), value_dict.get("is_wechat", True), value_dict.get("is_alarm", False), \
                                                    value_dict.get("trade_min", 10), value_dict.get("trade_max", 1000), value_dict.get("wait_buy_price"), \
                                                               value_dict.get("wait_buy_account"), value_dict.get("wait_sell_price"), value_dict.get("wait_sell_account"), value_dict.get("alarm_time", 30), value_dict.get("is_alarm_trade", True)
 
@@ -46,6 +46,13 @@ class PopupSystem(Toplevel):
 
         self.ckb_login_wechat_now = IntVar()
         self.ckb_lwn = None
+
+        self.position = DoubleVar()
+        self.position.set(position)
+
+        self.ckb_force_position = IntVar()
+        self.ckb_force_position.set(force_position)
+        self.ckb_fp = None
 
         self.risk_factor = DoubleVar()
         self.risk_factor.set(risk_factor)
@@ -125,6 +132,12 @@ class PopupSystem(Toplevel):
         row3.pack(fill="x")
         Label(row3, text=u"风险系数(取值范围0.5-2.0, 越小越稳健, 越大越激进): ", width=40).pack(side=LEFT)
         Entry(row3, textvariable=self.risk_factor, width=5).pack(side=LEFT)
+
+        row3 = Frame(self)
+        row3.pack(fill="x")
+        Label(row3, text=u"限制最低持仓(取值0-1): ", width=25).pack(side=LEFT)
+        Entry(row3, textvariable=self.position, width=5).pack(side=LEFT)
+        self.ckb_fp = Checkbutton(row3, text='低于指定仓位后是否强制锁仓', variable=self.ckb_force_position, onvalue=1, offvalue=0).pack()
 
         row3 = Frame(self)
         row3.pack(fill="x")
@@ -234,10 +247,18 @@ class PopupSystem(Toplevel):
             wait_sell_price3 = float(self.wait_sell_price3.get())
             wait_sell_account3 = float(self.wait_sell_account3.get())
             login_wechat_now = self.ckb_login_wechat_now.get()
+            force_position = self.ckb_force_position.get()
 
             risk = float(self.risk_factor.get())
             if risk < 0.1 or risk > 10:
                 risk = 1.0
+            position = float(self.position.get())
+            if position>1:
+                position=position/100
+                if position>1:
+                    position=0.5
+            if position<0:
+                position=0
 
         except Exception as e:
             messagebox.showwarning("Warning", "All parameters must be numeric and cannot be null!")  # 提出警告对话窗
@@ -257,6 +278,8 @@ class PopupSystem(Toplevel):
         self.value_dict["wait_sell_account"] = [wait_sell_account1, wait_sell_account2, wait_sell_account3]
 
         self.value_dict["risk"] = risk
+        self.value_dict["position"] = position
+        self.value_dict["force_position"] = force_position
         self.value_dict["emails"] = self.txt_emails.get(1.0, END)
         self.value_dict["wechats"] = self.txt_wechats.get(1.0, END)
         self.value_dict["login_wechat_now"] = login_wechat_now

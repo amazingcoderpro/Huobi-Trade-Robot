@@ -689,7 +689,7 @@ class MainUI():
                       "trade_min": config.TRADE_MIN_LIMIT_VALUE, "alarm_time": config.ALARM_TIME,
                       "trade_max": config.TRADE_MAX_LIMIT_VALUE, "wait_buy_price": config.WAIT_BUY_PRICE,
                       "wait_buy_account": config.WAIT_BUY_ACCOUNT, "wait_sell_price":config.WAIT_SELL_PRICE, "wait_sell_account":config.WAIT_SELL_ACCOUNT,
-                      "risk": config.RISK, "emails": config.EMAILS, "wechats": config.WECHATS}
+                      "risk": config.RISK, "emails": config.EMAILS, "wechats": config.WECHATS, "position": config.LIMIT_MIN_POSITION, "force_position": config.FORCE_POSITION}
 
         pop = PopupSystem(value_dict)
         self.root.wait_window(pop)
@@ -706,6 +706,10 @@ class MainUI():
             config.WAIT_SELL_PRICE = value_dict["wait_sell_price"]
             config.WAIT_SELL_ACCOUNT = value_dict["wait_sell_account"]
             config.RISK = value_dict["risk"]
+
+            config.LIMIT_MIN_POSITION = value_dict["position"]
+            config.FORCE_POSITION = value_dict["force_position"]
+
             emails = value_dict.get("emails", "").strip().split("\n")
             wechats = value_dict.get("wechats", "").strip().split("\n")
             log_config.output2ui("system config:\n{}！".format(value_dict))

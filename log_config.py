@@ -114,7 +114,7 @@ def output2ui(msg, level=UI_LOG_LEVEL):
     REALTIME_LOG.put(msg_dict)
 
     if level in [6, 7]:
-        time_now = datetime.datetime.now()
+        time_now = datetime.now()
         config.TRADE_ALL_LOG.append({time_now: "[{}] {}".format(time_now.strftime("%Y/%m/%d, %H:%M:%S"), msg)})
 
     # if level >= 6:

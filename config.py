@@ -135,4 +135,4 @@ OWNNER_WECHATS = [u"Justkidding", u"长城1211"]
 
 TRADE_ALL_LOG = []
 LIMIT_MIN_POSITION = 0.3    #期望最少持仓比
-FORCE_POSITION = True       #是否强制保持最少持仓比，如果是，无论何种情况都保持该持仓比例，否则系统将在持仓比低于最小持仓比后降低买入标准以尽快达到持仓比
+FORCE_POSITION = 1       #是否强制保持最少持仓比，如果是，无论何种情况都保持该持仓比例，否则系统将在持仓比低于最小持仓比后降低买入标准以尽快达到持仓比
