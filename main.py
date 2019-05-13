@@ -507,10 +507,10 @@ class MainUI():
                     if not daily_report_start_time:
                         daily_report_start_time = now_time
                     else:
-                        if (now_time-daily_report_start_time).total_seconds() > 86400:
+                        if (now_time-daily_report_start_time).total_seconds() > config.TRADE_HISTORY_REPORT_INTERVAL*3600:
                             today_logs = [y for x, y in config.TRADE_ALL_LOG.items() if x > daily_report_start_time]
                             daily_report_start_time = now_time
-                            daily_msg = "最近１天的交易记录如下:\n"+"\n".join(today_logs)
+                            daily_msg = "最近{}小时的交易记录如下:\n".format(config.TRADE_HISTORY_REPORT_INTERVAL)+"\n".join(today_logs)
                             log_config.output2ui(daily_msg, 8)
                             logger.warning(daily_msg)
                             log_config.notify_user(daily_msg, own=True)
@@ -518,7 +518,7 @@ class MainUI():
                     if not hour_report_start_time:
                         hour_report_start_time = now_time
                     else:
-                        if (now_time-hour_report_start_time).total_seconds() > 7200:
+                        if (now_time-hour_report_start_time).total_seconds() > config.ACCOUNT_REPORT_INTERVAL*3600:
                             hour_report_start_time = now_time
 
                             global CURRENT_PRICE
@@ -528,7 +528,7 @@ class MainUI():
                             dapan_profit = round((CURRENT_PRICE - process.ORG_PRICE) * 100 / process.ORG_PRICE, 2)
                             account_profit = round((total - process.ORG_DOLLAR_TOTAL) * 100 / process.ORG_DOLLAR_TOTAL, 2)
                             is_win = u"是" if account_profit>=dapan_profit else u"否"
-                            msg_own = u"\n火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n启动时价格:{}" \
+                            msg_own = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n启动时价格:{}" \
                                       u"\n当前价格:{}" \
                                       u"\n启动时持币量:可用{},冻结{},仓位{}%" \
                                       u"\n当前持币量:可用{},冻结{},仓位{}%" \
@@ -685,16 +685,19 @@ class MainUI():
             wechat_helper.login_wechat()
 
         from popup_system import PopupSystem
-        value_dict = {"is_email": config.EMAIL_NOTIFY, "is_alarm": config.ALARM_NOTIFY, "is_alarm_trade": config.ALARM_TRADE_DEFAULT,
+        value_dict = {"is_email": config.EMAIL_NOTIFY, "is_wechat": config.WECHAT_NOTIFY, "is_alarm": config.ALARM_NOTIFY, "is_alarm_trade": config.ALARM_TRADE_DEFAULT,
                       "trade_min": config.TRADE_MIN_LIMIT_VALUE, "alarm_time": config.ALARM_TIME,
                       "trade_max": config.TRADE_MAX_LIMIT_VALUE, "wait_buy_price": config.WAIT_BUY_PRICE,
                       "wait_buy_account": config.WAIT_BUY_ACCOUNT, "wait_sell_price":config.WAIT_SELL_PRICE, "wait_sell_account":config.WAIT_SELL_ACCOUNT,
-                      "risk": config.RISK, "emails": config.EMAILS, "wechats": config.WECHATS, "position": config.LIMIT_MIN_POSITION, "force_position": config.FORCE_POSITION}
+                      "risk": config.RISK, "emails": config.EMAILS, "wechats": config.WECHATS, "position": config.LIMIT_MIN_POSITION,
+                      "force_position": config.FORCE_POSITION, "trade_history_report_interval": config.TRADE_HISTORY_REPORT_INTERVAL,
+                      "account_report_interval": config.ACCOUNT_REPORT_INTERVAL, "emails_vip": config.EMAILS_VIP, "wechats_vip": config.WECHATS_VIP}
 
         pop = PopupSystem(value_dict)
         self.root.wait_window(pop)
         if pop.is_ok:
             config.EMAIL_NOTIFY = value_dict["is_email"]
+            config.WECHAT_NOTIFY = value_dict["is_wechat"]
             config.ALARM_NOTIFY = value_dict["is_alarm"]
             config.ALARM_TRADE_DEFAULT = value_dict["is_alarm_trade"]
             config.ALARM_TIME = value_dict["alarm_time"]
@@ -710,10 +713,17 @@ class MainUI():
             config.LIMIT_MIN_POSITION = value_dict["position"]
             config.FORCE_POSITION = value_dict["force_position"]
 
+            config.TRADE_HISTORY_REPORT_INTERVAL = value_dict["trade_history_report_interval"]
+            config.ACCOUNT_REPORT_INTERVAL = value_dict["account_report_interval"]
+
             emails = value_dict.get("emails", "").strip().split("\n")
             wechats = value_dict.get("wechats", "").strip().split("\n")
+
+            emails_vip = value_dict.get("emails_vip", "").strip().split("\n")
+            wechats_vip = value_dict.get("wechats_vip", "").strip().split("\n")
+
             log_config.output2ui("system config:\n{}！".format(value_dict))
-            is_login = value_dict.get("login_wechat_now", 0)
+            login_wechat_now = value_dict.get("login_wechat_now", 0)
             config.EMAILS = []
             for email in emails:
                 if email and len(email) > 5 and "@" in email:
@@ -724,7 +734,18 @@ class MainUI():
                 if wechat and len(wechat) > 2:
                     config.WECHATS.append(wechat)
 
-            if config.EMAIL_NOTIFY and config.WECHATS and is_login:
+            config.EMAILS_VIP = []
+            for email in emails_vip:
+                if email and len(email) > 5 and "@" in email:
+                    config.EMAILS_VIP.append(email)
+
+            config.WECHATS_VIP = []
+            for wechat in wechats_vip:
+                if wechat and len(wechat) > 2:
+                    config.WECHATS_VIP.append(wechat)
+
+            # if (config.EMAIL_NOTIFY and (config.WECHATS or config.WECHATS_VIP)) or login_wechat_now:
+            if login_wechat_now:
                 log_config.output2ui("需要扫码登录微信！")
                 self.first_login = False
                 th = threading.Thread(target=login_wechat)

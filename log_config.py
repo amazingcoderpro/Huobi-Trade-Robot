@@ -148,7 +148,7 @@ def notify_user(msg, own=False):
             time_str = datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
             msg = "[{}]\n{}".format(time_str, msg)
             if own:
-                ret = wechat_helper.send_to_wechat(msg, config.OWNNER_WECHATS)
+                ret = wechat_helper.send_to_wechat(msg, config.WECHATS_VIP)
             else:
                 if config.WECHAT_NOTIFY:
                     ret = wechat_helper.send_to_wechat(msg, config.WECHATS)
@@ -164,7 +164,7 @@ def notify_user(msg, own=False):
         receiver_list = []
         receiver_str = ""
         if own:
-            receiver_list = config.OWNER_EMAILS
+            receiver_list = config.EMAILS_VIP
             receiver_str = ", ".join(receiver_list)
         else:
             if config.EMAIL_NOTIFY and config.EMAILS:

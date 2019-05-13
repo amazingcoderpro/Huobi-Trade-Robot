@@ -14,9 +14,9 @@ class PopupSystem(Toplevel):
         self.is_ok = False
         self.value_dict = value_dict
         position, force_position, risk_factor, is_email, is_wechat, is_alarm, trade_min, trade_max, wait_buy_price, \
-        wait_buy_account, wait_sell_price, wait_sell_amount, alarm_time, alarm_trade = value_dict.get("position", 0), value_dict.get("force_position", 0), value_dict.get("risk", 1.0), value_dict.get("is_email", True), value_dict.get("is_wechat", True), value_dict.get("is_alarm", False), \
+        wait_buy_account, wait_sell_price, wait_sell_amount, alarm_time, alarm_trade, trade_history_report_interval, account_report_interval = value_dict.get("position", 0), value_dict.get("force_position", 0), value_dict.get("risk", 1.0), value_dict.get("is_email", True), value_dict.get("is_wechat", True), value_dict.get("is_alarm", False), \
                                                    value_dict.get("trade_min", 10), value_dict.get("trade_max", 1000), value_dict.get("wait_buy_price"), \
-                                                              value_dict.get("wait_buy_account"), value_dict.get("wait_sell_price"), value_dict.get("wait_sell_account"), value_dict.get("alarm_time", 30), value_dict.get("is_alarm_trade", True)
+                                                              value_dict.get("wait_buy_account"), value_dict.get("wait_sell_price"), value_dict.get("wait_sell_account"), value_dict.get("alarm_time", 30), value_dict.get("is_alarm_trade", True), value_dict.get("trade_history_report_interval", 86400), value_dict.get("account_report_interval", 7200)
 
         self.trade_min = DoubleVar()
         self.trade_min.set(trade_min)
@@ -27,7 +27,7 @@ class PopupSystem(Toplevel):
         self.is_email.set('YES' if is_email else 'NO')
 
         self.is_wechat = StringVar()
-        self.is_wechat.set('YES' if is_email else 'NO')
+        self.is_wechat.set('YES' if is_wechat else 'NO')
 
         self.is_alarm = StringVar()
         self.is_alarm.set('YES' if is_alarm else 'NO')
@@ -56,6 +56,15 @@ class PopupSystem(Toplevel):
 
         self.risk_factor = DoubleVar()
         self.risk_factor.set(risk_factor)
+
+        # 历史交易记录播报周期
+        self.trade_history_report_interval = DoubleVar()
+        self.trade_history_report_interval.set(trade_history_report_interval)
+
+        # 账户情况播报周期
+        self.account_report_interval = DoubleVar()
+        self.account_report_interval.set(account_report_interval)
+
 
         self.wait_buy_price1 = DoubleVar()
         self.wait_buy_price1.set(wait_buy_price[0])
@@ -87,12 +96,16 @@ class PopupSystem(Toplevel):
         self.wait_sell_account3 = DoubleVar()
         self.wait_sell_account3.set(wait_sell_amount[2])
 
+        self.txt_emails_vip = None
         self.txt_emails = None
         # print(value_dict.get("emails", []))
+        self.emails_vip = "\n".join(value_dict.get("emails_vip", []))
         self.emails = "\n".join(value_dict.get("emails", []))
         # print(self.emails)
 
+        self.txt_wechats_vip = None
         self.txt_wechats = None
+        self.wechats_vip = "\n".join(value_dict.get("wechats_vip", []))
         self.wechats = "\n".join(value_dict.get("wechats", []))
 
         self.setup_ui()
@@ -141,24 +154,52 @@ class PopupSystem(Toplevel):
 
         row3 = Frame(self)
         row3.pack(fill="x")
+        Label(row3, text=u"历史交易记录播报周期(小时): ", width=25).pack(side=LEFT)
+        Entry(row3, textvariable=self.trade_history_report_interval, width=15).pack(side=LEFT)
+
+        row3 = Frame(self)
+        row3.pack(fill="x")
+        Label(row3, text=u"账户信息播报周期(小时): ", width=25).pack(side=LEFT)
+        Entry(row3, textvariable=self.account_report_interval, width=15).pack(side=LEFT)
+
+        row3 = Frame(self)
+        row3.pack(fill="x")
         Label(row3, text=u"收件箱地址(多个邮箱地址请换行输入): ", width=30).pack(side=LEFT)
         row3 = Frame(self)
         row3.pack(fill="x")
-        # Entry(row3, textvariable=self.emails, width=15).pack(side=LEFT)
-        self.txt_emails = Text(row3, height=4, width=40)
+        Label(row3, text=u"VIP: ", width=30).pack(side=LEFT)
+        Label(row3, text=u"普通: ", width=30).pack(side=LEFT)
+
+        row3 = Frame(self)
+        row3.pack(fill="x")
+        self.txt_emails_vip = Text(row3, height=4, width=30)
+        self.txt_emails_vip.insert(END, self.emails_vip)
+        self.txt_emails_vip.pack(ipadx=5, side=LEFT)
+
+        self.txt_emails = Text(row3, height=4, width=30)
         self.txt_emails.insert(END, self.emails)
-        self.txt_emails.pack(ipadx=2)
+        self.txt_emails.pack(ipadx=5, side=LEFT)
+
 
         row3 = Frame(self)
         row3.pack(fill="x")
         Label(row3, text=u"微信昵称(多个微信昵称请换行输入): ", width=30).pack(side=LEFT)
         self.ckb_lwn = Checkbutton(row3, text='立即登录', variable=self.ckb_login_wechat_now, onvalue=1, offvalue=0).pack()
+        row3 = Frame(self)
+        row3.pack(fill="x")
+        Label(row3, text=u"VIP: ", width=30).pack(side=LEFT)
+        Label(row3, text=u"普通: ", width=30).pack(side=LEFT)
 
         row3 = Frame(self)
         row3.pack(fill="x")
-        self.txt_wechats = Text(row3, height=4, width=40)
+        self.txt_wechats_vip = Text(row3, height=4, width=30)
+        self.txt_wechats_vip.insert(END, self.wechats_vip)
+        self.txt_wechats_vip.pack(ipadx=5, side=LEFT)
+
+        self.txt_wechats = Text(row3, height=4, width=30)
         self.txt_wechats.insert(END, self.wechats)
-        self.txt_wechats.pack(ipadx=2)
+        self.txt_wechats.pack(ipadx=5, side=LEFT)
+
 
         row4 = Frame(self)
         row4.pack(fill="x")
@@ -248,6 +289,8 @@ class PopupSystem(Toplevel):
             wait_sell_account3 = float(self.wait_sell_account3.get())
             login_wechat_now = self.ckb_login_wechat_now.get()
             force_position = self.ckb_force_position.get()
+            trade_history_interval = self.trade_history_report_interval.get()
+            account_report_interval = self.account_report_interval.get()
 
             risk = float(self.risk_factor.get())
             if risk < 0.1 or risk > 10:
@@ -282,7 +325,12 @@ class PopupSystem(Toplevel):
         self.value_dict["force_position"] = force_position
         self.value_dict["emails"] = self.txt_emails.get(1.0, END)
         self.value_dict["wechats"] = self.txt_wechats.get(1.0, END)
+        self.value_dict["emails_vip"] = self.txt_emails_vip.get(1.0, END)
+        self.value_dict["wechats_vip"] = self.txt_wechats_vip.get(1.0, END)
+
         self.value_dict["login_wechat_now"] = login_wechat_now
+        self.value_dict["trade_history_report_interval"] = trade_history_interval
+        self.value_dict["account_report_interval"] = account_report_interval
 
         self.is_ok = True
         # messagebox.showinfo("Info", "System settings change have taken effect！")

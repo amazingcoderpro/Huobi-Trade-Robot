@@ -121,18 +121,21 @@ ROOT = None
 RISK = 1.0
 
 #是否邮件通知
-EMAIL_NOTIFY = True
+EMAIL_NOTIFY = False
 WECHAT_NOTIFY = True
 ALARM_NOTIFY = False            # 是否弹窗提醒
 ALARM_TIME = 30                 # 弹窗提醒时长, 最多不能超过120，否则可能错过交易点
 ALARM_TRADE_DEFAULT = True    # 弹窗提醒后, 人工未处理时, 默认是否交易
+TRADE_HISTORY_REPORT_INTERVAL = 24  # 历史交易记录播报周期, 小时
+ACCOUNT_REPORT_INTERVAL = 2 # 账户情况播报周期, 小时
+
 
 # 邮件\微信通知对象
 EMAILS = ["wcadaydayup@163.com", "2879230281@qq.com", "371606063@qq.com", "790840993@qq.com", "383362849@qq.com", "351172940@qq.com", "182089859@qq.com", "278995617@qq.com", "2931429366@qq.com"]
 WECHATS = [u"信链众创量化1.0版"]
-OWNER_EMAILS = ["wcadaydayup@163.com", "1447385994@qq.com", "bbb201@126.com"]
-OWNNER_WECHATS = [u"Justkidding", u"长城1211"]
+EMAILS_VIP = ["wcadaydayup@163.com", "1447385994@qq.com", "bbb201@126.com"]
+WECHATS_VIP = [u"Justkidding", u"长城1211"]
 
 TRADE_ALL_LOG = []
 LIMIT_MIN_POSITION = 0.3    #期望最少持仓比
-FORCE_POSITION = 0       #是否强制保持最少持仓比，如果是，无论何种情况都保持该持仓比例，否则系统将在持仓比低于最小持仓比后降低买入标准以尽快达到持仓比
+FORCE_POSITION = 0       #是否强制保持最 少持仓比，如果是，无论何种情况都保持该持仓比例，否则系统将在持仓比低于最小持仓比后降低买入标准以尽快达到持仓比
