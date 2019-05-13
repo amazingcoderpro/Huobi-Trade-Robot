@@ -110,7 +110,7 @@ RETRY_TIMES = -1  # 小于0无限重试
 
 
 TRADE_MIN_LIMIT_VALUE = 10  # 单次最小交易額不能低於10美金
-TRADE_MAX_LIMIT_VALUE = 1000  # 单次最大交易額不能高於1000美金
+TRADE_MAX_LIMIT_VALUE = 2000  # 单次最大交易額不能高於1000美金
 
 WAIT_BUY_PRICE = [0, 0, 0]
 WAIT_BUY_ACCOUNT = [0, 0, 0]
@@ -135,4 +135,4 @@ OWNNER_WECHATS = [u"Justkidding", u"长城1211"]
 
 TRADE_ALL_LOG = []
 LIMIT_MIN_POSITION = 0.3    #期望最少持仓比
-FORCE_POSITION = 1       #是否强制保持最少持仓比，如果是，无论何种情况都保持该持仓比例，否则系统将在持仓比低于最小持仓比后降低买入标准以尽快达到持仓比
+FORCE_POSITION = 0       #是否强制保持最少持仓比，如果是，无论何种情况都保持该持仓比例，否则系统将在持仓比低于最小持仓比后降低买入标准以尽快达到持仓比

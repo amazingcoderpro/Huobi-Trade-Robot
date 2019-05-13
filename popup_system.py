@@ -106,7 +106,7 @@ class PopupSystem(Toplevel):
         OptionMenu(row1, self.is_email, *lst_yes_no).pack(side=LEFT)
 
         Label(row1, text=u"是否微信通知: ", width=12).pack(side=LEFT)
-        OptionMenu(row1, self.is_email, *lst_yes_no).pack(side=LEFT)
+        OptionMenu(row1, self.is_wechat, *lst_yes_no).pack(side=LEFT)
 
 
         Label(row1, text=u"交易时是否弹窗提醒: ", width=18).pack(side=LEFT)
