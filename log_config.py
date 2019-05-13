@@ -145,6 +145,8 @@ def notify_user(msg, own=False):
         ret = True
         logging.getLogger().info("start to send wechat. own={}".format(own))
         try:
+            time_str = datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+            msg = "[{}]\n{}".format(time_str, msg)
             if own:
                 ret = wechat_helper.send_to_wechat(msg, config.OWNNER_WECHATS)
             else:
@@ -172,6 +174,9 @@ def notify_user(msg, own=False):
         if not receiver_list or not receiver_str:
             logging.getLogger().warning("send email cancelled. receive list is empty! own={}, text={}".format(own, msg))
         else:
+            time_str = datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+            msg = "[{}] {}".format(time_str, msg)
+
             logging.getLogger().info("send mail owner={}, to={}, text={}".format(own, receiver_list, msg))
             try:
                 email = MIMEText(msg, 'plain', 'utf-8')      # 中文需参数‘utf-8'，单字节字符不需要

@@ -31,7 +31,7 @@ SELL_RECORD = []
 TRADE_RECORD = []
 
 move_stop_profit_params = {"check": 1, "msf_min": 0.02, "msf_back": 0.20}
-stop_loss_params = {"check": 1, "percent": 0.02}
+stop_loss_params = {"check": 1, "percent": 0.03}
 kdj_buy_params = {"check": 1, "k": 20, "d": 22, "buy_percent": 0.4, "up_percent": 0.004, "peroid": "15min"}
 kdj_sell_params = {"check": 1, "k": 82, "d": 78, "sell_percent": 0.4, "down_percent": 0.004, "peroid": "15min"}
 vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 2, "price_up_limit": 0.02, "buy_percent": 0.5,
@@ -1412,7 +1412,7 @@ def update_balance(is_first=False):
                                                    round(bal1.get("frozen", 0), 2))
             logger.info("update_balance = {}".format(str_balance))
             process.REALTIME_BALANCE.put(str_balance)
-            log_config.output2ui("update balance--{}".format(str_balance), 8)
+            # log_config.output2ui("update balance--{}".format(str_balance), 8)
             return bal0.get("trade", 0), bal0.get("frozen", 0), bal1.get("trade", 0), bal1.get("frozen", 0)
 
     except Exception as e:
@@ -1473,7 +1473,7 @@ def buy_low():
         total = (bal0 + bal0_f) * current_price + bal1 + bal1_f
         current_chicang = ((bal0 + bal0_f) * current_price) / total  # 当前持仓比
         if current_chicang < config.LIMIT_MIN_POSITION:
-            low_percent*=0.90
+            low_percent *= 0.995
 
     if current_price*low_percent < min_price_5 and get_open(market, 1) > get_close(market, 1) \
             and get_open(market, 2) > get_close(market, 2) and get_open(market, 3) > get_close(market, 3):
