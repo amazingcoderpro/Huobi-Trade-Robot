@@ -30,10 +30,10 @@ BUY_RECORD = []
 SELL_RECORD = []
 TRADE_RECORD = []
 
-move_stop_profit_params = {"check": 1, "msf_min": 0.02, "msf_back": 0.20}
+move_stop_profit_params = {"check": 1, "msf_min": 0.02, "msf_back": 0.22}
 stop_loss_params = {"check": 1, "percent": 0.03}
-kdj_buy_params = {"check": 1, "k": 20, "d": 22, "buy_percent": 0.4, "up_percent": 0.004, "peroid": "15min"}
-kdj_sell_params = {"check": 1, "k": 82, "d": 78, "sell_percent": 0.4, "down_percent": 0.004, "peroid": "15min"}
+kdj_buy_params = {"check": 1, "k": 20, "d": 22, "buy_percent": 0.3, "up_percent": 0.005, "peroid": "15min"}
+kdj_sell_params = {"check": 1, "k": 82, "d": 80, "sell_percent": 0.3, "down_percent": 0.005, "peroid": "15min"}
 vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 2, "price_up_limit": 0.02, "buy_percent": 0.5,
                         "peroid": "5min"}
 boll_strategy_params = {"check": 1, "peroid": "15min", "open_diff1_percent": 0.012, "open_diff2_percent": 0.012,
@@ -177,8 +177,8 @@ def boll_strategy():
         return False
 
     peroid = boll_strategy_params.get("peroid", "15min")
-    market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], peroid)
     symbol = config.NEED_TOBE_SUB_SYMBOL[0]
+    market = "market.{}.kline.{}".format(symbol, peroid)
     upper, middle, lower = get_boll(market, 0)
     price = get_current_price(symbol)
     diff1 = upper - middle
@@ -246,18 +246,18 @@ def boll_strategy():
 
     sell_percent = 0
     if price > upper:
-        # sell_percent = 0.2
+        sell_percent = 0.1
         logger.info("boll strategy price > upper, upper={}, price={}".format(upper, price))
         log_config.output2ui("boll strategy price > upper, upper={}, price={}".format(upper, price))
 
         if (upper - middle) / middle > open_diff1_percent:
-            sell_percent += 0.5
+            sell_percent += 0.3
             logger.info("超过上轨，且(upper-middle)/middle >open_diff1_percent")
             log_config.output2ui("超过上轨，且(upper-middle)/middle >open_diff1_percent")
-        # if up_down > 0.05:
-        #     logger.info("超过上轨，up_down > 0.05")
-        #     log_config.output2ui("超过上轨，up_down > 0.05")
-        #     sell_percent += 0.2
+        if up_down > 0.05:
+            logger.info("超过上轨，up_down > 0.05")
+            log_config.output2ui("超过上轨，up_down > 0.05")
+            sell_percent += 0.2
     # max_price = get_max_price(symbol, now - 10 * 60 * 1000)
 
     # if max_price > price and max_price > middle:
@@ -306,7 +306,7 @@ def boll_strategy():
             log_config.notify_user(msg, own=True)
             log_config.notify_user(log_config.make_msg(0, symbol, current_price=price, percent=buy_percent))
 
-            return success
+            return True
 
     # if sell_percent > 0 and G_BOLL_BUY > 0:
     if sell_percent > 0:
@@ -336,7 +336,7 @@ def boll_strategy():
             logger.warning(msg)
             log_config.notify_user(msg, own=True)
             log_config.notify_user(log_config.make_msg(1, symbol, current_price=price, percent=sell_percent))
-            return success
+            return True
 
     return False
 
@@ -356,35 +356,41 @@ def kdj_strategy_buy(currency=[], max_trade=1):
     logger.info("current k={}, d={}, current_price={}".format(cur_k, cur_d, current_price))
     log_config.output2ui("current k={}, d={}, current_price={}".format(cur_k, cur_d, current_price))
 
-    #是否需要降低门槛
-    should_loose = False
-
     # kd不能大于40
     limit_kd = 40*config.RISK
-    #　如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
-    if config.LIMIT_MIN_POSITION > 0.001:
-        bal0, bal0_f, bal1, bal1_f = update_balance()
-        total = (bal0 + bal0_f) * current_price + bal1 + bal1_f
-        current_chicang = ((bal0 + bal0_f) * current_price) / total  # 当前持仓比
-        if current_chicang < config.LIMIT_MIN_POSITION:
-            should_loose = True
-            limit_kd *= 1.1
+
+    # 如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比, 否则升高买入标准
+    postion, buy_factor, sell_factor = get_current_position()
+    if postion > 0:
+        limit_kd /= buy_factor
+
+    # 如果最近15分钟已经买过，则提高买入门槛
+    already = is_already_buy()
+    if already[0]:
+        limit_kd /= already[1]
+
+    limit_kd = 15 if limit_kd < 15 else limit_kd
+    limit_kd = 40 if limit_kd > 40 else limit_kd
 
     if cur_k > limit_kd or cur_d > limit_kd:
         logger.info("cur_k or cur_d > {}".format(limit_kd))
         return False
 
-    #回暖幅度超过0.008
+    # 回暖幅度超过0.008
+    up_percent = kdj_buy_params.get("up_percent", 0.008)
+    up_percent *= (1/config.RISK)
+
+    # 如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
+    if postion > 0:
+        up_percent *= buy_factor
+
+    if already[0]:
+        up_percent *= already[1]
+
     now = int(time.time()) * 1000
     min_price = get_min_price(symbol, last_time=now - (15 * 60 * 1000))
     if not min_price or min_price <= 0:
         return False
-
-    up_percent = kdj_buy_params.get("up_percent", 0.008)
-    up_percent *= (1/config.RISK)
-    # 　如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
-    if should_loose:
-        up_percent *= 0.9
 
     actual_up_percent = round((current_price - min_price) / min_price, 4)
     logger.info("kdj buy min_price={}, current_price={},  need up_percent={} actual up_percent = {}".format(min_price,
@@ -401,13 +407,21 @@ def kdj_strategy_buy(currency=[], max_trade=1):
     last_k_2, last_d_2, last_j_2 = get_kdj(market, 2)
     need_k = kdj_buy_params.get("k", 20)*config.RISK
     need_d = kdj_buy_params.get("d", 22)*config.RISK
+
+    # 如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
+    if postion > 0:
+        need_k /= buy_factor
+        need_d /= buy_factor
+
+    # 是否买过了
+    if already[0]:
+        need_k /= already[1]
+        need_d /= already[1]
+
     need_k = 15 if need_k < 15 else need_k
     need_d = 18 if need_d < 18 else need_d
-    # 　如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
-    if should_loose:
-        need_k *= 1.2
-        need_d *= 1.2
-
+    need_k = 25 if need_k > 25 else need_k
+    need_d = 30 if need_d > 30 else need_d
     if (cur_k <= need_k and cur_d <= need_d) \
             or (last_k <= need_k and last_d <= need_d) \
             or (last_k_2 <= need_k and last_d_2 <= need_d):
@@ -422,7 +436,7 @@ def kdj_strategy_buy(currency=[], max_trade=1):
 
         # logger.info("is_kdj_5min_buy return True")
         # log_config.output2ui("is_kdj_5min_buy return True")
-        percent = kdj_buy_params.get("buy_percent", 0.4)
+        percent = kdj_buy_params.get("buy_percent", 0.3)
         #
         # now = int(time.time()) * 1000
         # min_price = get_min_price(symbol, now - 15 * 60 * 1000)
@@ -468,7 +482,7 @@ def kdj_strategy_buy(currency=[], max_trade=1):
             log_config.notify_user(msg, own=True)
             log_config.notify_user(log_config.make_msg(0, symbol, current_price=current_price, percent=percent))
             logger.info("-----BUY_RECORD = {}".format(BUY_RECORD))
-            return success
+            return True
     return False
 
 
@@ -488,19 +502,42 @@ def kdj_strategy_sell(currency=[], max_trade=1):
     log_config.output2ui("current k={}, d={}, current_price={}".format(cur_k, cur_d, current_price))
 
     #kd要大于70
-    kd = 60 * config.RISK
-    kd = 75 if kd > 75 else kd
-    if cur_k < kd or cur_d < kd:
-        logger.info("cur_k or cur_d < {}".format(kd))
+    limit_kd = 70 * config.RISK
+    # 如果最近15分钟已经卖出过，则提高卖出门槛
+    already = is_already_sell()
+    if already[0]:
+        limit_kd *= already[1]
+
+    # 如果当前持仓比低于用户预设的值，则提高卖出门槛，保证仓位
+    postion, buy_factor, sell_factor = get_current_position()
+    if postion > 0:
+        if sell_factor == 0:
+            logger.info("kdj_strategy_sell be cancelled. force lock.")
+            return False
+
+        limit_kd *= sell_factor
+
+    limit_kd = 60 if limit_kd < 60 else limit_kd
+    limit_kd = 85 if limit_kd > 85 else limit_kd
+    if cur_k < limit_kd or cur_d < limit_kd:
+        logger.info("cur_k or cur_d < {}".format(limit_kd))
         return False
 
-    #回撤超过0.008
     now = int(time.time()) * 1000
     max_price = get_max_price(symbol, last_time=now - (15 * 60 * 1000))
     if not max_price or max_price <= 0:
         return False
 
-    down_percent = kdj_sell_params.get("down_percent", 0.008)*config.RISK
+    #回撤超过0.005
+    down_percent = kdj_sell_params.get("down_percent", 0.005)*config.RISK
+    if already[0]:
+        down_percent *= already[1]
+
+    if postion:
+        down_percent *= sell_factor
+
+    down_percent = 0.02 if down_percent > 0.02 else down_percent
+    down_percent = 0.001 if down_percent < 0.001 else down_percent
     actual_down_percent = round((max_price - current_price) / max_price, 4)
     logger.info(
         "kdj sell max_price={}, current_price={}, need down_percent={}, actual_down_percent={}".format(max_price,
@@ -513,19 +550,31 @@ def kdj_strategy_sell(currency=[], max_trade=1):
     # 最近三个周期内出现过kd大于80
     last_k, last_d, last_j = get_kdj(market, 1)
     last_k_2, last_d_2, last_j_2 = get_kdj(market, 2)
-    need_k = kdj_sell_params.get("k", 85)*config.RISK
+    need_k = kdj_sell_params.get("k", 82)*config.RISK
     need_d = kdj_sell_params.get("d", 80)*config.RISK
-    need_k = 90 if need_k>90 else need_k
+
+    if already[0]:
+        need_k *= already[1]
+        need_d *= already[1]
+
+    if postion > 0:
+        need_k *= sell_factor
+        need_d *= sell_factor
+
+    need_k = 95 if need_k > 95 else need_k
     need_d = 85 if need_d > 85 else need_d
+    need_k = 75 if need_k < 75 else need_k
+    need_d = 72 if need_d < 72 else need_d
     if (cur_k >= need_d and cur_d >= need_d) \
             or (last_k >= need_k and last_d >= need_d) \
             or (last_k_2 >= need_k and last_d_2 >= need_d):
-        percent = kdj_sell_params.get("sell_percent", 0.4)
 
+        percent = kdj_sell_params.get("sell_percent", 0.3)
         percent *= config.RISK
         msg_show = "[卖出{}]kdj_{} 卖出比例={}%, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}．".format(
             symbol, peroid, round(percent * 100, 2), round(current_price, 3), round(max_price, 3),
             round(actual_down_percent * 100, 2), round(cur_k, 2), round(cur_d, 2), )
+
         if not trade_alarm(msg_show):
             return False
 
@@ -549,7 +598,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
             logger.warning(msg)
             log_config.notify_user(msg, own=True)
             log_config.notify_user(log_config.make_msg(1, symbol, current_price=current_price, percent=percent))
-            return success
+            return True
 
     return False
 
@@ -606,14 +655,26 @@ def stop_loss(percent=0.03):
         log_config.output2ui("stop loss is not check", 2)
         return False
 
-    precision = 0.0000001
+    #最近三分钟内有买入策略被触发，则暂时不卖
+    already = is_already_buy(last_time=int(time.time()) * 1000 - 3 * 60 * 1000)
+    if already[0]:
+        return False
+
+    # 根据仓位调整止损比例
+    position, buy_factor, sell_factor = get_current_position()
+    if position > 0:
+        if sell_factor == 0:
+            logger.warning("sell_high be cancelled, lock postion")
+            return False
+
+    precision = 0.00001
     trigger = False
     for trade in BUY_RECORD:
-        last_buy_amount = float(trade.get("field-amount", "0.0"))
-        last_price = float(trade.get("price", "0.0"))
-        if last_price < precision and last_buy_amount > 0:
-            last_price = float(trade.get('field-cash-amount', "0.0")) / last_buy_amount
+        last_buy_amount = float(trade.get("field-amount", 0))
         last_time = trade.get('created-at', 0)
+        last_price = float(trade.get("price", 0))
+        if last_price < precision and last_buy_amount > 0:
+            last_price = float(trade.get('field-cash-amount', 0)) / last_buy_amount
 
         if last_buy_amount <= precision or last_price <= precision:
             continue
@@ -624,6 +685,10 @@ def stop_loss(percent=0.03):
         loss_percent = (last_price - current_price) / last_price
         limit_loss = stop_loss_params["percent"]*config.RISK
         limit_loss = 0.1 if limit_loss > 0.1 else limit_loss    #再激进也不能亏10个点都不止损
+
+        # 如果仓位已经很低了，提高止损门槛
+        limit_loss *= sell_factor
+
         if loss_percent >= limit_loss:
             msg = "[SELL] stop loss execute, sell {}, loss percent={}, config loss percent={}, last_buy_price={}, last_buy_amount={}, current_price={}".format(
                     symbol, loss_percent, limit_loss, last_price, last_buy_amount, current_price)
@@ -648,12 +713,10 @@ def stop_loss(percent=0.03):
 
                 msg = "[卖出{}] 移动止损 计划卖出量={}个, 实际卖出量={}个, 之前买入价={}$, 当前价={}$, 损失比例={}%.".format(
                         symbol, round(last_buy_amount, 3), round(ret[1], 3), round(last_price, 3),
-                        round(current_price,3), round(loss_percent*100, 2))
+                        round(current_price, 3), round(loss_percent*100, 2))
 
-                success = False
                 if ret[0] == 1:
                     msg += "-交易成功！"
-                    success = True
                 elif ret[0] == 2:
                     msg += "-交易被取消, 取消原因: {}!".format(ret[2])
                 elif ret[0] == 3:
@@ -663,12 +726,15 @@ def stop_loss(percent=0.03):
                 logger.warning(msg)
                 log_config.notify_user(msg, own=True)
                 log_config.notify_user(log_config.make_msg(1, symbol, current_price=current_price))
-                return success
 
     return trigger
 
 
 def move_stop_profit():
+    """
+    移动止盈，根据之前的买入记录来卖出
+    :return:
+    """
     # market = "market.ethusdt.kline.15min"
     precision = 0.00001
     logger.info("move_stop_profit checking params={}".format(move_stop_profit_params))
@@ -678,6 +744,20 @@ def move_stop_profit():
         return False
 
     trigger = False
+
+    # 根据当前仓位动态调整买入卖出的难度系数
+    position, buy_factor, sell_factor = get_current_position()
+    if position > 0:
+        if sell_factor == 0:
+            # 当前仓位小于用户指定的最低仓位，　强制锁仓，　不卖
+            logger.warning("move_stop_profit have been cancelled. sell_factor=0")
+            return False
+
+    # 获取布林的上轨，当前价格突破上轨后，降低卖出难度，尽快卖出
+    peroid = boll_strategy_params.get("peroid", "15min")
+    market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], peroid)
+    upper, middle, lower = get_boll(market, 0)
+
     for trade in BUY_RECORD:
         logger.info("move_stop_profit last buy trade = {}".format(trade))
         log_config.output2ui("move_stop_profit last buy trade = {}".format(trade))
@@ -695,10 +775,16 @@ def move_stop_profit():
         max_price = get_max_price(symbol, last_time)
         if max_price <= 0:
             continue
-        # if max_price < last_price * 1.02:
-        # 上涨超过两个点
+
+        # 上涨需要超过两个点才止盈
         max_upper = (max_price-last_price)/last_price
         limit_max_upper = config.RISK*move_stop_profit_params.get("msf_min", 0.02)
+
+        # 根据当前仓位，动态调整卖出门槛
+        if position > 0:
+            limit_max_upper *= sell_factor
+
+        # 最少盈利超过1.5个点
         limit_max_upper = 0.015 if limit_max_upper < 0.015 else limit_max_upper
         logger.info("move_stop_profit, profit upper={}, msf_min={}".format(max_upper, limit_max_upper))
 
@@ -711,17 +797,32 @@ def move_stop_profit():
         # 当前盈利
         profit = round(((current_price-last_price)/last_price)*100, 3)
 
+        # 回撤幅度超过25％（涨幅在2个点以内的）, 如果超过两个点，则要求回撤幅度需要缩小，以保证更多的盈利, 激进者可以承受更大的风险
+        limit_down_back_percent = move_stop_profit_params.get("msf_back", 0.20) * (0.02/max_upper) * config.RISK
+
         logger.info(
             "move_stop_profit last_price={}, max_price={}, current_price={}, max_upper={}, down_back_percent={}, last_buy_amount={}, msf_back={}".format(
-                last_price, max_price, current_price, max_upper, down_back_percent, last_buy_amount,
-                move_stop_profit_params["msf_back"]))
+                last_price, max_price, current_price, max_upper, down_back_percent, last_buy_amount, limit_down_back_percent))
 
-        # 回撤幅度超过25％（涨幅在2个点以内的）, 如果超过两个点，则要求回撤幅度需要缩小，以保证更多的盈利, 激进者可以承受更大的风险
-        if down_back_percent < move_stop_profit_params.get("msf_back", 0.20) * (0.02/max_upper) * config.RISK:
+        # 判断当前价格有没有超过上轨，如果超过了，则认为在危险区域，需要更快的卖出，如果没有超过，则相对安全，可以容忍更大的回撤幅度
+        if upper > 0:
+            if max_price > upper:
+                # 超过的越多，越危险, 可容忍的回撤幅度越低，这样可以在更高的价格卖出
+                limit_down_back_percent *= (1 - ((max_price-upper)/upper * 30))
+            else:
+                # 这样可以避免被洗盘洗出来
+                limit_down_back_percent *= (1 + ((upper-max_price)/max_price * 30))
+
+        # 最多允许回撤一半, 最小回撤5个点
+        limit_down_back_percent = 0.05 if limit_down_back_percent < 0.05 else limit_down_back_percent
+        limit_down_back_percent = 0.5 if limit_down_back_percent > 0.5 else limit_down_back_percent
+        logger.warning("move_stop_profit limit_down_back_percent={}".format(limit_down_back_percent))
+        if down_back_percent < limit_down_back_percent:
             continue
 
         # 盈利小于１个点不卖
-        limit_profit = 0.012*config.RISK
+        limit_profit = 0.013*config.RISK
+        limit_profit *= sell_factor
         limit_profit = 0.01 if limit_profit < 0.01 else limit_profit
         if profit < limit_profit:
             continue
@@ -729,11 +830,11 @@ def move_stop_profit():
         msg = "[SELL]Move stop profit be trigger sell {},  current price={}, last_price={}, max_price={} max_upper={}, profit={}% down_back_percent={}%".format(
                     symbol, current_price, last_price, max_price, max_upper, profit, down_back_percent)
         if not trade_alarm(msg):
-            return False
+            continue
 
         bal = get_balance(symbol[0:3], result_type=0)
         if bal and float(bal) <= last_buy_amount:
-            last_buy_amount = round(float(bal)*0.95, 3)
+            last_buy_amount = round(float(bal)*0.98, 3)
 
         logger.warning(
             "move_stop_profit last_price={}, max_price={}, current_price={}, down_back_percent={}, last_buy_amount={}, profit={}%".format(
@@ -769,10 +870,8 @@ def move_stop_profit():
                                                                                                                                current_price - last_price),
                                                                                                                    3))
 
-            success = False
             if ret[0] == 1:
                 msg += "-交易成功！"
-                success = True
                 BUY_RECORD.remove(trade)
             elif ret[0] == 2:
                 msg += "-交易被取消, 取消原因: {}!".format(ret[2])
@@ -783,7 +882,6 @@ def move_stop_profit():
             logger.warning(msg)
             log_config.notify_user(msg, own=True)
             log_config.notify_user(log_config.make_msg(1, symbol, current_price=current_price, last_price=last_price))
-            return success
 
     return trigger
 
@@ -798,16 +896,12 @@ def vol_price_fly():
     symbol = market.split(".")[1]
     multiple = vol_price_fly_params.get("vol_percent", 1.2) * (1/config.RISK)
     mul_21 = 1.1
-    #　如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
-    if config.LIMIT_MIN_POSITION > 0.001:
-        bal0, bal0_f, bal1, bal1_f = update_balance()
-        current_price = get_current_price(symbol)
-        total = (bal0 + bal0_f) * current_price + bal1 + bal1_f
-        current_chicang = ((bal0 + bal0_f) * current_price) / total  # 当前持仓比
-        if current_chicang < config.LIMIT_MIN_POSITION:
-            should_loose = True
-            multiple *= 0.9
-            mul_21 *= 0.9
+
+    # 根据当前仓位动态调整买入卖出的难度系数
+    position, buy_factor, sell_factor = get_current_position()
+    if position > 0:
+        multiple *= buy_factor
+        mul_21 *= buy_factor
 
     peroid_5min = 1
     if peroid == "5min":
@@ -946,7 +1040,7 @@ def vol_price_fly():
         logger.warning(msg)
         log_config.notify_user(msg, own=True)
         log_config.notify_user(log_config.make_msg(0, symbol, current_price=current_price, percent=percent))
-        return success
+        return True
     return False
 
 
@@ -995,7 +1089,7 @@ def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", cur
         if balance > config.TRADE_MIN_LIMIT_VALUE:
             amount = config.TRADE_MIN_LIMIT_VALUE
         else:
-            msg = "买入时余额不足, 当前可交易金额：{}.".format(balance)
+            msg = "买入时余额不足, 当前可交易金额：{}.".format(round(balance, 2))
             logger.warning(msg)
             return 2, amount, msg
 
@@ -1067,7 +1161,7 @@ def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
                 logger.warning(msg)
                 return 2, amount, msg
             elif balance-amount < limit_chicang_coin:
-                logger.warning("卖出后仓位将低于最小持仓比，需要减少卖出量，原计划卖出{}, 调整后卖出{}".format(amount, balance-limit_chicang_coin))
+                logger.warning("卖出后仓位将低于最小持仓比，需要减少卖出量，原计划卖出{}, 调整后卖出{}".format(round(amount, 4), round(balance-limit_chicang_coin,4)))
                 amount = balance-limit_chicang_coin
 
         total_value = amount*current_price
@@ -1076,7 +1170,7 @@ def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
             if balance*current_price > config.TRADE_MIN_LIMIT_VALUE:
                 amount = config.TRADE_MIN_LIMIT_VALUE/current_price
             else:
-                msg = "卖出时余币不足, 当前可交易币量{}个, 价值：{}$.".format(balance, round(balance*current_price, 2))
+                msg = "卖出时余币不足, 当前可交易币量{}个, 价值：{}$.".format(round(balance, 4), round(balance*current_price, 2))
                 logger.warning(msg)
                 return 2, amount, msg
         elif total_value > config.TRADE_MAX_LIMIT_VALUE:
@@ -1445,7 +1539,12 @@ def get_balance(currency, access_key=None, secret_key=None, retry=2, result_type
     # def __init__(self, func, check_period, execute_times=-1, after_execute_sleep=0,
     #              state=1, is_after_execute_pause=False, name=""):
 
+
 def buy_low():
+    """
+    低吸
+    :return:
+    """
     now = int(time.time()) * 1000
     symbol = config.NEED_TOBE_SUB_SYMBOL[0]
     market = "market.{}.kline.{}".format(symbol, "15min")
@@ -1463,28 +1562,34 @@ def buy_low():
 
     logger.info("buy low checking...current price={}, min price={}, min_price_5={}, min_price_20={}, min_price_60={}".format(current_price, min_price, min_price_5, min_price_20, min_price_60))
     buy_percent = 0
+
     # 比最低价还低1％以上，且最近三个周期都在跌
-    percent_factor = 0
+    percent_factor = 0  # 价格越代，这个值越大，　买的越多
     low_percent = 1.008 + (config.RISK-1)/100
 
+    # 如果最近15分钟已经买过，则提高买入门槛
+    already = is_already_buy()
+    if already[0]:
+        low_percent *= already[1]
+
     #　如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
-    if config.LIMIT_MIN_POSITION > 0.001:
-        bal0, bal0_f, bal1, bal1_f = update_balance()
-        total = (bal0 + bal0_f) * current_price + bal1 + bal1_f
-        current_chicang = ((bal0 + bal0_f) * current_price) / total  # 当前持仓比
-        if current_chicang < config.LIMIT_MIN_POSITION:
-            low_percent *= 0.995
+    position, buy_factor, sell_factor = get_current_position()
+    low_percent += (buy_factor-1) / 100
+
+    low_percent = 1.001 if low_percent < 1.001 else low_percent
+    low_percent = 1.02 if low_percent > 1.02 else low_percent
 
     if current_price*low_percent < min_price_5 and get_open(market, 1) > get_close(market, 1) \
             and get_open(market, 2) > get_close(market, 2) and get_open(market, 3) > get_close(market, 3):
-        percent_factor = (min_price_5 - current_price) / min_price_60 / (low_percent-1)
+        # 跌的越多，percent_factor 越大
+        percent_factor = (min_price_5 - current_price) / min_price_5 / (low_percent-1)
         buy_percent += 0.1
 
     if current_price*low_percent <= min_price_60:
         percent_factor = (min_price_60 - current_price)/min_price_60/(low_percent-1)
         buy_percent += 0.4
     elif current_price*low_percent <= min_price_20:
-        percent_factor = (min_price_60 - current_price) / min_price_60 / (low_percent-1)
+        percent_factor = (min_price_20 - current_price) / min_price_20 / (low_percent-1)
         buy_percent += 0.3
 
     # 判断是不是还在跌,如果是，暂时不买
@@ -1494,9 +1599,9 @@ def buy_low():
 
     logger.warning("buy low buy, current price={}, buy percent={}, min price={}, min_price_5={}, min_price_20={}, min_price_60={}".format(current_price, buy_percent, min_price, min_price_5, min_price_20, min_price_60))
     if buy_percent > 0:
-        percent_factor /= 10
+        percent_factor /= 20
         percent_factor = 0 if percent_factor < 0 else percent_factor
-        percent_factor = 0.4 if percent_factor > 0.4 else percent_factor
+        percent_factor = 0.3 if percent_factor > 0.3 else percent_factor
 
         buy_percent *= config.RISK
         buy_percent += percent_factor
@@ -1525,7 +1630,7 @@ def buy_low():
             log_config.notify_user(msg, own=True)
             log_config.notify_user(log_config.make_msg(0, symbol, current_price=current_price, percent=buy_percent))
             logger.info("-----BUY_RECORD = {}".format(BUY_RECORD))
-            return success
+            return True
 
     return False
 
@@ -1545,32 +1650,50 @@ def sell_high():
 
     current_price = get_current_price(symbol)
     logger.info("sell high checking... current price={}, max price={} max_price_5={}, max_price_20={}, max_price_60={}".format(current_price, max_price, max_price_5, max_price_20, max_price_60))
-    sell_percent = 0
-    # 比最高价还高1％，且最近三个周期都在涨
-    up_percent = 1.008 + (config.RISK-1)/100
-    percent_factor = 1
-    if current_price >= max_price_5*up_percent and get_open(market, 1) < get_close(market, 1) and get_open(market, 2) < get_close(
-            market, 2) and get_open(market, 3) < get_close(market, 3):
-        percent_factor = (current_price-max_price_5)/max_price_5/(up_percent-1)
-        sell_percent += 0.1
-
-    if current_price >= max_price_60 * up_percent:
-        percent_factor = (current_price - max_price_5) / max_price_5 / (up_percent - 1)
-        sell_percent += 0.4
-    elif current_price >= up_percent * max_price_20:
-        percent_factor = (current_price - max_price_5) / max_price_5 / (up_percent - 1)
-        sell_percent += 0.3
 
     # 判断是不是还在涨,如果是，暂时不卖
     if max_price > 0 and current_price*1.004 > max_price:
         logger.warning("sell high max price={}, current price={}, no sell!".format(max_price, current_price))
         return False
 
+    sell_percent = 0
+    # 比最高价还高1％，且最近三个周期都在涨
+    up_percent = 1.008 + (config.RISK-1)/100
+
+    #　如果当前持仓比低于用户预设的值，则提高卖出门槛，以保证用户要求的持仓比
+    position, buy_factor, sell_factor = get_current_position()
+    if position > 0:
+        if sell_factor == 0:
+            logger.warning("sell_high be cancelled, lock postion")
+            return False
+
+    already = is_already_sell()
+    if already[0]:
+        up_percent *= already[1]
+
+    up_percent += (sell_factor-1) / 100
+
+    up_percent = 1.001 if up_percent < 1.001 else up_percent
+    up_percent = 1.02 if up_percent > 1.02 else up_percent
+
+    percent_factor = 0
+    if current_price >= max_price_5*up_percent and get_open(market, 1) < get_close(market, 1) and get_open(market, 2) < get_close(
+            market, 2) and get_open(market, 3) < get_close(market, 3):
+        percent_factor = (current_price-max_price_5)/max_price_5/(up_percent-1)
+        sell_percent += 0.1
+
+    if current_price >= max_price_60 * up_percent:
+        percent_factor = (current_price - max_price_60) / max_price_60 / (up_percent - 1)
+        sell_percent += 0.4
+    elif current_price >= up_percent * max_price_20:
+        percent_factor = (current_price - max_price_20) / max_price_20 / (up_percent - 1)
+        sell_percent += 0.3
+
     logger.warning("sell high sell, current price={}, percent={}, max price={}, m5={}, m20={}, m60={}".format(current_price, sell_percent, max_price, max_price_5, max_price_20, max_price_60))
     if sell_percent > 0:
-        percent_factor /= 10
+        percent_factor /= 20
         percent_factor = 0 if percent_factor < 0 else percent_factor
-        percent_factor = 0.4 if percent_factor > 0.4 else percent_factor
+        percent_factor = 0.3 if percent_factor > 0.3 else percent_factor
 
         sell_percent *= config.RISK
         sell_percent += percent_factor
@@ -1582,7 +1705,6 @@ def sell_high():
         #     symbol, sell_percent, current_price, max_price_5, max_price_20, max_price_60)
         if not trade_alarm(msg):
             return False
-
 
         ret = sell_market(symbol, percent=sell_percent, current_price=current_price)
         if ret[0]:
@@ -1605,9 +1727,129 @@ def sell_high():
             log_config.notify_user(log_config.make_msg(1, symbol, current_price=current_price, percent=sell_percent))
             logger.info("-----SELL_RECORD = {}".format(SELL_RECORD))
 
-            return success
+            return True
 
     return False
+
+
+def is_already_buy(last_time=0):
+    """
+    检测最近15分钟内有没有买入过，如果15分钟内有其他策略买入过，则应该提高买入门槛，以避免重复买入
+    :param last_time: 检测时间起始值
+    :return: 是否买过，再次买入时难度提升系数(取值1--2)
+    """
+    try:
+        if not last_time:
+            last_time = int(time.time()) * 1000 - 15 * 60 * 1000
+        symbol = config.NEED_TOBE_SUB_SYMBOL[0]
+        total_buy_amount = 0
+        for trade in BUY_RECORD:
+            last_buy_time = int(trade.get("finished-at", 0))
+            last_buy_amount = float(trade.get("field-cash-amount", 0))  # 上次买入的金额数
+            trade_type = trade.get("type", "")
+            sym = trade.get("symbol", "")
+            if last_buy_time and last_buy_time > last_time and symbol == sym and "buy" in trade_type:
+                total_buy_amount += last_buy_amount
+
+        if total_buy_amount > 0:
+            bal0, bal0_f, bal1, bal1_f = update_balance()
+            current_price = get_current_price(symbol)
+            total_money = (bal0 + bal0_f) * current_price + bal1 + bal1_f
+            # 上次买的越多, 这次需要买入的门槛就越高, 如一共1000，　刚刚买入300，　当前系数＝１＋（300／1000）＝1.3
+            factor = 1+(total_buy_amount/total_money)
+            factor = 2 if factor > 2 else factor
+            logger.info("is_already_buy return true, factor={}".format(factor))
+            return True, factor
+    except Exception as e:
+        logger.warning("is_already_buy catch exception={}".format(e))
+
+    return False, 1
+
+
+def is_already_sell(last_time=0):
+    """
+    检测最近15分钟内有没有卖出过，如果15分钟内有其他策略卖出过，则应该提高卖出门槛，以避免重复卖出
+    :param last_time: 检测时间起始值
+    :return: 是否买过，再次卖出时难度提升系数，取值（１－－２）
+    """
+    try:
+        factor = 1
+        if not last_time:
+            last_time = int(time.time()) * 1000-15*60*1000
+
+        symbol = config.NEED_TOBE_SUB_SYMBOL[0]
+        total_sell_amount = 0
+        for trade in SELL_RECORD:
+            last_sell_time = int(trade.get("finished-at", 0))
+            last_sell_amount = float(trade.get("field-cash-amount", 0))
+            trade_type = trade.get("type", "")
+            sym = trade.get("symbol", "")
+            if last_sell_time and last_sell_time >= last_time and symbol == sym and "sell" in trade_type:
+                total_sell_amount += last_sell_amount
+
+        if total_sell_amount > 0:
+            bal0, bal0_f, bal1, bal1_f = update_balance()
+            current_price = get_current_price(symbol)
+            total_money = (bal0 + bal0_f) * current_price + bal1 + bal1_f
+
+            # 上次卖的越多, 这次需要卖出的门槛就越高, 如一共1000，　刚刚卖出300，　当前系数＝１＋（300／1000）＝1.3
+            factor = 1+(total_sell_amount/total_money)
+            factor = 2 if factor > 2 else factor
+            logger.info("is_already_sell return true, factor={}".format(factor))
+            return True, factor
+    except Exception as e:
+        logger.warning("is_already_sell catch exception={}".format(e))
+
+    logger.info("is_already_sell return false, factor={}".format(factor))
+    return False, 1
+
+
+def get_current_position():
+    """
+    根据当前的仓位与用户期望的仓位大小关系，　来计算买卖系数，
+    获取当前的持仓比以及买入＼卖出条件系数，系数小于１代表交易门槛降低，系数大于１代表交易门槛升高, 如果系数为零代表禁止交易
+    buy_factor, sell_factor的取值范围在0.7－－1.3之间
+    :return:
+    """
+    position = -1
+    buy_factor = 1
+    sell_factor = 1
+    try:
+        bal0, bal0_f, bal1, bal1_f = update_balance()
+        current_price = get_current_price(symbol=config.NEED_TOBE_SUB_SYMBOL[0])
+        if current_price < 0:
+            return position, buy_factor, sell_factor
+
+        total = (bal0 + bal0_f) * current_price + bal1 + bal1_f
+        position = ((bal0 + bal0_f) * current_price) / total  # 当前持仓比
+        if config.LIMIT_MIN_POSITION >= 0.01:
+            limit_pos = config.LIMIT_MIN_POSITION
+        else:
+            limit_pos = 0.5
+
+        if position < limit_pos:
+            # 比如用户期望仓位是50％，　当前仓位是20％，　则factor=(0.5-0.2)/0.5/2=0.3, 则买入系数为0.7（更易买）, 卖出系数为1.3（更难卖）
+            factor = (limit_pos - position) / limit_pos/3
+            buy_factor = 1 - factor         # 小于１代表买入门槛应该降低
+            sell_factor = 1 + factor          # 大于１代表卖出门槛应该增高
+
+            # 如果用户设置了强制锁仓则不能卖出
+            if config.FORCE_POSITION:
+                sell_factor = 0
+        else:
+            factor = (position-limit_pos)/position/3
+            sell_factor = 1 - factor
+            buy_factor = 1 + factor
+
+        buy_factor = 0.7 if buy_factor < 0.7 else buy_factor
+        buy_factor = 1.3 if buy_factor > 1.3 else buy_factor
+        sell_factor = 0.7 if sell_factor < 0.7 else sell_factor
+        sell_factor = 1.3 if sell_factor > 1.3 else sell_factor
+    except Exception as e:
+        logger.warning("get_current_position e={}".format(e))
+
+    logger.info("get_current_position postion={}, limit position={}, buy_factor={}, sell_factor={}, ".format(position, config.LIMIT_MIN_POSITION, buy_factor, sell_factor))
+    return position, buy_factor, sell_factor
 
 
 STRATEGY_LIST = [
@@ -1620,8 +1862,8 @@ STRATEGY_LIST = [
     Strategy(kdj_strategy_sell, 45, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
     Strategy(stop_loss, 35, -1, after_execute_sleep=60, name="stop_loss"),
     Strategy(move_stop_profit, 30, -1, after_execute_sleep=60, name="move_stop_profit"),
-    Strategy(vol_price_fly, 120, -1, name="vol_price_fly", after_execute_sleep=900 * 2),
-    Strategy(boll_strategy, 100, -1, name="boll strategy", after_execute_sleep=900 * 2),
+    Strategy(vol_price_fly, 150, -1, name="vol_price_fly", after_execute_sleep=900 * 2),
+    Strategy(boll_strategy, 120, -1, name="boll strategy", after_execute_sleep=900 * 2),
     # Strategy(kdj_5min_update, 30, -1, name="kdj_5min_update", after_execute_sleep=1),
     Strategy(kdj_15min_update, 60, -1, name="kdj_15min_update", after_execute_sleep=1),
     Strategy(buy_low, 15, -1, name="buy_low", after_execute_sleep=600),

@@ -431,6 +431,7 @@ class MainUI():
         def update_price(price_text):
             while True:
                 try:
+                    time.sleep(2)
                     msg = process.REALTIME_PRICE.get(block=True)
                     # print("update_price {}".format(msg))
                     (key, value), = msg.items()
@@ -448,6 +449,7 @@ class MainUI():
         def update_balance(bal_text):
             while True:
                 try:
+                    time.sleep(2)
                     msg = process.REALTIME_BALANCE.get(block=True)
                     bal_text.set(str(msg))
                 except Exception as e:
@@ -457,6 +459,7 @@ class MainUI():
 
         def update_ui_log(log_text, trade_text):
             while True:
+                time.sleep(2)
                 try:
                     if not log_config.REALTIME_LOG.empty():
                         msg_dict = log_config.REALTIME_LOG.get(block=True)
@@ -476,6 +479,7 @@ class MainUI():
                     continue
 
         def update_kdj(kdj_text):
+            time.sleep(2)
             while True:
                 try:
                     kdj_15min = process.REALTIME_KDJ_15MIN.get(block=True)
@@ -487,6 +491,7 @@ class MainUI():
 
         def update_uml(uml_text):
             while True:
+                time.sleep(2)
                 try:
                     global CURRENT_PRICE
                     uml = process.REALTIME_UML.get(block=True)
@@ -510,7 +515,7 @@ class MainUI():
                         if (now_time-daily_report_start_time).total_seconds() > config.TRADE_HISTORY_REPORT_INTERVAL*3600:
                             today_logs = [y for x, y in config.TRADE_ALL_LOG.items() if x > daily_report_start_time]
                             daily_report_start_time = now_time
-                            daily_msg = "最近{}小时的交易记录如下:\n".format(config.TRADE_HISTORY_REPORT_INTERVAL)+"\n".join(today_logs)
+                            daily_msg = "最近{}小时的交易记录如下:\n".format(int(config.TRADE_HISTORY_REPORT_INTERVAL))+"\n".join(today_logs)
                             log_config.output2ui(daily_msg, 8)
                             logger.warning(daily_msg)
                             log_config.notify_user(daily_msg, own=True)
@@ -527,7 +532,7 @@ class MainUI():
                             chicang = ((bal0 + bal0_f) * CURRENT_PRICE) / total
                             dapan_profit = round((CURRENT_PRICE - process.ORG_PRICE) * 100 / process.ORG_PRICE, 2)
                             account_profit = round((total - process.ORG_DOLLAR_TOTAL) * 100 / process.ORG_DOLLAR_TOTAL, 2)
-                            is_win = u"是" if account_profit>=dapan_profit else u"否"
+                            is_win = u"是" if account_profit >= dapan_profit else u"否"
                             msg_own = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n启动时价格:{}" \
                                       u"\n当前价格:{}" \
                                       u"\n启动时持币量:可用{},冻结{},仓位{}%" \
