@@ -299,7 +299,7 @@ def boll_strategy():
             elif ret[0] == 2:
                 msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
-                msg += "-交易失败, 失败原因:{}！".format(ret[2])
+                msg += "-交易失败, 失败原因: {}！".format(ret[2])
 
             log_config.output2ui(msg, 7)
             logger.warning(msg)
@@ -330,7 +330,7 @@ def boll_strategy():
             elif ret[0] == 2:
                 msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
-                msg += "-交易失败, 失败原因:{}！".format(ret[2])
+                msg += "-交易失败, 失败原因: {}！".format(ret[2])
 
             log_config.output2ui(msg, 7)
             logger.warning(msg)
@@ -475,7 +475,7 @@ def kdj_strategy_buy(currency=[], max_trade=1):
             elif ret[0] == 2:
                 msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
-                msg += "-交易失败, 失败原因:{}！".format(ret[2])
+                msg += "-交易失败, 失败原因: {}！".format(ret[2])
 
             log_config.output2ui(msg, 6)
             logger.warning(msg)
@@ -492,35 +492,44 @@ def kdj_strategy_sell(currency=[], max_trade=1):
         return False
 
     peroid = kdj_sell_params.get("peroid", "15min")
-    logger.info("kdj_sell_{} be called".format(peroid))
-    log_config.output2ui("kdj_sell_{} be called".format(peroid))
     market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], peroid)
     symbol = market.split(".")[1]
     cur_k, cur_d, cur_j = get_kdj(market)
     current_price = get_current_price(symbol)
-    logger.info("current k={}, d={}, current_price={}".format(cur_k, cur_d, current_price))
-    log_config.output2ui("current k={}, d={}, current_price={}".format(cur_k, cur_d, current_price))
+    limit_diff_kd = 5 - (config.RISK-1)*5
+    diff_kd = cur_k - cur_d
 
-    #kd要大于70
-    limit_kd = 70 * config.RISK
+    entry_msg = "kdj_strategy_sell peroid={}, current k={}, d={}, current_price={}, actural diff_kd={}, limit diff_kd={}"\
+        .format(peroid, cur_k, cur_d, current_price, diff_kd, limit_diff_kd)
+    logger.info(entry_msg)
+    log_config.output2ui(entry_msg)
+
+    # kd是差距是否在缩小，其至死叉
+    if diff_kd > limit_diff_kd:
+        logger.info("diff_kd {} > limit_diff_kd {}, return False".format(diff_kd, limit_diff_kd))
+        return False
+
+    # kd要大于50
+    limit_kd = 50 * config.RISK
+
     # 如果最近15分钟已经卖出过，则提高卖出门槛
     already = is_already_sell()
     if already[0]:
-        limit_kd *= already[1]
+        limit_kd += limit_kd * ((already[1]-1)/2)
 
     # 如果当前持仓比低于用户预设的值，则提高卖出门槛，保证仓位
-    postion, buy_factor, sell_factor = get_current_position()
-    if postion > 0:
+    position, buy_factor, sell_factor = get_current_position()
+    if position > 0:
         if sell_factor == 0:
-            logger.info("kdj_strategy_sell be cancelled. force lock.")
+            logger.warning("kdj_strategy_sell be cancelled. force lock.")
             return False
 
-        limit_kd *= sell_factor
+        limit_kd += (sell_factor-1)*limit_kd/2
 
-    limit_kd = 60 if limit_kd < 60 else limit_kd
-    limit_kd = 85 if limit_kd > 85 else limit_kd
+    limit_kd = 35 if limit_kd < 35 else limit_kd
+    limit_kd = 90 if limit_kd > 90 else limit_kd
     if cur_k < limit_kd or cur_d < limit_kd:
-        logger.info("cur_k or cur_d < {}".format(limit_kd))
+        logger.info("cur_k={} or cur_d={} < {}".format(cur_k, cur_d, limit_kd))
         return False
 
     now = int(time.time()) * 1000
@@ -533,7 +542,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
     if already[0]:
         down_percent *= already[1]
 
-    if postion:
+    if position:
         down_percent *= sell_factor
 
     down_percent = 0.02 if down_percent > 0.02 else down_percent
@@ -550,21 +559,27 @@ def kdj_strategy_sell(currency=[], max_trade=1):
     # 最近三个周期内出现过kd大于80
     last_k, last_d, last_j = get_kdj(market, 1)
     last_k_2, last_d_2, last_j_2 = get_kdj(market, 2)
-    need_k = kdj_sell_params.get("k", 82)*config.RISK
-    need_d = kdj_sell_params.get("d", 80)*config.RISK
 
+    need_k = kdj_sell_params.get("k", 82)
+    need_k += (config.RISK-1)*(100-need_k)
+
+    need_d = kdj_sell_params.get("d", 78)
+    need_d += (config.RISK-1)*(100-need_d)
+
+    # 根据是否买卖过来调整kd
     if already[0]:
-        need_k *= already[1]
-        need_d *= already[1]
+        need_k += (already[1]-1) * (100-need_k)
+        need_d += (already[1]-1) * (100-need_d)
 
-    if postion > 0:
-        need_k *= sell_factor
-        need_d *= sell_factor
+    # 根据仓位调整kd的高低
+    if position > 0:
+        need_k += (sell_factor-1) * (100-need_k)
+        need_d += (sell_factor-1) * (100-need_d)
 
-    need_k = 95 if need_k > 95 else need_k
-    need_d = 85 if need_d > 85 else need_d
-    need_k = 75 if need_k < 75 else need_k
-    need_d = 72 if need_d < 72 else need_d
+    # need_k = 95 if need_k > 95 else need_k
+    # need_d = 85 if need_d > 85 else need_d
+    # need_k = 75 if need_k < 75 else need_k
+    # need_d = 72 if need_d < 72 else need_d
     if (cur_k >= need_d and cur_d >= need_d) \
             or (last_k >= need_k and last_d >= need_d) \
             or (last_k_2 >= need_k and last_d_2 >= need_d):
@@ -592,7 +607,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
             elif ret[0] == 2:
                 msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
-                msg += "-交易失败, 失败原因:{}！".format(ret[2])
+                msg += "-交易失败, 失败原因: {}！".format(ret[2])
 
             log_config.output2ui(msg, 7)
             logger.warning(msg)
@@ -720,7 +735,7 @@ def stop_loss(percent=0.03):
                 elif ret[0] == 2:
                     msg += "-交易被取消, 取消原因: {}!".format(ret[2])
                 elif ret[0] == 3:
-                    msg += "-交易失败, 失败原因:{}！".format(ret[2])
+                    msg += "-交易失败, 失败原因: {}！".format(ret[2])
 
                 log_config.output2ui(msg, 7)
                 logger.warning(msg)
@@ -876,7 +891,7 @@ def move_stop_profit():
             elif ret[0] == 2:
                 msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
-                msg += "-交易失败, 失败原因:{}！".format(ret[2])
+                msg += "-交易失败, 失败原因: {}！".format(ret[2])
 
             log_config.output2ui(msg, 7)
             logger.warning(msg)
@@ -1034,7 +1049,7 @@ def vol_price_fly():
         elif ret[0] == 2:
             msg += "-交易被取消, 取消原因: {}!".format(ret[2])
         elif ret[0] == 3:
-            msg += "-交易失败, 失败原因:{}！".format(ret[2])
+            msg += "-交易失败, 失败原因: {}！".format(ret[2])
 
         log_config.output2ui(msg, 6)
         logger.warning(msg)
@@ -1151,7 +1166,7 @@ def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
     # 市价卖时表示卖多少币
     if current_price:
         #　判断卖出时和卖出后的持仓比例是否满足用户设置的最低持仓比例，如果不满足则需要取消卖出，或者减少卖出量
-        if config.LIMIT_MIN_POSITION>0.0001 and config.FORCE_POSITION:
+        if config.LIMIT_MIN_POSITION>0.0001 and config.FORCE_POSITION_MIN:
             bal0, bal0_f, bal1, bal1_f = update_balance()
             total = (bal0 + bal0_f) * current_price + bal1 + bal1_f
             current_chicang = ((bal0 + bal0_f) * current_price) / total     #当前持仓比
@@ -1219,179 +1234,221 @@ def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
 
 # pos--0 代表实时价，1--代表上一次收盘价
 def get_close(market, before=1):
-    df = process.KLINE_DATA.get(market, None)
-    if df is None:
-        logger.error("get_close -1, market={}, before={}".format(market, before))
-        return -1
-
     try:
-        # print(len(df))
-        close = df.loc[len(df) - 1 - before, "close"]
-    except Exception as e:
+        process.data_lock.acquire()
+        df = process.KLINE_DATA.get(market, None)
+        if df is None:
+            logger.error("get_close -1, market={}, before={}".format(market, before))
+            return -1
+
+        try:
+            # print(len(df))
+            close = df.loc[len(df) - 1 - before, "close"]
+        except Exception as e:
+            logger.exception("get_close")
+            print(len(df))
+            close = df.loc[len(df) - 1 - before - 1, "close"]
+        return close
+    except:
         logger.exception("get_close")
-        print(len(df))
-        close = df.loc[len(df) - 1 - before - 1, "close"]
-    return close
+    finally:
+        process.data_lock.release()
+
 
 
 def get_open(market, before=1):
-    df = process.KLINE_DATA.get(market, None)
-    if df is None:
-        logger.error("get_open -1, market={}, before={}".format(market, before))
-        return -1
-
     try:
-        print(len(df))
-        open_price = df.loc[len(df) - 1 - before, "open"]
-    except Exception as e:
-        logger.exception("get_open, e={}".format(e))
-        print(len(df))
-        open_price = df.loc[len(df) - 1 - before - 1, "open"]
-    return open_price
+        process.data_lock.acquire()
+        df = process.KLINE_DATA.get(market, None)
+        if df is None:
+            logger.error("get_open -1, market={}, before={}".format(market, before))
+            return -1
+
+        try:
+            print(len(df))
+            open_price = df.loc[len(df) - 1 - before, "open"]
+        except Exception as e:
+            logger.exception("get_open, e={}".format(e))
+            print(len(df))
+            open_price = df.loc[len(df) - 1 - before - 1, "open"]
+        return open_price
+    except:
+        logger.exception("get_open")
+    finally:
+        process.data_lock.release()
 
 #获取涨跌幅
 def get_up_down(market, before=1):
-    df = process.KLINE_DATA.get(market, None)
-    if df is None:
-        logger.error("get_up_down -1, market={}, before={}".format(market, before))
-        return -1
-
     try:
-        # print(len(df))
-        open_price = df.loc[len(df) - before, "open"]
-        close_price = df.loc[len(df) - before, "close"]
-        up_dwon = round((close_price - open_price) / open_price, 4)
-    except Exception as e:
-        logger.exception("get_open")
-        # print(len(df))
-        open_price = df.loc[len(df) - 1 - before, "open"]
-        close_price = df.loc[len(df) - 1 - before, "close"]
-        up_dwon = round((close_price - open_price) / open_price, 4)
-    logger.info("get_up_down = {}".format(up_dwon))
-    return up_dwon
+        process.data_lock.acquire()
+        df = process.KLINE_DATA.get(market, None)
+        if df is None:
+            logger.error("get_up_down -1, market={}, before={}".format(market, before))
+            return -1
+
+        try:
+            # print(len(df))
+            open_price = df.loc[len(df) - before, "open"]
+            close_price = df.loc[len(df) - before, "close"]
+            up_dwon = round((close_price - open_price) / open_price, 4)
+        except Exception as e:
+            logger.exception("get_open")
+            # print(len(df))
+            open_price = df.loc[len(df) - 1 - before, "open"]
+            close_price = df.loc[len(df) - 1 - before, "close"]
+            up_dwon = round((close_price - open_price) / open_price, 4)
+        logger.info("get_up_down = {}".format(up_dwon))
+        return up_dwon
+    except:
+        logger.exception("get_up_down")
+    finally:
+        process.data_lock.release()
 
 
 def get_current_price(symbol):
-    df = process.KLINE_DATA.get(symbol, None)
-    if df is None:
-        return -1
-
-    # return df.loc[len(df) - 1, "close"]
     try:
-        # print(len(df))
-        price = df.loc[len(df) - 1, "close"]
-    except Exception as e:
-        logger.exception("get_close e={}".format(e))
-        print(len(df))
-        price = df.loc[len(df) - 1 - 1, "close"]
+        process.data_lock.acquire()
+        df = process.KLINE_DATA.get(symbol, None)
+        if df is None:
+            logger.warning("get_current_price failed.")
+            return -1
 
-    logger.info("get_current_price sysmbol={}, price={}".format(symbol, price))
-    return price
+        try:
+            # price = df.loc[len(df) - 1, "close"]
+            price = float(df.tail(1)["close"])
+        except Exception as e:
+            logger.exception("get_current_price e={}, len(df)={}".format(e, len(df)))
+            price = df.loc[len(df) - 1 - 1, "close"]
+
+        logger.info("get_current_price sysmbol={}, price={}".format(symbol, price))
+        return price
+    except:
+        logger.exception("get_current_price")
+    finally:
+        process.data_lock.release()
 
 
 def get_max_price(symbol, last_time, current=0):
-    df = process.KLINE_DATA.get(symbol, None)
-    if df is None:
-        return -1
+    try:
+        process.data_lock.acquire()
+        df = process.KLINE_DATA.get(symbol, None)
+        if df is None:
+            return -1
 
-    if current>0:
-        # 默认取五分钟之前往前的最大价格
-        # current = ((int(time.time()) * 1000) - 5*60*1000) if current <= 0 else current
-        try:
-            tmp_df = df.loc[df["ts"] >= last_time]
-            max_price = tmp_df.loc[tmp_df["ts"]<current].high.max()
-            if pd.isna(max_price):
-                max_price = tmp_df.loc[tmp_df["ts"] < current].close.max()
-        except Exception as e:
-            logger.exception("get_max_price catch e={}, last_time={}, current={}".format(e, last_time, current))
+        if current>0:
+            # 默认取五分钟之前往前的最大价格
+            # current = ((int(time.time()) * 1000) - 5*60*1000) if current <= 0 else current
             try:
-                temp_df = df[["ts", "high"]][df.ts >= last_time]
-                temp_df = temp_df.loc[temp_df["ts"]<current]
-                max_price = temp_df.high.max()
-            except:
-                max_price=-1
-    else:
-        try:
-            max_price = df.loc[df["ts"] >= last_time].high.max()
-            if pd.isna(max_price):
-                max_price = df.loc[df["ts"] >= last_time].close.max()
-        except Exception as e:
-            logger.exception("get_max_price catch e={}, last_time={}, current={}".format(e, last_time, current))
+                tmp_df = df.loc[df["ts"] >= last_time]
+                max_price = tmp_df.loc[tmp_df["ts"]<current].high.max()
+                if pd.isna(max_price):
+                    max_price = tmp_df.loc[tmp_df["ts"] < current].close.max()
+            except Exception as e:
+                logger.exception("get_max_price catch e={}, last_time={}, current={}".format(e, last_time, current))
+                try:
+                    temp_df = df[["ts", "high"]][df.ts >= last_time]
+                    temp_df = temp_df.loc[temp_df["ts"]<current]
+                    max_price = temp_df.high.max()
+                except:
+                    max_price=-1
+        else:
             try:
-                temp_df = df[["ts", "high"]][df.ts >= last_time]
-                max_price = temp_df.high.max()
-            except:
-                max_price=-1
+                max_price = df.loc[df["ts"] > last_time].high.max()
+                if pd.isna(max_price):
+                    max_price = df.loc[df["ts"] > last_time].close.max()
+            except Exception as e:
+                logger.exception("get_max_price catch e={}, last_time={}, current={}".format(e, last_time, current))
+                try:
+                    temp_df = df[["ts", "high"]][df.ts >= last_time]
+                    max_price = temp_df.high.max()
+                except:
+                    max_price=-1
 
-    logger.info("get_max_price, symbol={}, last time={}, current={}, max_price={}".format(symbol, last_time, current, max_price))
-    if not max_price or pd.isna(max_price):
-        return -1
-    else:
-        return max_price
+        logger.info("get_max_price, symbol={}, last time={}, current={}, max_price={}".format(symbol, last_time, current, max_price))
+        if not max_price or pd.isna(max_price):
+            return -1
+        else:
+            return max_price
+    except:
+        logger.exception("get_max_price")
+    finally:
+        process.data_lock.release()
 
 
 def get_min_price(symbol, last_time, current=0):
     # 默认取五分钟之前往前的最低价格
     # current = ((int(time.time()) * 1000)-5*60*1000) if current <= 0 else current
 
-    df = process.KLINE_DATA.get(symbol, None)
-    if df is None:
-        return -1
+    try:
+        process.data_lock.acquire()
+        df = process.KLINE_DATA.get(symbol, None)
+        if df is None:
+            return -1
 
-    if current>0:
-        try:
-            temp_df = df.loc[df["ts"] >= last_time]
-            min_price = temp_df.loc[temp_df["ts"]<current].low.min()
-            if pd.isna(min_price):
-                min_price = temp_df.loc[temp_df["ts"]<current].close.min()
-        except Exception as e:
-            logger.exception("get_min_price catch e={}, last_time={}, current={}".format(e, last_time, current))
+        if current > 0:
             try:
-                temp_df = df[["ts", "low"]][df.ts >= last_time][df.ts < current]
-                min_price = temp_df.low.min()
-            except:
-                min_price=-1
+                temp_df = df.loc[df["ts"] >= last_time]
+                min_price = temp_df.loc[temp_df["ts"]<current].low.min()
+                if pd.isna(min_price):
+                    min_price = temp_df.loc[temp_df["ts"]<current].close.min()
+            except Exception as e:
+                logger.exception("get_min_price catch e={}, last_time={}, current={}".format(e, last_time, current))
+                try:
+                    temp_df = df[["ts", "low"]][df.ts >= last_time][df.ts < current]
+                    min_price = temp_df.low.min()
+                except:
+                    min_price=-1
 
-    else:
-        try:
-            min_price = df.loc[df["ts"] >= last_time].low.min()
-            if pd.isna(min_price):
-                min_price = df.loc[df["ts"] >= last_time].close.min()
-        except Exception as e:
-            logger.exception("get_min_price catch e={}, last_time={}, current={}".format(e, last_time, current))
+        else:
             try:
-                temp_df = df[["ts", "low"]][df.ts >= last_time]
-                min_price = temp_df.low.min()
-            except:
-                min_price = -1
+                min_price = df.loc[df["ts"] >= last_time].low.min()
+                if pd.isna(min_price):
+                    min_price = df.loc[df["ts"] >= last_time].close.min()
+            except Exception as e:
+                logger.exception("get_min_price catch e={}, last_time={}, current={}".format(e, last_time, current))
+                try:
+                    temp_df = df[["ts", "low"]][df.ts >= last_time]
+                    min_price = temp_df.low.min()
+                except:
+                    min_price = -1
 
-    logger.info("get_min_price, symbol={}, last time={}, current={}, min_price={}".format(symbol, last_time, current, min_price))
+        logger.info("get_min_price, symbol={}, last time={}, current={}, min_price={}".format(symbol, last_time, current, min_price))
 
-    if not min_price or pd.isna(min_price):
-        return -1
-    else:
-        return min_price
+        if not min_price or pd.isna(min_price):
+            return -1
+        else:
+            return min_price
+    except:
+        logger.exception("get_min_price")
+    finally:
+        process.data_lock.release()
 
 
 def get_boll(market, pos=0, update2ui=True):
-    upper, middle, lower = -1, -1, -1
-    df = process.KLINE_DATA.get(market, None)
-    if df is None:
-        return upper, middle, lower
+    try:
+        process.data_lock.acquire()
+        upper, middle, lower = -1, -1, -1
+        df = process.KLINE_DATA.get(market, None)
+        if df is None:
+            return upper, middle, lower
 
-    temp_df = df.head(len(df) - pos)
-    temp_df["upper"], temp_df["middle"], temp_df["lower"] = talib.BBANDS(temp_df.close.values, timeperiod=15, nbdevup=2, nbdevdn=2, matype=0)
-    # a,b,c=talib.BBANDS(temp_df.close.values, timeperiod=15, nbdevup=2, nbdevdn=2, matype=talib.MA_Type.T3)
-    # d,e,f=talib.BBANDS(temp_df.close.values, timeperiod=15, nbdevup=2, nbdevdn=2, matype=0)
-    # g, h, k = talib.BBANDS(temp_df.close.values, timeperiod=15, nbdevup=2, nbdevdn=2, matype=0)
-    # temp_df = df.head(len(df) - 1)
-    # u, m, l = talib.BBANDS(temp_df.close.values, timeperiod=15, nbdevup=2, nbdevdn=2, matype=0)
-    upper = temp_df.loc[len(temp_df) - 1, "upper"]
-    middle = temp_df.loc[len(temp_df) - 1, "middle"]
-    lower = temp_df.loc[len(temp_df) - 1, "lower"]
-    if update2ui:
-        process.REALTIME_UML.put((upper, middle, lower))
-    return upper, middle, lower
+        temp_df = df.head(len(df) - pos)
+        temp_df["upper"], temp_df["middle"], temp_df["lower"] = talib.BBANDS(temp_df.close.values, timeperiod=15, nbdevup=2, nbdevdn=2, matype=0)
+        # a,b,c=talib.BBANDS(temp_df.close.values, timeperiod=15, nbdevup=2, nbdevdn=2, matype=talib.MA_Type.T3)
+        # d,e,f=talib.BBANDS(temp_df.close.values, timeperiod=15, nbdevup=2, nbdevdn=2, matype=0)
+        # g, h, k = talib.BBANDS(temp_df.close.values, timeperiod=15, nbdevup=2, nbdevdn=2, matype=0)
+        # temp_df = df.head(len(df) - 1)
+        # u, m, l = talib.BBANDS(temp_df.close.values, timeperiod=15, nbdevup=2, nbdevdn=2, matype=0)
+        upper = temp_df.loc[len(temp_df) - 1, "upper"]
+        middle = temp_df.loc[len(temp_df) - 1, "middle"]
+        lower = temp_df.loc[len(temp_df) - 1, "lower"]
+        if update2ui:
+            process.REALTIME_UML = (upper, middle, lower) #.put((upper, middle, lower))
+        return upper, middle, lower
+    except:
+        logger.exception("get_boll")
+    finally:
+        process.data_lock.release()
     # plt.plot(upper)
     # plt.plot(middle)
     # plt.plot(lower)
@@ -1407,44 +1464,52 @@ def get_boll(market, pos=0, update2ui=True):
 
 # pos=0代表将当前价格纳入计算，pos越大代表数据离目前越远
 def get_kdj(market, pos=0, fastk_period=9, slowk_period=3, slowk_matype=0, slowd_period=3, slowd_matype=3):
-    k, d, j = -1, -1, -1
-    df = process.KLINE_DATA.get(market, None)
-    if df is None:
+    try:
+        process.data_lock.acquire()
+        k, d, j = -1, -1, -1
+        df = process.KLINE_DATA.get(market, None)
+        if df is None:
+            return k, d, j
+
+        len_df = len(df)
+        temp_df = df.head(len_df - pos)
+        temp_df["k"], temp_df["d"] = talib.STOCH(temp_df.high.values,
+                                                 temp_df.low.values,
+                                                 temp_df.close.values,
+                                                 fastk_period=fastk_period,
+                                                 slowk_period=slowk_period,
+                                                 slowk_matype=slowk_matype,
+                                                 slowd_period=slowd_period,
+                                                 slowd_matype=slowd_matype)
+
+        k = temp_df.loc[len(temp_df) - 1, "k"]
+        d = temp_df.loc[len(temp_df) - 1, "d"]
+        temp_df["j"] = temp_df.k * 3 - temp_df.d * 2
+        j = temp_df.loc[len(temp_df) - 1, "j"]
+
+        # temp_df[['k', 'd']].plot(figsize=(9, 6), title=flag)
+        # plt.legend(loc='upper left')
+        # plt.show()
+        # plt.savefig("picture//{}.png".format(flag))
+        # process.REALTIME_KDJ.put((k, d, j))
+        logger.info("get_kdj, df size={}, pos={}, kdj={}/{}/{}".format(len_df, pos, k, d, j))
         return k, d, j
-
-    temp_df = df.head(len(df) - pos)
-    temp_df["k"], temp_df["d"] = talib.STOCH(temp_df.high.values,
-                                             temp_df.low.values,
-                                             temp_df.close.values,
-                                             fastk_period=fastk_period,
-                                             slowk_period=slowk_period,
-                                             slowk_matype=slowk_matype,
-                                             slowd_period=slowd_period,
-                                             slowd_matype=slowd_matype)
-
-    k = temp_df.loc[len(temp_df) - 1, "k"]
-    d = temp_df.loc[len(temp_df) - 1, "d"]
-    temp_df["j"] = temp_df.k * 3 - temp_df.d * 2
-    j = temp_df.loc[len(temp_df) - 1, "j"]
-
-    # temp_df[['k', 'd']].plot(figsize=(9, 6), title=flag)
-    # plt.legend(loc='upper left')
-    # plt.show()
-    # plt.savefig("picture//{}.png".format(flag))
-    # process.REALTIME_KDJ.put((k, d, j))
-    return k, d, j
+    except Exception as e:
+        logger.exception("get_kdj exception={}".format(e))
+    finally:
+        process.data_lock.release()
 
 
 def kdj_5min_update():
     market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], "5min")
     k,d,j = get_kdj(market)
-    process.REALTIME_KDJ_5MIN.put((k, d, j))
+    process.REALTIME_KDJ_5MIN = (k,d,j)#.put((k, d, j))
     return k, d, j
 
 def kdj_15min_update():
     market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], "15min")
     k,d,j = get_kdj(market)
-    process.REALTIME_KDJ_15MIN.put((k, d, j))
+    process.REALTIME_KDJ_15MIN=(k,d,j) #.put((k, d, j))
     return k, d, j
 
 
@@ -1496,18 +1561,20 @@ def update_balance(is_first=False):
             s0 = symbol[0:3]
             s1 = symbol[3:]
             bal0 = get_balance(s0, result_type=2)
+            bal1 = get_balance(s1, result_type=2)
             str_balance = ""
-            if bal0:
+            if bal0 and bal1:
                 str_balance += "{}/{}".format(round(bal0.get("trade", 0), 4),
                                                  round(bal0.get("frozen", 0), 4))
-            bal1 = get_balance(s1, result_type=2)
-            if bal1:
+
                 str_balance += ", {}/{}".format(round(bal1.get("trade", 0), 2),
                                                    round(bal1.get("frozen", 0), 2))
-            logger.info("update_balance = {}".format(str_balance))
-            process.REALTIME_BALANCE.put(str_balance)
-            # log_config.output2ui("update balance--{}".format(str_balance), 8)
-            return bal0.get("trade", 0), bal0.get("frozen", 0), bal1.get("trade", 0), bal1.get("frozen", 0)
+                logger.info("update_balance = {}".format(str_balance))
+                process.REALTIME_BALANCE = str_balance #.put(str_balance)
+                return bal0.get("trade", 0), bal0.get("frozen", 0), bal1.get("trade", 0), bal1.get("frozen", 0)
+            else:
+                logger.warning("update_balance failed.")
+                return 0,0,0,0
 
     except Exception as e:
         logger.exception("update_balance e= {}".format(e))
@@ -1548,20 +1615,23 @@ def buy_low():
     now = int(time.time()) * 1000
     symbol = config.NEED_TOBE_SUB_SYMBOL[0]
     market = "market.{}.kline.{}".format(symbol, "15min")
+    current_price = get_current_price(symbol)
+
+    if current_price <= 0:
+        return False
+
+    min_price = get_min_price(symbol, now - (60 * 1000), current=0)
+
+    # 判断是不是还在跌,如果是，暂时不买
+    if min_price > 0 and current_price < min_price*1.004:
+        logger.info("buy low min price={}, current price={}, keep down！!".format(min_price, current_price))
+        return False
 
     min_price_5 = get_min_price(symbol, now - (15 * 60 * 1000)*5, current=now - (10 * 60 * 1000))
     min_price_20 = get_min_price(symbol, now - (15 * 60 * 1000) * 20, now - (10 * 60 * 1000))
     min_price_60 = get_min_price(symbol, now - (15 * 60 * 1000) * 60, now - (10 * 60 * 1000))
-    min_price = get_min_price(symbol, now - (60 * 1000), current=0)
-    if min_price_5<=0 or min_price_20<=0 or min_price_60<=0:
+    if min_price_5 <= 0 or min_price_20 <= 0 or min_price_60 <= 0:
         return False
-
-    current_price = get_current_price(symbol)
-    if current_price<=0:
-        return False
-
-    logger.info("buy low checking...current price={}, min price={}, min_price_5={}, min_price_20={}, min_price_60={}".format(current_price, min_price, min_price_5, min_price_20, min_price_60))
-    buy_percent = 0
 
     # 比最低价还低1％以上，且最近三个周期都在跌
     percent_factor = 0  # 价格越代，这个值越大，　买的越多
@@ -1570,7 +1640,7 @@ def buy_low():
     # 如果最近15分钟已经买过，则提高买入门槛
     already = is_already_buy()
     if already[0]:
-        low_percent *= already[1]
+        low_percent = 1 + (low_percent-1) * already[1]
 
     #　如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
     position, buy_factor, sell_factor = get_current_position()
@@ -1578,6 +1648,9 @@ def buy_low():
 
     low_percent = 1.001 if low_percent < 1.001 else low_percent
     low_percent = 1.02 if low_percent > 1.02 else low_percent
+
+    logger.info("buy low checking. current price={}, mp={}, mp5={}, mp20={}, mp60={},lowp={}".format(current_price, min_price, min_price_5, min_price_20, min_price_60, low_percent))
+    buy_percent = 0
 
     if current_price*low_percent < min_price_5 and get_open(market, 1) > get_close(market, 1) \
             and get_open(market, 2) > get_close(market, 2) and get_open(market, 3) > get_close(market, 3):
@@ -1592,12 +1665,6 @@ def buy_low():
         percent_factor = (min_price_20 - current_price) / min_price_20 / (low_percent-1)
         buy_percent += 0.3
 
-    # 判断是不是还在跌,如果是，暂时不买
-    if min_price > 0 and current_price < min_price*1.004:
-        logger.warning("buy low current price={}, min price={}, no buy".format(current_price, min_price))
-        return False
-
-    logger.warning("buy low buy, current price={}, buy percent={}, min price={}, min_price_5={}, min_price_20={}, min_price_60={}".format(current_price, buy_percent, min_price, min_price_5, min_price_20, min_price_60))
     if buy_percent > 0:
         percent_factor /= 20
         percent_factor = 0 if percent_factor < 0 else percent_factor
@@ -1605,6 +1672,10 @@ def buy_low():
 
         buy_percent *= config.RISK
         buy_percent += percent_factor
+        logger.warning(
+            "buy low buy, current price={}, buy percent={}, mp={}, mp5={}, mp20={}, mp60={}".format(
+                current_price, buy_percent, min_price, min_price_5, min_price_20, min_price_60))
+
         msg = "[买入{}]抄底 买入比例={}%, 当前价格={}, 最低价={}, 最近5/20/60周期内最低价={}/{}/{}.".format(
             symbol, round(buy_percent*100, 2), round(current_price, 3), round(min_price, 3),round(min_price_5, 3), round(min_price_20, 3), round(min_price_60, 3))
 
@@ -1623,7 +1694,7 @@ def buy_low():
             elif ret[0] == 2:
                 msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
-                msg += "-交易失败, 失败原因:{}！".format(ret[2])
+                msg += "-交易失败, 失败原因: {}！".format(ret[2])
 
             log_config.output2ui(msg, 6)
             logger.warning(msg)
@@ -1640,20 +1711,18 @@ def sell_high():
     symbol = config.NEED_TOBE_SUB_SYMBOL[0]
     market = "market.{}.kline.{}".format(symbol, "15min")
 
-    max_price_5 = get_max_price(symbol, now - (15 * 60 * 1000) * 5, now - (10 * 60 * 1000))
-    max_price_20 = get_max_price(symbol, now - (15 * 60 * 1000) * 20, now - (10 * 60 * 1000))
-    max_price_60 = get_max_price(symbol, now - (15 * 60 * 1000) * 60, now - (10 * 60 * 1000))
     max_price = get_max_price(symbol, now - (60 * 1000), current=0)
-
-    if max_price_5 <= 0 or max_price_20 <= 0 or max_price_60 <= 0:
-        return False
-
     current_price = get_current_price(symbol)
-    logger.info("sell high checking... current price={}, max price={} max_price_5={}, max_price_20={}, max_price_60={}".format(current_price, max_price, max_price_5, max_price_20, max_price_60))
 
     # 判断是不是还在涨,如果是，暂时不卖
     if max_price > 0 and current_price*1.004 > max_price:
-        logger.warning("sell high max price={}, current price={}, no sell!".format(max_price, current_price))
+        logger.info("sell high max price={}, current price={}, keep up！!".format(max_price, current_price))
+        return False
+
+    max_price_5 = get_max_price(symbol, now - (15 * 60 * 1000) * 5, now - (10 * 60 * 1000))
+    max_price_20 = get_max_price(symbol, now - (15 * 60 * 1000) * 20, now - (10 * 60 * 1000))
+    max_price_60 = get_max_price(symbol, now - (15 * 60 * 1000) * 60, now - (10 * 60 * 1000))
+    if max_price_5 <= 0 or max_price_20 <= 0 or max_price_60 <= 0:
         return False
 
     sell_percent = 0
@@ -1664,7 +1733,7 @@ def sell_high():
     position, buy_factor, sell_factor = get_current_position()
     if position > 0:
         if sell_factor == 0:
-            logger.warning("sell_high be cancelled, lock postion")
+            logger.warning("sell_high be cancelled, lock position")
             return False
 
     already = is_already_sell()
@@ -1675,6 +1744,8 @@ def sell_high():
 
     up_percent = 1.001 if up_percent < 1.001 else up_percent
     up_percent = 1.02 if up_percent > 1.02 else up_percent
+
+    logger.info("sell high checking. current price={}, mp={} mp5={}, mp20={}, mp60={}, upp={}".format(current_price, max_price, max_price_5, max_price_20, max_price_60, up_percent))
 
     percent_factor = 0
     if current_price >= max_price_5*up_percent and get_open(market, 1) < get_close(market, 1) and get_open(market, 2) < get_close(
@@ -1689,8 +1760,14 @@ def sell_high():
         percent_factor = (current_price - max_price_20) / max_price_20 / (up_percent - 1)
         sell_percent += 0.3
 
-    logger.warning("sell high sell, current price={}, percent={}, max price={}, m5={}, m20={}, m60={}".format(current_price, sell_percent, max_price, max_price_5, max_price_20, max_price_60))
     if sell_percent > 0:
+        logger.warning(
+            "sell high sell, current price={}, percent={}, mp={}, m5={}, m20={}, m60={}, upp={}".format(current_price,
+                                                                                                       sell_percent,
+                                                                                                       max_price,
+                                                                                                       max_price_5,
+                                                                                                       max_price_20,
+                                                                                                       max_price_60, up_percent))
         percent_factor /= 20
         percent_factor = 0 if percent_factor < 0 else percent_factor
         percent_factor = 0.3 if percent_factor > 0.3 else percent_factor
@@ -1719,7 +1796,7 @@ def sell_high():
             elif ret[0] == 2:
                 msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
-                msg += "-交易失败, 失败原因:{}！".format(ret[2])
+                msg += "-交易失败, 失败原因: {}！".format(ret[2])
 
             log_config.output2ui(msg, 7)
             logger.warning(msg)
@@ -1834,7 +1911,7 @@ def get_current_position():
             sell_factor = 1 + factor          # 大于１代表卖出门槛应该增高
 
             # 如果用户设置了强制锁仓则不能卖出
-            if config.FORCE_POSITION:
+            if config.FORCE_POSITION_MIN:
                 sell_factor = 0
         else:
             factor = (position-limit_pos)/position/3
@@ -1848,7 +1925,7 @@ def get_current_position():
     except Exception as e:
         logger.warning("get_current_position e={}".format(e))
 
-    logger.info("get_current_position postion={}, limit position={}, buy_factor={}, sell_factor={}, ".format(position, config.LIMIT_MIN_POSITION, buy_factor, sell_factor))
+    logger.info("get_current_position position={}, limit position={}, buy_factor={}, sell_factor={}, ".format(position, config.LIMIT_MIN_POSITION, buy_factor, sell_factor))
     return position, buy_factor, sell_factor
 
 
@@ -1858,14 +1935,14 @@ STRATEGY_LIST = [
     # Strategy(macd_strategy_1day, 20, 1, "macd_strategy_1day"),
     # Strategy(kdj_strategy_buy, 240, -1, after_execute_sleep=900 * 3, name="kdj_strategy_buy"),
     # Strategy(kdj_strategy_sell, 240, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
-    Strategy(kdj_strategy_buy, 30, -1, after_execute_sleep=900 * 3, name="kdj_strategy_buy"),
-    Strategy(kdj_strategy_sell, 45, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
+    Strategy(kdj_strategy_buy, 23, -1, after_execute_sleep=900 * 3, name="kdj_strategy_buy"),
+    Strategy(kdj_strategy_sell, 25, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
     Strategy(stop_loss, 35, -1, after_execute_sleep=60, name="stop_loss"),
     Strategy(move_stop_profit, 30, -1, after_execute_sleep=60, name="move_stop_profit"),
     Strategy(vol_price_fly, 150, -1, name="vol_price_fly", after_execute_sleep=900 * 2),
     Strategy(boll_strategy, 120, -1, name="boll strategy", after_execute_sleep=900 * 2),
     # Strategy(kdj_5min_update, 30, -1, name="kdj_5min_update", after_execute_sleep=1),
-    Strategy(kdj_15min_update, 60, -1, name="kdj_15min_update", after_execute_sleep=1),
+    Strategy(kdj_15min_update, 30, -1, name="kdj_15min_update", after_execute_sleep=1),
     Strategy(buy_low, 15, -1, name="buy_low", after_execute_sleep=600),
     Strategy(sell_high, 17, -1, name="sell_high", after_execute_sleep=600),
 ]

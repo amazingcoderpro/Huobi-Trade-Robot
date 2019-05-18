@@ -142,59 +142,62 @@ def add_handler(handler):
 def notify_user(msg, own=False):
     def send_wechat(msg, own=False):
         # 发送微信
-        ret = True
-        logging.getLogger().info("start to send wechat. own={}".format(own))
         try:
+            if not config.WECHAT_NOTIFY:
+                logging.getLogger().info("send wechat have been disabled.")
+
             time_str = datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
             msg = "[{}]\n{}".format(time_str, msg)
+            logging.getLogger().info("start to send wechat. own={}, msg={}".format(own,msg))
             if own:
                 ret = wechat_helper.send_to_wechat(msg, config.WECHATS_VIP)
             else:
-                if config.WECHAT_NOTIFY:
-                    ret = wechat_helper.send_to_wechat(msg, config.WECHATS)
+                ret = wechat_helper.send_to_wechat(msg, config.WECHATS)
         except Exception as e:
-            logging.getLogger().exception("send_wechat e={}".format(e))
+            logging.getLogger().exception("send wechat e={}".format(e))
             ret = False
 
         return ret
 
     def send_mail(msg, own=False):
-        ret = True
         # 发送邮件
-        receiver_list = []
-        receiver_str = ""
+        if not config.EMAIL_NOTIFY:
+            logging.getLogger().info("send mail have been disabled. msg={}".format(msg))
+            return True
+
         if own:
             receiver_list = config.EMAILS_VIP
             receiver_str = ", ".join(receiver_list)
         else:
-            if config.EMAIL_NOTIFY and config.EMAILS:
-                receiver_list = config.EMAILS
-                receiver_str = ", ".join(receiver_list)
+            receiver_list = config.EMAILS
+            receiver_str = ", ".join(receiver_list)
 
-        if not receiver_list or not receiver_str:
-            logging.getLogger().warning("send email cancelled. receive list is empty! own={}, text={}".format(own, msg))
-        else:
-            time_str = datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-            msg = "[{}] {}".format(time_str, msg)
+        if not all([receiver_str, receiver_list]):
+            logging.getLogger().warning("send email have been cancelled. receive list is empty! own={}, text={}".format(own, msg))
+            return True
 
-            logging.getLogger().info("send mail owner={}, to={}, text={}".format(own, receiver_list, msg))
-            try:
-                email = MIMEText(msg, 'plain', 'utf-8')      # 中文需参数‘utf-8'，单字节字符不需要
-                if own:
-                    new_subject = subject+"[VIP]"
-                else:
-                    new_subject = subject
-                email['Subject'] = Header(new_subject, 'utf-8')
-                email['From'] = '{}<{}>'.format(from_name, sender)
-                email['To'] = receiver_str
+        ret = True
+        time_str = datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        msg = "[{}] {}".format(time_str, msg)
 
-                smtp = smtplib.SMTP_SSL(smtpserver)
-                smtp.login(sender, sender_password)
-                smtp.sendmail(sender, receiver_list, email.as_string())
-                smtp.close()
-            except Exception as e:
-                logging.getLogger().exception("send mail failed. e = {}".format(e))
-                ret = False
+        logging.getLogger().info("send mail owner={}, to={}, text={}".format(own, receiver_list, msg))
+        try:
+            email = MIMEText(msg, 'plain', 'utf-8')      # 中文需参数‘utf-8'，单字节字符不需要
+            if own:
+                new_subject = subject+"[VIP]"
+            else:
+                new_subject = subject
+            email['Subject'] = Header(new_subject, 'utf-8')
+            email['From'] = '{}<{}>'.format(from_name, sender)
+            email['To'] = receiver_str
+
+            smtp = smtplib.SMTP_SSL(smtpserver)
+            smtp.login(sender, sender_password)
+            smtp.sendmail(sender, receiver_list, email.as_string())
+            smtp.close()
+        except Exception as e:
+            logging.getLogger().exception("send mail failed. e = {}".format(e))
+            ret = False
 
         return ret
 

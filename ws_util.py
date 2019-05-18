@@ -116,7 +116,7 @@ class HuobiWS:
             log_config.output2ui("SUB: {} have subscribed successfully".format(channel))
             return True
         else:
-            logger.error("SUB:  {} failed. ret={}, request body={}".format(channel, ret, str_sub_body))
+            logger.error("SUB: {} failed. ret={}, request body={}".format(channel, ret, str_sub_body))
             log_config.output2ui("SUB:  {} failed. ret={}, request body={}".format(channel, ret, str_sub_body), 3)
             return False
 
@@ -280,7 +280,7 @@ if __name__ == '__main__':
     #测试订阅（重复）
     hws.ws_sub("market.eosusdt.kline.1year", process.kline_sub_msg_process)
     #
-    hws.ws_sub("market.eosusdt.kline.1day", process.kline_sub_msg_process)
+    hws.ws_sub("market.eosusdt.kline.1min", process.kline_sub_msg_process)
     # hws.ws_sub("market.ethusdt.kline.5min", kline_msg_process)
     # print(hws._sub_map)
     # hws.ws_req("market.eosusdt.kline.1day", process.kline_req_msg_process, t_from=1508947200, t_to=1527782400)
@@ -290,7 +290,7 @@ if __name__ == '__main__':
     #开始启动接收线程
     hws.start_recv()
 
-    time.sleep(200)
+    time.sleep(120)
     hws.ws_close()
     for channel, df in process.KLINE_DATA.items():
         print("\n{} data:\n{}".format(channel, df))

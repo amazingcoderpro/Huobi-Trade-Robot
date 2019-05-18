@@ -59,8 +59,8 @@ KL_1WEEK = "1week"
 KL_1MON = "1mon"
 KL_1YEAR = "1year"
 #KL_ALL = [KL_1MIN, KL_5MIN, KL_15MIN, KL_30MIN, KL_60MIN, KL_1DAY, KL_1WEEK, KL_1MON]
-KL_ALL = [KL_1MIN, KL_5MIN, KL_15MIN, KL_30MIN]#, KL_1DAY
-KL_HISTORY = [KL_1MIN, KL_5MIN, KL_15MIN, KL_30MIN]#, KL_1DAY
+KL_ALL = [KL_1MIN, KL_15MIN]#,KL_5MIN,KL_30MIN KL_1DAY
+KL_HISTORY = [KL_1MIN, KL_15MIN]#, KL_1DAY KL_5MIN,, KL_30MIN
 KL_REALTIME = KL_1MIN
 
 # depth type
@@ -118,7 +118,7 @@ WAIT_SELL_PRICE = [0, 0, 0]
 WAIT_SELL_ACCOUNT = [0, 0, 0]
 
 ROOT = None
-RISK = 1.0
+RISK = 1.0  # 取值0.5－－1.5之间，默认是１，越大越激进（买的更低，卖得更高，风险承受能力越强），越小越保守．
 
 #是否邮件通知
 EMAIL_NOTIFY = False
@@ -137,5 +137,9 @@ EMAILS_VIP = ["wcadaydayup@163.com", "1447385994@qq.com", "bbb201@126.com"]
 WECHATS_VIP = [u"Justkidding", u"长城1211"]
 
 TRADE_ALL_LOG = []
-LIMIT_MIN_POSITION = 0.6    #期望持仓比
-FORCE_POSITION = 0       #是否强制保持最 少持仓比，如果是，无论何种情况都保持该持仓比例，否则系统将在持仓比低于最小持仓比后降低买入标准以尽快达到持仓比
+LIMIT_MIN_POSITION = 0.5    #期望最低持仓比
+FORCE_POSITION_MIN = 0       #是否强制保持最 少持仓比，如果是，无论何种情况都保持该持仓比例，否则系统将在持仓比低于最小持仓比后降低买入标准以尽快达到持仓比
+
+LIMIT_MAX_POSITION = 1      #期望的最高持仓比
+FORCE_POSITION_MAX = 0       #是否强制保持最大持仓比，如果是，无论何种情况都保持不超过该持仓比，否则系统将在持仓比高于最大持仓比后降低卖出准以尽快降低持仓比
+

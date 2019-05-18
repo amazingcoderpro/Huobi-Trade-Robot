@@ -337,7 +337,7 @@ class MainUI():
                         elif ret[0] == 2:
                             msg += "-交易被取消, 取消原因: {}!".format(ret[2])
                         elif ret[0] == 3:
-                            msg += "-交易失败, 失败原因:{}！".format(ret[2])
+                            msg += "-交易失败, 失败原因: {}！".format(ret[2])
                         log_config.output2ui(msg, 6)
                         logger.warning(msg)
                         log_config.notify_user(msg, own=True)
@@ -363,7 +363,7 @@ class MainUI():
                         elif ret[0] == 2:
                             "-交易被取消, 取消原因: {}!".format(ret[2])
                         elif ret[0] == 3:
-                            msg += "-交易失败, 失败原因:{}！".format(ret[2])
+                            msg += "-交易失败, 失败原因: {}！".format(ret[2])
                         log_config.output2ui(msg, 7)
                         logger.warning(msg)
                         log_config.notify_user(msg, own=True)
@@ -431,16 +431,17 @@ class MainUI():
         def update_price(price_text):
             while True:
                 try:
-                    time.sleep(2)
-                    msg = process.REALTIME_PRICE.get(block=True)
-                    # print("update_price {}".format(msg))
-                    (key, value), = msg.items()
-                    global CURRENT_PRICE
-                    CURRENT_PRICE = float(value)
-                    price_text.set("{}:{}".format(key.upper(), value))
+                    time.sleep(1)
+                    msg = process.REALTIME_PRICE    #.get(block=True)
+                    if msg:
+                        # print("update_price {}".format(msg))
+                        (key, value), = msg.items()
+                        global CURRENT_PRICE
+                        CURRENT_PRICE = float(value)
+                        price_text.set("{}:{}".format(key.upper(), value))
 
-                    self.wait_buy_sell(price=CURRENT_PRICE)
-                    self.update_coin(price=value)
+                        self.wait_buy_sell(price=CURRENT_PRICE)
+                        self.update_coin(price=value)
                 except Exception as e:
                     logger.exception("update_price exception....")
                     log_config.output2ui("update_price exception....", 3)
@@ -449,8 +450,8 @@ class MainUI():
         def update_balance(bal_text):
             while True:
                 try:
-                    time.sleep(2)
-                    msg = process.REALTIME_BALANCE.get(block=True)
+                    time.sleep(5)
+                    msg = process.REALTIME_BALANCE #.get(block=True)
                     bal_text.set(str(msg))
                 except Exception as e:
                     logger.exception("update_balance exception....")
@@ -459,30 +460,36 @@ class MainUI():
 
         def update_ui_log(log_text, trade_text):
             while True:
-                time.sleep(2)
                 try:
                     if not log_config.REALTIME_LOG.empty():
-                        msg_dict = log_config.REALTIME_LOG.get(block=True)
-                        if msg_dict["level"] == "BUY" or msg_dict["level"] == "SELL":
-                            trade_text.configure(state='normal')
-                            trade_text.insert(END, msg_dict["msg"], msg_dict["level"])
-                            trade_text.see(END)
-                            trade_text.configure(state='disabled')
-                        else:
-                            log_text.configure(state='normal')
-                            log_text.insert(END, msg_dict["msg"], msg_dict["level"])
-                            log_text.see(END)
-                            log_text.configure(state='disabled')
+                        try:
+                            msg_dict = log_config.REALTIME_LOG.get(block=False)
+                        except:
+                            time.sleep(1)
+                        if msg_dict:
+                            if msg_dict["level"] == "BUY" or msg_dict["level"] == "SELL":
+                                trade_text.configure(state='normal')
+                                trade_text.insert(END, msg_dict["msg"], msg_dict["level"])
+                                trade_text.see(END)
+                                trade_text.configure(state='disabled')
+                            else:
+                                log_text.configure(state='normal')
+                                log_text.insert(END, msg_dict["msg"], msg_dict["level"])
+                                log_text.see(END)
+                                log_text.configure(state='disabled')
+                    else:
+                        time.sleep(1)
                 except Exception as e:
                     logger.exception("update_ui_log exception....")
                     log_config.output2ui("update_ui_log exception....", 3)
                     continue
 
         def update_kdj(kdj_text):
-            time.sleep(2)
+
             while True:
                 try:
-                    kdj_15min = process.REALTIME_KDJ_15MIN.get(block=True)
+                    time.sleep(5)
+                    kdj_15min = process.REALTIME_KDJ_15MIN #.get(block=True)
                     # kdj_5min = process.REALTIME_KDJ_5MIN.get(block=True)
                     kdj_text.set("{}/{}/{}".format(round(kdj_15min[0], 2), round(kdj_15min[1], 2), round(kdj_15min[2], 2)))
                 except Exception as e:
@@ -491,10 +498,10 @@ class MainUI():
 
         def update_uml(uml_text):
             while True:
-                time.sleep(2)
                 try:
+                    time.sleep(5)
                     global CURRENT_PRICE
-                    uml = process.REALTIME_UML.get(block=True)
+                    uml = process.REALTIME_UML#.get(block=True)
                     diff1 = uml[0] - uml[1]
                     diff2 = uml[1] - uml[2]
                     uml_text.set("{}/{}/{}-{}/{}-{}/{}".format(round(uml[0], 3), round(uml[1], 3), round(uml[2], 3), round(diff1, 3), round(diff2, 3), round(diff1 / CURRENT_PRICE, 4), round(diff2 / CURRENT_PRICE, 4)))
@@ -533,13 +540,13 @@ class MainUI():
                             dapan_profit = round((CURRENT_PRICE - process.ORG_PRICE) * 100 / process.ORG_PRICE, 2)
                             account_profit = round((total - process.ORG_DOLLAR_TOTAL) * 100 / process.ORG_DOLLAR_TOTAL, 2)
                             is_win = u"是" if account_profit >= dapan_profit else u"否"
-                            msg_own = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n启动时价格:{}" \
+                            msg_own = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n初始价格:{}" \
                                       u"\n当前价格:{}" \
-                                      u"\n启动时持币量:可用{},冻结{},仓位{}%" \
+                                      u"\n初始持币量:可用{},冻结{},仓位{}%" \
                                       u"\n当前持币量:可用{},冻结{},仓位{}%" \
-                                      u"\n启动时持金量:可用{},冻结{}" \
-                                      u"\n当前持金量:可用{},冻结{}" \
-                                      u"\n当前账户总价值:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}".format(
+                                      u"\n初始时持金量:可用{},冻结{}" \
+                                      u"\n初始持金量:可用{},冻结{}" \
+                                      u"\n初始账户总价值:${}\n当前账户总价值:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}".format(
                                 config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
                                 process.START_TIME.strftime("%Y/%m/%d, %H:%M:%S"),
                                 now_time.strftime("%Y/%m/%d, %H:%M:%S"), round(process.ORG_PRICE, 2),
@@ -547,16 +554,16 @@ class MainUI():
                                 round(process.ORG_COIN_TRADE, 4), round(process.ORG_COIN_FROZEN, 4),
                                 round(process.ORG_CHICANG * 100, 2), round(bal0, 4), round(bal0_f, 4), round(chicang * 100, 2),
                                 round(process.ORG_DOLLAR_TRADE, 2), round(process.ORG_DOLLAR_FROZEN, 2), round(bal1, 2), round(bal1_f, 2),
-                                round(total, 2), dapan_profit, account_profit, round(total - process.ORG_DOLLAR_TOTAL, 2), is_win)
+                                round(process.ORG_DOLLAR_TOTAL, 2), round(total, 2), dapan_profit, account_profit, round(total - process.ORG_DOLLAR_TOTAL, 2), is_win)
 
-                            msg_other = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n启动时价格:{}\n当前价格:{}\n启动时持币量:可用{},冻结{},仓位{}%\n当前持币量:可用{},冻结{},仓位{}%\n启动时持金量:可用{},冻结{}\n当前持金量:可用{},冻结{}\n当前账户总资产:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}"\
+                            msg_other = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n初始价格:{}\n当前价格:{}\n初始持币量:可用{},冻结{},仓位{}%\n当前持币量:可用{},冻结{},仓位{}%\n初始持金量:可用{},冻结{}\n当前持金量:可用{},冻结{}\n初始账户总资产:{}$\n当前账户总资产:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}"\
                                 .format(config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
                                     process.START_TIME.strftime("%Y/%m/%d, %H:%M:%S"),
                                     now_time.strftime("%Y/%m/%d, %H:%M:%S"),
                                     round(process.ORG_PRICE, 2), round(CURRENT_PRICE, 2),
                                     "***", "***", round(process.ORG_CHICANG * 100, 2), "***", "***", round(chicang * 100, 2),
                                     "***", "***", "***", "***",
-                                    "***",
+                                    "***", "***",
                                     dapan_profit,
                                     account_profit,"***",
                                     is_win)
@@ -564,7 +571,6 @@ class MainUI():
                             logger.warning(msg_own)
                             ret1 = log_config.notify_user(msg_own, own=True)
                             ret2 = log_config.notify_user(msg_other)
-
 
         th = threading.Thread(target=update_price, args=(self.price_text,))
         th.setDaemon(True)
@@ -694,8 +700,9 @@ class MainUI():
                       "trade_min": config.TRADE_MIN_LIMIT_VALUE, "alarm_time": config.ALARM_TIME,
                       "trade_max": config.TRADE_MAX_LIMIT_VALUE, "wait_buy_price": config.WAIT_BUY_PRICE,
                       "wait_buy_account": config.WAIT_BUY_ACCOUNT, "wait_sell_price":config.WAIT_SELL_PRICE, "wait_sell_account":config.WAIT_SELL_ACCOUNT,
-                      "risk": config.RISK, "emails": config.EMAILS, "wechats": config.WECHATS, "position": config.LIMIT_MIN_POSITION,
-                      "force_position": config.FORCE_POSITION, "trade_history_report_interval": config.TRADE_HISTORY_REPORT_INTERVAL,
+                      "risk": config.RISK, "emails": config.EMAILS, "wechats": config.WECHATS, "position_low": config.LIMIT_MIN_POSITION,
+                      "force_position_low": config.FORCE_POSITION_MIN, "position_high": config.LIMIT_MAX_POSITION,
+                      "force_position_high": config.FORCE_POSITION_MAX,"trade_history_report_interval": config.TRADE_HISTORY_REPORT_INTERVAL,
                       "account_report_interval": config.ACCOUNT_REPORT_INTERVAL, "emails_vip": config.EMAILS_VIP, "wechats_vip": config.WECHATS_VIP}
 
         pop = PopupSystem(value_dict)
@@ -715,8 +722,11 @@ class MainUI():
             config.WAIT_SELL_ACCOUNT = value_dict["wait_sell_account"]
             config.RISK = value_dict["risk"]
 
-            config.LIMIT_MIN_POSITION = value_dict["position"]
-            config.FORCE_POSITION = value_dict["force_position"]
+            config.LIMIT_MIN_POSITION = value_dict["position_low"]
+            config.FORCE_POSITION_MIN = value_dict["force_position_low"]
+
+            config.LIMIT_MAX_POSITION = value_dict["position_high"]
+            config.FORCE_POSITION_MAX = value_dict["force_position_high"]
 
             config.TRADE_HISTORY_REPORT_INTERVAL = value_dict["trade_history_report_interval"]
             config.ACCOUNT_REPORT_INTERVAL = value_dict["account_report_interval"]

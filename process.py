@@ -13,8 +13,8 @@ import queue
 import logging
 import log_config
 logger = logging.getLogger(__name__)
-
-
+import threading
+data_lock = threading.Lock()
 pd.set_option('display.max_rows', None)     #当行太多时全部显示
 pd.set_option('display.max_colwidth', 500)
 # pd.set_option("display.max_columns", None)
@@ -26,8 +26,8 @@ pd.set_option('expand_frame_repr', False)  # 当列太多时不换行
     {"market.btcusdt.kline.15min": Dataframe["ts", "tick_id", "open", "high", "low", 'close', 'amount', 'vol', 'count']}
 """
 KLINE_DATA = {}
-REALTIME_PRICE = queue.Queue()
-REALTIME_BALANCE = queue.Queue()
+REALTIME_PRICE = {}#queue.Queue()
+REALTIME_BALANCE = "" # queue.Queue()
 TRADE_VOL_HISTORY = {}
 START_TIME = None
 ORG_CHICANG = None
@@ -39,12 +39,12 @@ ORG_DOLLAR_FROZEN = None
 ORG_COIN_TOTAL = None    # 总价值币量, 所有资产换成币
 ORG_DOLLAR_TOTAL = None  # 总价值金量, 所有资产换成usdt
 ORG_PRICE = None
-REALTIME_KDJ_5MIN = queue.Queue()
+REALTIME_KDJ_5MIN = (1, 1, 1)#queue.Queue()
 REALTIME_KDJ_30MIN = queue.Queue()
 REALTIME_KDJ_1DAY = queue.Queue()
 
-REALTIME_KDJ_15MIN = queue.Queue()
-REALTIME_UML = queue.Queue()
+REALTIME_KDJ_15MIN = (1, 1, 1) #queue.Queue()
+REALTIME_UML = (1, 1, 1) #queue.Queue()
 #所有的K线订阅响应都在此处理
 def kline_sub_msg_process(response):
     if not is_valid(response, "sub"):
@@ -78,28 +78,34 @@ def is_valid(response, type="sub"):
 # 历史请求数据保存
 def kline_req_msg_process(response):
     if not is_valid(response, "req"):
+        logger.warning("kline_req_msg_process response is invalid. response={}".format(response))
         return False
 
-    channel = response.get("rep")
-    if "1min" in channel:
-        symbol = channel.split(".")[1]
-        df_kl = KLINE_DATA.get(symbol, None)
-        if df_kl is None:
-            df_kl = pd.DataFrame([], columns=["ts", "tick_id", "open", "high", "low", 'close', 'amount', 'vol', 'count'])
-            KLINE_DATA[symbol] = df_kl
-    else:
-        df_kl = KLINE_DATA.get(channel, None)
-        if df_kl is None:
-            df_kl = pd.DataFrame([], columns=["ts", "tick_id", "open", "high", "low", 'close', 'amount', 'vol', 'count'])
-            KLINE_DATA[channel] = df_kl
+    try:
+        channel = response.get("rep")
+        if "1min" in channel:
+            symbol = channel.split(".")[1]
+            df_kl = KLINE_DATA.get(symbol, None)
+            if df_kl is None:
+                df_kl = pd.DataFrame([], columns=["ts", "tick_id", "open", "high", "low", 'close', 'amount', 'vol', 'count'])
+                KLINE_DATA[symbol] = df_kl
+        else:
+            df_kl = KLINE_DATA.get(channel, None)
+            if df_kl is None:
+                df_kl = pd.DataFrame([], columns=["ts", "tick_id", "open", "high", "low", 'close', 'amount', 'vol', 'count'])
+                KLINE_DATA[channel] = df_kl
 
-    pos = len(df_kl)  # 追加
-    data_list = response.get("data", [])
-    for tick in data_list:
-        df_kl.loc[pos] = [tick["id"]*1000, tick["id"], tick["open"],
-                           tick["high"], tick["low"], tick["close"],
-                           tick["amount"], tick["vol"], tick["count"]]
-        pos += 1
+        pos = len(df_kl)  # 追加
+        data_list = response.get("data", [])
+        for tick in data_list:
+            df_kl.loc[pos] = [tick["id"]*1000, tick["id"], tick["open"],
+                               tick["high"], tick["low"], tick["close"],
+                               tick["amount"], tick["vol"], tick["count"]]
+            pos += 1
+    except Exception as e:
+        logger.error("kline_req_msg_process exception e={}".format(e))
+        return False
+
     return True
 
 
@@ -110,7 +116,8 @@ def update_realtime_price(data):
     if tick:
         price = {symbol: tick["close"]}
         # print("REALTIME_PRICE put data: {}".format(price))
-        REALTIME_PRICE.put(price)
+        global REALTIME_PRICE
+        REALTIME_PRICE = price  #.put(price)
 
 
 #对订阅响应数据进行保存，存入dataframe, 分实时和k线两部分
@@ -124,52 +131,77 @@ def save_data_df(data):
         log_config.output2ui("save_data_df failed, data invalid. data = {}".format(data), 3)
         return False
 
-    if config.KL_REALTIME in channel:
-        # 如果是KL_REALTIME则直接追加保存
-        symbol = channel.split(".")[1]
-        df_rt = KLINE_DATA.get(symbol, None)
-        if df_rt is None:
-            df_rt = pd.DataFrame([], columns=["ts", "tick_id", "open", "high", "low", 'close', 'amount', 'vol',
-                                              'count'])
-            KLINE_DATA[symbol] = df_rt
-
-        try:
-            pos = len(df_rt)
-            df_rt.loc[pos] = [ts, tick["id"], tick["open"], tick["high"],
-                                     tick["low"], tick["close"], tick["amount"],
-                                     tick["vol"], tick["count"]]
-        except Exception as e:
-            logger.info("pos-1")
-            df_rt.loc[pos-1] = [ts, tick["id"], tick["open"], tick["high"],
-                                     tick["low"], tick["close"], tick["amount"],
-                                     tick["vol"], tick["count"]]
-    else:
-        df_kl = KLINE_DATA.get(channel, None)
-        if df_kl is None:
-            df_kl = pd.DataFrame([], columns=["ts", "tick_id", "open", "high", "low", 'close', 'amount', 'vol', 'count'])
-            KLINE_DATA[channel] = df_kl
-
-        if df_kl.empty:
-            df_kl.loc[0] = [ts, tick["id"], tick["open"],
-                            tick["high"], tick["low"], tick["close"],
-                            tick["amount"], tick["vol"], tick["count"]]
-        else:
-            pos = len(df_kl)  # 追加
-            # print(df.loc[len(df)-1, 'tick_id'])
-            # 在df_kl中只保存k线最后一次数据+最近一条即时数据(除KL_REALTIME除外），不保存实时数据，避免内存占用太大
-            # 如果tick_id和df_kl中最后一条相等，则说明是同一个k线的不同时刻，直接覆盖
-            if tick["id"] == df_kl.loc[pos-1, 'tick_id']:
-                pos = pos-1     #覆盖最后一条
+    try:
+        data_lock.acquire()
+        if config.KL_REALTIME in channel:
+            # 如果是KL_REALTIME则直接追加保存
+            symbol = channel.split(".")[1]
+            df_rt = KLINE_DATA.get(symbol, None)
+            if df_rt is None:
+                df_rt = pd.DataFrame([], columns=["ts", "tick_id", "open", "high", "low", 'close', 'amount', 'vol',
+                                                  'count'])
+                KLINE_DATA[symbol] = df_rt
 
             try:
-                df_kl.loc[pos] = [ts, tick["id"], tick["open"], tick["high"],
-                                  tick["low"], tick["close"], tick["amount"],
-                                  tick["vol"], tick["count"]]
-            except Exception as e :
-                logger.info("pos-1")
-                df_kl.loc[pos - 1] = [ts, tick["id"], tick["open"], tick["high"],
+                pos = len(df_rt)
+
+                if pos > 100000:
+                    try:
+                        logger.warning("df_rt length={}".format(pos))
+                        df_rt.drop([x for x in range(1, 50000)], inplace=True)
+                        df_rt.reset_index(drop=True, inplace=True)
+                        pos = len(df_rt)
+                    except:
+                        logger.exception("drop datafarme 1-50000")
+
+                df_rt.loc[pos] = [ts, tick["id"], tick["open"], tick["high"],
+                                         tick["low"], tick["close"], tick["amount"],
+                                         tick["vol"], tick["count"]]
+            except Exception as e:
+                logger.exception("save_data_df, e={}".format(e))
+                df_rt.loc[len(pos)-1] = [ts, tick["id"], tick["open"], tick["high"],
+                                         tick["low"], tick["close"], tick["amount"],
+                                         tick["vol"], tick["count"]]
+        else:
+            df_kl = KLINE_DATA.get(channel, None)
+            if df_kl is None:
+                df_kl = pd.DataFrame([], columns=["ts", "tick_id", "open", "high", "low", 'close', 'amount', 'vol', 'count'])
+                KLINE_DATA[channel] = df_kl
+
+            if df_kl.empty:
+                df_kl.loc[0] = [ts, tick["id"], tick["open"],
+                                tick["high"], tick["low"], tick["close"],
+                                tick["amount"], tick["vol"], tick["count"]]
+            else:
+                pos = len(df_kl)  # 追加
+                if pos > 100000:
+                    try:
+                        logger.warning("df_kl length={}".format(pos))
+                        df_kl.drop([x for x in range(1, 50000)], inplace=True)
+                        df_kl.reset_index(drop=True, inplace=True)
+                        pos = len(df_kl)
+                    except:
+                        logger.exception("drop datafarme 1-50000")
+
+                # print(df.loc[len(df)-1, 'tick_id'])
+                # 在df_kl中只保存k线最后一次数据+最近一条即时数据(除KL_REALTIME除外），不保存实时数据，避免内存占用太大
+                # 如果tick_id和df_kl中最后一条相等，则说明是同一个k线的不同时刻，直接覆盖
+                if tick["id"] == df_kl.loc[pos-1, 'tick_id']:
+                    pos = pos-1     #覆盖最后一条
+
+                try:
+                    df_kl.loc[pos] = [ts, tick["id"], tick["open"], tick["high"],
                                       tick["low"], tick["close"], tick["amount"],
                                       tick["vol"], tick["count"]]
+                except Exception as e:
+                    logger.exception("save_data_df, e={}".format(e))
+                    df_kl.loc[pos - 1] = [ts, tick["id"], tick["open"], tick["high"],
+                                          tick["low"], tick["close"], tick["amount"],
+                                          tick["vol"], tick["count"]]
+    except:
+        logger.exception("save_data_df")
+    finally:
+        data_lock.release()
 
     return True
 

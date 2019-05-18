@@ -43,6 +43,22 @@ def plot_candle_chart(df, pic_name='candle_chart'):
     # 保存数据
     plt.savefig(pic_name+'.png')
 
+def test_drop():
+    dw = pd.DataFrame([[1, 0, 3], [1, 5, 6], [4, 2, 5],[5, 2, 5],[6, 2, 5],[7, 2, 5]], columns=["a", "b", "c"])
+    lt = len(dw)
+    dw.drop([1,2,3], inplace=True)
+    # dw.reset_index(drop=True, inplace=True)
+    print(dw)
+    dw.loc[len(dw)]=[99,4,9]
+    print(dw)
+    print(float(dw.tail(1)["a"]))
+
+    tpdf = dw.loc[dw["b"]>1]
+    print(tpdf)
+    tpdf2=tpdf[tpdf["b"]<4]
+    print(tpdf2)
+    print(tpdf[tpdf["b"]<10].c.max())
+    # print(dw.loc[dw["b"]>20].c.max())
 
 def test_duplicate():
     dw = pd.DataFrame([[1, 2, 3], [1, 5, 6], [4, 2, 5]], columns=["a", "b", "c"])
@@ -53,7 +69,7 @@ def test_duplicate():
     print(current_price)
 
     print(dw)
-    dd = dw[['a','c']][dw.a > 1]
+    dd = dw[['a', 'c']][dw.a > 1]
     print(dd)
     exit(1)
 
@@ -82,4 +98,4 @@ if __name__ == '__main__':
     # df = pd.read_csv("sh600000.csv")
     # plot_candle_chart(df)
 
-    test_duplicate()
+    test_drop()
