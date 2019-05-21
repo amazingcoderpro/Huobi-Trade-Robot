@@ -340,9 +340,12 @@ class PopupSystem(Toplevel):
                 position_high = 0
             else:
                 position_high /= 100
+            #
+            # if position_high-position_low < 0.05:
+            #     position_high += 0.05
 
             if position_high < position_low:
-                position_high=1
+                position_high = 1
 
         except Exception as e:
             messagebox.showwarning("Warning", "All parameters must be numeric and cannot be null!")  # 提出警告对话窗
