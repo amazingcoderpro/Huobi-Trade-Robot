@@ -136,7 +136,7 @@ WECHATS = [u"信链众创量化1.0版"]
 EMAILS_VIP = ["wcadaydayup@163.com", "1447385994@qq.com", "bbb201@126.com"]
 WECHATS_VIP = [u"长城1211", u"追风少年人"]
 
-TRADE_ALL_LOG = []
+TRADE_ALL_LOG = {}
 LIMIT_MIN_POSITION = 0.2    #期望最低持仓比
 FORCE_POSITION_MIN = 0       #是否强制保持最 少持仓比，如果是，无论何种情况都保持该持仓比例，否则系统将在持仓比低于最小持仓比后降低买入标准以尽快达到持仓比
 

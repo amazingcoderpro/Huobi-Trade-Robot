@@ -155,13 +155,11 @@ class MainUI():
         self.stop_check_strategy_button.grid(row=8, column=0)
         self.stop_button.grid(row=9, column=0)
 
-
         self.label_pop.grid(row=0, column=1)
         self.price_label.grid(row=0, column=2)
 
         self.label_origin.grid(row=0, column=3)
         self.origin_label.grid(row=0, column=4)
-
 
         self.label_bal.grid(row=1, column=1)
         self.bal_label.grid(row=1, column=2)#columnspan=2
@@ -244,7 +242,6 @@ class MainUI():
         self.verify_identity_button.config(state="disabled")
         self.working = True
 
-
     def stop_work(self):
         logger.info("stop_work!")
         log_config.output2ui("stop_work!")
@@ -271,7 +268,6 @@ class MainUI():
         self.start_check_strategy_button.config(state="disabled")
         self.stop_check_strategy_button.config(state="normal")
         log_config.output2ui("Start check strategy successfully!", 8)
-
 
     def stop_check_strategy(self):
         logger.warning("stop_check_strategy...")
@@ -526,11 +522,15 @@ class MainUI():
                             if run_total_seconds > config.TRADE_HISTORY_REPORT_INTERVAL*3600:
                                 today_logs = [y for x, y in config.TRADE_ALL_LOG.items() if x > daily_report_start_time]
                                 daily_report_start_time = now_time
-                                daily_msg = u"最近{}小时的交易记录如下:\n".format(int(config.TRADE_HISTORY_REPORT_INTERVAL))+"\n".join(today_logs)
+                                if today_logs:
+                                    today_logs.sort()
+                                    daily_msg = u"最近{}小时的交易记录如下:\n".format(int(config.TRADE_HISTORY_REPORT_INTERVAL))+"\n".join(today_logs)
+                                else:
+                                    daily_msg = u"最近{}小时无交易记录！\n".format(int(config.TRADE_HISTORY_REPORT_INTERVAL))
+
                                 log_config.output2ui(daily_msg, 8)
                                 logger.warning(daily_msg)
                                 log_config.notify_user(daily_msg, own=True)
-
                         if not hour_report_start_time:
                             hour_report_start_time = now_time
                         else:

@@ -115,7 +115,7 @@ def output2ui(msg, level=UI_LOG_LEVEL):
 
     if level in [6, 7]:
         time_now = datetime.now()
-        config.TRADE_ALL_LOG.append({time_now: "[{}] {}".format(time_now.strftime("%Y/%m/%d, %H:%M:%S"), msg)})
+        config.TRADE_ALL_LOG[time_now] = "[{}] {}".format(time_now.strftime("%Y/%m/%d, %H:%M:%S"), msg)
 
     # if level >= 6:
     #     import smtplib

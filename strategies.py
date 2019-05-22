@@ -1830,7 +1830,7 @@ def sell_high():
     # 判断是不是还在涨,如果是，暂时不卖
     if is_still_up(symbol):
         logger.info("sell high max price={}, current price={}, still up！!".format(max_price, current_price))
-        return True
+        return False
 
     max_price_5 = get_max_price(symbol, now - (15 * 60 * 1000) * 5, now - (10 * 60 * 1000))
     max_price_20 = get_max_price(symbol, now - (15 * 60 * 1000) * 20, now - (10 * 60 * 1000))
