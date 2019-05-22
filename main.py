@@ -83,7 +83,7 @@ class MainUI():
         self.bal_label = Label(root, textvariable=self.bal_text, foreground='red', background="gray",
                                font=("", 12, 'bold'), width=25)
 
-        self.label_coin = Label(root, text="当前账户总资产(按币/金): ", width=20)
+        self.label_coin = Label(root, text="当前账户总资产(按币/金/仓位): ", width=22)
         self.coin_text = StringVar()
         self.coin_text.set("")
         self.coin_label = Label(root, textvariable=self.coin_text, foreground='red', background="gray",
@@ -398,7 +398,8 @@ class MainUI():
                 dollar_frozen = float(dollar_str[1])
                 total_coin_value = coin_trade + coin_frozen + (dollar_trade + dollar_frozen) / price
                 total_dollar_value = (coin_trade + coin_frozen) * price + dollar_trade + dollar_frozen
-                self.coin_text.set("{}/{}".format(round(total_coin_value, 4), round(total_dollar_value, 2)))
+                position = (coin_trade + coin_frozen)*price / total_dollar_value
+                self.coin_text.set("{}/{}/{}%".format(round(total_coin_value, 4), round(total_dollar_value, 2), round(position*100, 2)))
                 if not process.ORG_COIN_TOTAL:
                     process.START_TIME = datetime.datetime.now()
                     process.ORG_CHICANG = (coin_trade+coin_frozen)*price/total_dollar_value
@@ -515,62 +516,68 @@ class MainUI():
             while 1:
                 time.sleep(60)
                 if self.working:
-                    now_time = datetime.datetime.now()
-                    if not daily_report_start_time:
-                        daily_report_start_time = now_time
-                    else:
-                        if (now_time-daily_report_start_time).total_seconds() > config.TRADE_HISTORY_REPORT_INTERVAL*3600:
-                            today_logs = [y for x, y in config.TRADE_ALL_LOG.items() if x > daily_report_start_time]
+                    try:
+                        now_time = datetime.datetime.now()
+                        if not daily_report_start_time:
                             daily_report_start_time = now_time
-                            daily_msg = "最近{}小时的交易记录如下:\n".format(int(config.TRADE_HISTORY_REPORT_INTERVAL))+"\n".join(today_logs)
-                            log_config.output2ui(daily_msg, 8)
-                            logger.warning(daily_msg)
-                            log_config.notify_user(daily_msg, own=True)
+                        else:
+                            run_total_seconds = (now_time-daily_report_start_time).total_seconds()
+                            logger.info("system run total seconds={}, trade_notify_interval={}".format(run_total_seconds, config.TRADE_HISTORY_REPORT_INTERVAL))
+                            if run_total_seconds > config.TRADE_HISTORY_REPORT_INTERVAL*3600:
+                                today_logs = [y for x, y in config.TRADE_ALL_LOG.items() if x > daily_report_start_time]
+                                daily_report_start_time = now_time
+                                daily_msg = u"最近{}小时的交易记录如下:\n".format(int(config.TRADE_HISTORY_REPORT_INTERVAL))+"\n".join(today_logs)
+                                log_config.output2ui(daily_msg, 8)
+                                logger.warning(daily_msg)
+                                log_config.notify_user(daily_msg, own=True)
 
-                    if not hour_report_start_time:
-                        hour_report_start_time = now_time
-                    else:
-                        if (now_time-hour_report_start_time).total_seconds() > config.ACCOUNT_REPORT_INTERVAL*3600:
+                        if not hour_report_start_time:
                             hour_report_start_time = now_time
+                        else:
+                            if (now_time-hour_report_start_time).total_seconds() > config.ACCOUNT_REPORT_INTERVAL*3600:
+                                hour_report_start_time = now_time
 
-                            global CURRENT_PRICE
-                            bal0, bal0_f, bal1, bal1_f = strategies.update_balance()
-                            total = (bal0+bal0_f)*CURRENT_PRICE+bal1+bal1_f
-                            chicang = ((bal0 + bal0_f) * CURRENT_PRICE) / total
-                            dapan_profit = round((CURRENT_PRICE - process.ORG_PRICE) * 100 / process.ORG_PRICE, 2)
-                            account_profit = round((total - process.ORG_DOLLAR_TOTAL) * 100 / process.ORG_DOLLAR_TOTAL, 2)
-                            is_win = u"是" if account_profit >= dapan_profit else u"否"
-                            msg_own = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n初始价格:{}" \
-                                      u"\n当前价格:{}" \
-                                      u"\n初始持币量:可用{},冻结{},仓位{}%" \
-                                      u"\n当前持币量:可用{},冻结{},仓位{}%" \
-                                      u"\n初始时持金量:可用{},冻结{}" \
-                                      u"\n初始持金量:可用{},冻结{}" \
-                                      u"\n初始账户总价值:${}\n当前账户总价值:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}".format(
-                                config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
-                                process.START_TIME.strftime("%Y/%m/%d, %H:%M:%S"),
-                                now_time.strftime("%Y/%m/%d, %H:%M:%S"), round(process.ORG_PRICE, 2),
-                                round(CURRENT_PRICE, 2),
-                                round(process.ORG_COIN_TRADE, 4), round(process.ORG_COIN_FROZEN, 4),
-                                round(process.ORG_CHICANG * 100, 2), round(bal0, 4), round(bal0_f, 4), round(chicang * 100, 2),
-                                round(process.ORG_DOLLAR_TRADE, 2), round(process.ORG_DOLLAR_FROZEN, 2), round(bal1, 2), round(bal1_f, 2),
-                                round(process.ORG_DOLLAR_TOTAL, 2), round(total, 2), dapan_profit, account_profit, round(total - process.ORG_DOLLAR_TOTAL, 2), is_win)
-
-                            msg_other = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n初始价格:{}\n当前价格:{}\n初始持币量:可用{},冻结{},仓位{}%\n当前持币量:可用{},冻结{},仓位{}%\n初始持金量:可用{},冻结{}\n当前持金量:可用{},冻结{}\n初始账户总资产:{}$\n当前账户总资产:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}"\
-                                .format(config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
+                                global CURRENT_PRICE
+                                bal0, bal0_f, bal1, bal1_f = strategies.update_balance()
+                                total = (bal0+bal0_f)*CURRENT_PRICE+bal1+bal1_f
+                                chicang = ((bal0 + bal0_f) * CURRENT_PRICE) / total
+                                dapan_profit = round((CURRENT_PRICE - process.ORG_PRICE) * 100 / process.ORG_PRICE, 2)
+                                account_profit = round((total - process.ORG_DOLLAR_TOTAL) * 100 / process.ORG_DOLLAR_TOTAL, 2)
+                                is_win = u"是" if account_profit >= dapan_profit else u"否"
+                                msg_own = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n初始价格:{}" \
+                                          u"\n当前价格:{}" \
+                                          u"\n初始持币量:可用{},冻结{},仓位{}%" \
+                                          u"\n当前持币量:可用{},冻结{},仓位{}%" \
+                                          u"\n初始时持金量:可用{},冻结{}" \
+                                          u"\n初始持金量:可用{},冻结{}" \
+                                          u"\n初始账户总价值:${}\n当前账户总价值:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}".format(
+                                    config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
                                     process.START_TIME.strftime("%Y/%m/%d, %H:%M:%S"),
-                                    now_time.strftime("%Y/%m/%d, %H:%M:%S"),
-                                    round(process.ORG_PRICE, 2), round(CURRENT_PRICE, 2),
-                                    "***", "***", round(process.ORG_CHICANG * 100, 2), "***", "***", round(chicang * 100, 2),
-                                    "***", "***", "***", "***",
-                                    "***", "***",
-                                    dapan_profit,
-                                    account_profit,"***",
-                                    is_win)
-                            log_config.output2ui(msg_own, level=8)
-                            logger.warning(msg_own)
-                            ret1 = log_config.notify_user(msg_own, own=True)
-                            ret2 = log_config.notify_user(msg_other)
+                                    now_time.strftime("%Y/%m/%d, %H:%M:%S"), round(process.ORG_PRICE, 3),
+                                    round(CURRENT_PRICE, 3),
+                                    round(process.ORG_COIN_TRADE, 4), round(process.ORG_COIN_FROZEN, 4),
+                                    round(process.ORG_CHICANG * 100, 2), round(bal0, 4), round(bal0_f, 4), round(chicang * 100, 2),
+                                    round(process.ORG_DOLLAR_TRADE, 2), round(process.ORG_DOLLAR_FROZEN, 2), round(bal1, 2), round(bal1_f, 2),
+                                    round(process.ORG_DOLLAR_TOTAL, 2), round(total, 2), dapan_profit, account_profit, round(total - process.ORG_DOLLAR_TOTAL, 2), is_win)
+
+                                msg_other = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n初始价格:{}\n当前价格:{}\n初始持币量:可用{},冻结{},仓位{}%\n当前持币量:可用{},冻结{},仓位{}%\n初始持金量:可用{},冻结{}\n当前持金量:可用{},冻结{}\n初始账户总资产:{}$\n当前账户总资产:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}"\
+                                    .format(config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
+                                        process.START_TIME.strftime("%Y/%m/%d, %H:%M:%S"),
+                                        now_time.strftime("%Y/%m/%d, %H:%M:%S"),
+                                        round(process.ORG_PRICE, 3), round(CURRENT_PRICE, 3),
+                                        "***", "***", round(process.ORG_CHICANG * 100, 2), "***", "***", round(chicang * 100, 2),
+                                        "***", "***", "***", "***",
+                                        "***", "***",
+                                        dapan_profit,
+                                        account_profit,"***",
+                                        is_win)
+                                log_config.output2ui(msg_own, level=8)
+                                logger.warning(msg_own)
+                                ret1 = log_config.notify_user(msg_own, own=True)
+                                ret2 = log_config.notify_user(msg_other)
+                    except Exception as e:
+                        logger.warning("notify_profit_info exception.e={}".format(e))
+
 
         th = threading.Thread(target=update_price, args=(self.price_text,))
         th.setDaemon(True)

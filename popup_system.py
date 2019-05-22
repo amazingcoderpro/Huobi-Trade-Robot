@@ -68,11 +68,11 @@ class PopupSystem(Toplevel):
         self.risk_scale = None
 
         # 历史交易记录播报周期
-        self.trade_history_report_interval = DoubleVar()
+        self.trade_history_report_interval = IntVar()
         self.trade_history_report_interval.set(trade_history_report_interval)
 
         # 账户情况播报周期
-        self.account_report_interval = DoubleVar()
+        self.account_report_interval = IntVar()
         self.account_report_interval.set(account_report_interval)
 
 
