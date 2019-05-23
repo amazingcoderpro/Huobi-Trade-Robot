@@ -31,7 +31,7 @@ SELL_RECORD = []
 TRADE_RECORD = []
 
 move_stop_profit_params = {"check": 1, "msf_min": 0.02, "msf_back": 0.22}
-stop_loss_params = {"check": 1, "percent": 0.03}
+stop_loss_params = {"check": 0, "percent": 0.03}
 kdj_buy_params = {"check": 1, "k": 20, "d": 22, "buy_percent": 0.2, "up_percent": 0.005, "peroid": "15min"}
 kdj_sell_params = {"check": 1, "k": 82, "d": 80, "sell_percent": 0.3, "down_percent": 0.005, "peroid": "15min"}
 vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 2, "price_up_limit": 0.02, "buy_percent": 0.5,
@@ -41,6 +41,8 @@ boll_strategy_params = {"check": 1, "peroid": "15min", "open_diff1_percent": 0.0
                         "open_up_percent": 0.01, "open_buy_percent": 0.5, "trade_percent": 1.5, "close_up_percent": 0.03,
                         "close_buy_percent": 0.5}
 
+# BUY_LOW_RECORD = {}
+# SELL_HIGH_RECORD = {}
 
 def macd_strategy_5min():
     logger.info("macd_strategy_5min be called")
@@ -179,13 +181,13 @@ def boll_strategy():
     peroid = boll_strategy_params.get("peroid", "15min")
     symbol = config.NEED_TOBE_SUB_SYMBOL[0]
 
-    if is_still_up(symbol):
-        logger.info(u"boll_strategy　still up")
-        return False
-
-    if is_still_down(symbol):
-        logger.info(u"boll_strategy　still down")
-        return False
+    # if is_still_up(symbol):
+    #     logger.info(u"boll_strategy　still up")
+    #     return False
+    #
+    # if is_still_down(symbol):
+    #     logger.info(u"boll_strategy　still down")
+    #     return False
 
     market = "market.{}.kline.{}".format(symbol, peroid)
     upper, middle, lower = get_boll(market, 0)
@@ -278,12 +280,17 @@ def boll_strategy():
     logger.info(
         "boll_strategy call buy percent: {},sell_percent={}, current price={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(
             buy_percent, sell_percent, price, upper, middle, lower, pdiff1, pdiff2))
-    log_config.output2ui(
-        "boll_strategy call buy percent: {},sell_percent={}, current price={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(
-            buy_percent, sell_percent, price, upper, middle, lower, pdiff1, pdiff2))
+
     global G_BOLL_BUY
     if buy_percent > 0:
         buy_percent *= config.RISK
+        if is_still_down(symbol):
+            logger.info("boll buy, still down, 0.8")
+            buy_percent *= 0.8
+        else:
+            logger.info("boll buy, not still down, 1.2")
+            buy_percent *= 1.2
+
         # msg = "[BUY]boll_strategy buy {} percent: {}, current price={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(symbol, buy_percent, price, upper, middle, lower, pdiff1, pdiff2)
         msg = "[买入{}]boll 买入比例={}%, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
             buy_percent * 100, 2), round(price, 3), round(upper, 2), round(middle, 2),
@@ -320,6 +327,12 @@ def boll_strategy():
     # if sell_percent > 0 and G_BOLL_BUY > 0:
     if sell_percent > 0:
         sell_percent *= config.RISK
+        if is_still_up(symbol):
+            logger.info("boll sell, still up, 0.8")
+            sell_percent *= 0.8
+        else:
+            logger.info("boll sell, not still up, 1.2")
+            sell_percent *= 1.2
         msg = "[卖出{}]boll 卖出比例={}%, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(sell_percent*100, 2), round(price,3), round(upper,2), round(middle,2), round(lower,2), round(pdiff1,2), round(pdiff2,2))
         if not trade_alarm(msg):
             return False
@@ -361,13 +374,15 @@ def kdj_strategy_buy():
 
     buy_percent = 0
 
-    # 如果继续跌，暂时不买
-    if is_still_down(symbol):
-        logging.info("kdj buy checking, still down!")
-        return False
+    # # 如果继续跌，暂时不买
+    # if is_still_down(symbol):
+    #     logging.info("kdj buy checking, still down!")
+    #     return False
 
+    cur_k2, cur_d2, cur_j2 = get_kdj(market, pos=2)
     cur_k1, cur_d1, cur_j1 = get_kdj(market, pos=1)
     last_diff_kd = cur_k1 - cur_d1
+    last_diff_kd2 = cur_k2 - cur_d2
 
     cur_k, cur_d, cur_j = get_kdj(market)
     diff_kd = cur_k - cur_d
@@ -377,17 +392,17 @@ def kdj_strategy_buy():
 
     strategy_flag = []
     # 低位即将金叉
-    if last_diff_kd < 0 and diff_kd >= -3 and diff_kd > last_diff_kd and cur_k > cur_k1:
+    if last_diff_kd < 0 and diff_kd >= -3 and diff_kd > last_diff_kd and cur_k > cur_k1 and diff_kd > last_diff_kd2:
         if cur_k < 30 and cur_d < 30:
-            logging.warning(u"KDJ 低位即将金叉, k1={}, k={}, d1={}, d={}, cp={}.".format(cur_k1, cur_k, cur_d1, cur_d, current_price))
+            logging.warning(u"KDJ 低位即将金叉, k1={}, k={}, d1={}, d={}, cp={}. curk2={}, last_diff_kd2={}".format(cur_k1, cur_k, cur_d1, cur_d, current_price, cur_k2, last_diff_kd2))
             buy_percent += 0.25
             strategy_flag.append(u"低位金叉")
-        elif cur_k <= 65 and cur_d <= 65 and current_price < upper:  # 中位金叉,且未出上轨
-            logging.warning(u"KDJ 中位即将金叉, k1={}, k={}, d1={}, d={}, cp={}, upper={}".format(cur_k1, cur_k, cur_d1, cur_d, current_price, upper))
+        elif cur_k <= 55 and cur_d <= 55 and current_price < middle and cur_d >= cur_d1:  # 中位金叉,且未出中轨
+            logging.warning(u"KDJ 中位即将金叉, k1={}, k={}, d1={}, d={}, cp={}, upper={}, curk2={}, last_diff_kd2={}".format(cur_k1, cur_k, cur_d1, cur_d, current_price, upper, cur_k2, last_diff_kd2))
             buy_percent += 0.15
             strategy_flag.append(u"中位金叉")
     else:
-        logger.info(u"没有趋近金叉, k1={}, k={}, d1={}, d={}, last_diff_kd={}, diff_kd={}, cp={}.".format(cur_k1, cur_k, cur_d1, cur_d, last_diff_kd, diff_kd, current_price))
+        logger.info(u"没有趋近金叉, k1={}, k={}, d1={}, d={}, last_diff_kd={}, diff_kd={}, cp={}. curk2={}, last_diff_kd2={}".format(cur_k1, cur_k, cur_d1, cur_d, last_diff_kd, diff_kd, current_price, cur_k2, last_diff_kd2))
 
     # 低位回弹
     # kd不能大于40
@@ -465,7 +480,17 @@ def kdj_strategy_buy():
                         buy_percent += 0.1
                         strategy_flag.append(u"买盘活跃")
 
+    if buy_percent <=0:
+        return False
+
     buy_percent *= config.RISK
+    if is_still_down(symbol):
+        logger.info("kdj buy, still down *0.8")
+        buy_percent *= 0.8
+    else:
+        logger.info("kdj buy, not still down *1.2")
+        buy_percent *= 1.2
+
     msg = "[买入{}]kdj_{} 计划买入比例={}%, 当前价格={}, 指标K={}, D={}, 阶段最低价格={}, 回暖幅度={}%".format(
         symbol, peroid, round(buy_percent * 100, 2), round(current_price, 3), round(cur_k, 2), round(cur_d, 2), round(min_price, 3),
          round(actual_up_percent * 100, 2))
@@ -504,9 +529,9 @@ def kdj_strategy_sell(currency=[], max_trade=1):
     market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], peroid)
     symbol = market.split(".")[1]
 
-    if is_still_up(symbol):
-        logging.info("kdj sell checking, still up!")
-        return False
+    # if is_still_up(symbol):
+    #     logging.info("kdj sell checking, still up!")
+    #     return False
 
     cur_k, cur_d, cur_j = get_kdj(market)
     current_price = get_current_price(symbol)
@@ -601,13 +626,21 @@ def kdj_strategy_sell(currency=[], max_trade=1):
     # need_d = 85 if need_d > 85 else need_d
     # need_k = 75 if need_k < 75 else need_k
     # need_d = 72 if need_d < 72 else need_d
-    logger.info("")
+
     if (cur_k >= need_d and cur_d >= need_d) \
             or (last_k >= need_k and last_d >= need_d) \
             or (last_k_2 >= need_k and last_d_2 >= need_d):
 
         percent = kdj_sell_params.get("sell_percent", 0.3)
         percent *= config.RISK
+
+        if is_still_up(symbol):
+            logger.info("kdj sell, still up *0.8")
+            percent *= 0.8
+        else:
+            logger.info("kdj sell, not still up *1.2")
+            percent *= 1.2
+
         msg_show = "[卖出{}]kdj_{} 卖出比例={}%, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}．".format(
             symbol, peroid, round(percent * 100, 2), round(current_price, 3), round(max_price, 3),
             round(actual_down_percent * 100, 2), round(cur_k, 2), round(cur_d, 2), )
@@ -615,7 +648,6 @@ def kdj_strategy_sell(currency=[], max_trade=1):
         if not trade_alarm(msg_show):
             return False
 
-        logger.info("kdj sell actual_down_percent={} is big than need down percent".format(actual_down_percent))
         ret = sell_market(symbol, percent=percent, current_price=current_price)
         if ret[0]:
             msg = "[卖出{}]kdj_{} 计划卖出比例={}%, 实际卖出数量={}个, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}.".format(
@@ -692,9 +724,10 @@ def stop_loss(percent=0.03):
         log_config.output2ui("stop loss is not check", 2)
         return False
 
-    #最近三分钟内有买入策略被触发，则暂时不卖
-    already = is_already_buy(last_time=int(time.time()) * 1000 - 3 * 60 * 1000)
+    #最近10分钟内有买入策略被触发，则暂时不卖
+    already = is_already_buy(last_time=int(time.time()) * 1000 - 10 * 60 * 1000)
     if already[0]:
+        logger.info(u"最近十分钟有买入, 暂不止损．")
         return False
 
     # 根据仓位调整止损比例
@@ -928,7 +961,7 @@ def vol_price_fly():
         log_config.output2ui("vol price fily is not check", 2)
         return False
 
-    peroid = vol_price_fly_params.get("peroid", 1)
+    peroid = vol_price_fly_params.get("peroid", "5min")
     market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], peroid)
     symbol = market.split(".")[1]
     multiple = vol_price_fly_params.get("vol_percent", 1.2) * (1/config.RISK)
@@ -1026,6 +1059,9 @@ def vol_price_fly():
     # 当前价格不能超过前面第三个周期的收盘价*（1+规定涨幅）
     current_price = get_current_price(symbol)
     close_before_2 = (get_close(market, before=3) + get_close(market, before=4) + get_close(market, before=5))/3
+    if close_before_2 < 0:
+        return False
+
     # close_before1 = get_close(market, before=1)
     logger.info("vol_price_fly current_price={} , close_before_2={}, * 1+price_up_limit= {}".format(current_price,
                                                                                                     close_before_2,
@@ -1267,12 +1303,12 @@ def get_close(market, before=1):
             # print(len(df))
             close = df.loc[len(df) - 1 - before, "close"]
         except Exception as e:
-            logger.exception("get_close")
+            logger.exception("get_close, e={}".format(e))
             print(len(df))
             close = df.loc[len(df) - 1 - before - 1, "close"]
         return close
     except:
-        logger.exception("get_close")
+        logger.exception("get_close, ")
     finally:
         process.data_lock.release()
 
@@ -1287,11 +1323,9 @@ def get_open(market, before=1):
             return -1
 
         try:
-            print(len(df))
             open_price = df.loc[len(df) - 1 - before, "open"]
         except Exception as e:
             logger.exception("get_open, e={}".format(e))
-            print(len(df))
             open_price = df.loc[len(df) - 1 - before - 1, "open"]
         return open_price
     except:
@@ -1312,15 +1346,15 @@ def get_up_down(market, before=1):
             # print(len(df))
             open_price = df.loc[len(df) - before, "open"]
             close_price = df.loc[len(df) - before, "close"]
-            up_dwon = round((close_price - open_price) / open_price, 4)
+            up_down = round((close_price - open_price) / open_price, 4)
         except Exception as e:
             logger.exception("get_open")
             # print(len(df))
             open_price = df.loc[len(df) - 1 - before, "open"]
             close_price = df.loc[len(df) - 1 - before, "close"]
-            up_dwon = round((close_price - open_price) / open_price, 4)
-        logger.info("get_up_down = {}".format(up_dwon))
-        return up_dwon
+            up_down = round((close_price - open_price) / open_price, 4)
+        logger.info("get_up_down = {}".format(up_down))
+        return up_down
     except:
         logger.exception("get_up_down")
     finally:
@@ -1372,7 +1406,7 @@ def get_max_price(symbol, last_time, current=0):
                     temp_df = temp_df.loc[temp_df["ts"]<current]
                     max_price = temp_df.high.max()
                 except:
-                    max_price=-1
+                    max_price = -1
         else:
             try:
                 max_price = df.loc[df["ts"] > last_time].high.max()
@@ -1629,7 +1663,14 @@ def get_balance(currency, access_key=None, secret_key=None, retry=2, result_type
     #              state=1, is_after_execute_pause=False, name=""):
 
 
-def is_still_down(symbol, delta=200, percent=1):
+def is_still_down(symbol, delta=100, percent=1.002):
+    """
+    是否还在下跌，　以近期平均值与远期平均值的关系来衡量，近平大于远平的1.002倍，认为不在下跌了
+    :param symbol:
+    :param delta:
+    :param percent:
+    :return:
+    """
     process.data_lock.acquire()
     try:
         df = process.KLINE_DATA.get(symbol, None)
@@ -1637,27 +1678,32 @@ def is_still_down(symbol, delta=200, percent=1):
             return False
 
         now = int(time.time()) * 1000
-        last_time_far = now - delta*1000
-        last_time_close = now - delta * 1000/2
-        far_mean = df.loc[df["ts"] > last_time_far].close.mean()
-        far_mean_count = df.loc[df["ts"] > last_time_far].close.count()
+        last_time_far_beg = now - delta * 1000*2
+        last_time_far_end = now - delta * 1000
+
+        last_time_close = now - delta * 1000 / 2
+
+        tmp_df = df.loc[df["ts"] > last_time_far_beg]
+        far_mean = tmp_df.loc[tmp_df["ts"] < last_time_far_end].close.mean()
+
         close_mean = df.loc[df["ts"] > last_time_close].close.mean()
-        if close_mean < far_mean*percent:
-            logger.info("is still down True, far_mean={}, close_mean={}, cp={}, far count={}".format(far_mean, close_mean,
-                                                                                  float(df.tail(1)["close"]), far_mean_count))
-            return True
-        else:
-            logger.info("is still down False, far_mean={}, close_mean={}, cp={}, far count={}".format(far_mean, close_mean,
-                                                                                  float(df.tail(1)["close"]), far_mean_count))
+        cp = float(df.tail(1)["close"])
+
+        if close_mean > far_mean*percent and cp > far_mean:
+            logger.info("is still down False, far_mean={}, close_mean={}, cp={}".format(far_mean, close_mean, cp))
             return False
-    except Exception as e :
+        else:
+            logger.info("is still down True, far_mean={}, close_mean={}, cp={}".format(far_mean, close_mean, cp))
+            return True
+
+    except Exception as e:
         logger.exception("is still down exception. e={}".format(e))
         return False
     finally:
         process.data_lock.release()
 
 
-def is_still_up(symbol, delta=200, percent=1):
+def is_still_up(symbol, delta=100, percent=1.002):
     process.data_lock.acquire()
     try:
         df = process.KLINE_DATA.get(symbol, None)
@@ -1665,21 +1711,23 @@ def is_still_up(symbol, delta=200, percent=1):
             return False
 
         now = int(time.time()) * 1000
-        last_time_far = now - delta * 1000
+        last_time_far_beg = now - delta * 1000*2
+        last_time_far_end = now - delta * 1000
+
         last_time_close = now - delta * 1000 / 2
 
-        far_mean = df.loc[df["ts"] > last_time_far].close.mean()
-        far_mean_count = df.loc[df["ts"] > last_time_far].close.count()
+        tmp_df = df.loc[df["ts"] > last_time_far_beg]
+        far_mean = tmp_df.loc[tmp_df["ts"] < last_time_far_end].close.mean()
+
         close_mean = df.loc[df["ts"] > last_time_close].close.mean()
-        logger.info("is still up, far_mean={}, close_mean={}, cp={}".format(far_mean, close_mean, float(df.tail(1)["close"])))
-        if close_mean*percent > far_mean:
-            logger.info("is still up True, far_mean={}, close_mean={}, cp={}, far count={}".format(far_mean, close_mean,
-                                                                                float(df.tail(1)["close"]), far_mean_count))
-            return True
-        else:
-            logger.info("is still up False, far_mean={}, close_mean={}, cp={}, far count={}".format(far_mean, close_mean,
-                                                                                float(df.tail(1)["close"]), far_mean_count))
+        cp = float(df.tail(1)["close"])
+
+        if close_mean*percent < far_mean and cp < far_mean:
+            logger.info("is still up False, far_mean={}, close_mean={}, cp={}".format(far_mean, close_mean, cp))
             return False
+        else:
+            logger.info("is still up True, far_mean={}, close_mean={}, cp={}".format(far_mean, close_mean, cp))
+            return True
     except Exception as e:
         logger.exception("is still up exception. e={}".format(e))
         return False
@@ -1717,25 +1765,21 @@ def buy_low():
         logger.warning("buy_low get current price error.")
         return False
 
-    min_price = get_min_price(symbol, now - (300 * 1000), current=0)
+    min_price = get_min_price(symbol, now - (5*60 * 1000), current=0)
 
     # 判断是不是还在跌,如果是，暂时不买
-    # if min_price > 0 and current_price < min_price*1.004:
-    #     logger.info("buy low min price={}, current price={}, still down！!".format(min_price, current_price))
+    # if is_still_down(symbol):
+    #     logger.info("buy low recent 5min min price={}, current price={}, still down！!".format(min_price, current_price))
     #     return False
-
-    if is_still_down(symbol):
-        logger.info("buy low min price={}, current price={}, still down！!".format(min_price, current_price))
-        return False
 
     k, d, j = get_kdj(market)
     if k-d < -7:
         logging.info(u"低吸时k远小于d, 暂时不买．　k={}, d={}, cp={}".format(k, d, current_price))
         return False
 
-    min_price_5 = get_min_price(symbol, now - (15 * 60 * 1000)*5, current=now - (10 * 60 * 1000))
-    min_price_20 = get_min_price(symbol, now - (15 * 60 * 1000) * 20, now - (10 * 60 * 1000))
-    min_price_60 = get_min_price(symbol, now - (15 * 60 * 1000) * 60, now - (10 * 60 * 1000))
+    min_price_5 = get_min_price(symbol, now - (15 * 60 * 1000)*5, current=now - (7 * 60 * 1000))
+    min_price_20 = get_min_price(symbol, now - (15 * 60 * 1000) * 20, now - (7 * 60 * 1000))
+    min_price_60 = get_min_price(symbol, now - (15 * 60 * 1000) * 60, now - (7 * 60 * 1000))
     if min_price_5 <= 0 or min_price_20 <= 0 or min_price_60 <= 0:
         return False
 
@@ -1771,8 +1815,6 @@ def buy_low():
         percent_factor = (min_price_20 - current_price) / min_price_20 / (low_percent-1)
         buy_percent += 0.3
 
-
-
     if buy_percent > 0:
         percent_factor /= 20
         percent_factor = 0 if percent_factor < 0 else percent_factor
@@ -1780,9 +1822,19 @@ def buy_low():
 
         buy_percent *= config.RISK
         buy_percent += percent_factor
+
+        still_down = False
+        if is_still_down(symbol):
+            logger.info("buy low, still down *0.8")
+            buy_percent *= 0.5
+            still_down = True
+        else:
+            logger.info("buy low, not still down *1.2")
+            buy_percent *= 1.3
+
         logger.warning(
-            "buy low buy, current price={}, buy percent={}, mp={}, mp5={}, mp20={}, mp60={}".format(
-                current_price, buy_percent, min_price, min_price_5, min_price_20, min_price_60))
+            "buy low buy, current price={}, buy percent={}, mp={}, mp5={}, mp20={}, mp60={}, still down={}".format(
+                current_price, buy_percent, min_price, min_price_5, min_price_20, min_price_60, still_down))
 
         msg = "[买入{}]抄底 买入比例={}%, 当前价格={}, 最低价={}, 最近5/20/60周期内最低价={}/{}/{}.".format(
             symbol, round(buy_percent*100, 2), round(current_price, 3), round(min_price, 3),round(min_price_5, 3), round(min_price_20, 3), round(min_price_60, 3))
@@ -1809,6 +1861,9 @@ def buy_low():
             log_config.notify_user(msg, own=True)
             log_config.notify_user(log_config.make_msg(0, symbol, current_price=current_price, percent=buy_percent))
             logger.info("-----BUY_RECORD = {}".format(BUY_RECORD))
+            if still_down:
+                return False    #如果还在跌，先少买，但不暂停此策略
+
             return True
 
     return False
@@ -1819,7 +1874,7 @@ def sell_high():
     symbol = config.NEED_TOBE_SUB_SYMBOL[0]
     market = "market.{}.kline.{}".format(symbol, "15min")
 
-    max_price = get_max_price(symbol, now - (300 * 1000), current=0)
+    max_price = get_max_price(symbol, now - (5*60 * 1000), current=0)
     current_price = get_current_price(symbol)
 
     # # 判断是不是还在涨,如果是，暂时不卖
@@ -1828,13 +1883,13 @@ def sell_high():
     #     return False
 
     # 判断是不是还在涨,如果是，暂时不卖
-    if is_still_up(symbol):
-        logger.info("sell high max price={}, current price={}, still up！!".format(max_price, current_price))
-        return False
+    # if is_still_up(symbol):
+    #     logger.info("sell high max price={}, current price={}, still up！!".format(max_price, current_price))
+    #     return False
 
-    max_price_5 = get_max_price(symbol, now - (15 * 60 * 1000) * 5, now - (10 * 60 * 1000))
-    max_price_20 = get_max_price(symbol, now - (15 * 60 * 1000) * 20, now - (10 * 60 * 1000))
-    max_price_60 = get_max_price(symbol, now - (15 * 60 * 1000) * 60, now - (10 * 60 * 1000))
+    max_price_5 = get_max_price(symbol, now - (15 * 60 * 1000) * 5, now - (7 * 60 * 1000))
+    max_price_20 = get_max_price(symbol, now - (15 * 60 * 1000) * 20, now - (7 * 60 * 1000))
+    max_price_60 = get_max_price(symbol, now - (15 * 60 * 1000) * 60, now - (7 * 60 * 1000))
     if max_price_5 <= 0 or max_price_20 <= 0 or max_price_60 <= 0:
         return False
 
@@ -1874,19 +1929,31 @@ def sell_high():
         sell_percent += 0.3
 
     if sell_percent > 0:
-        logger.warning(
-            "sell high sell, current price={}, percent={}, mp={}, m5={}, m20={}, m60={}, upp={}".format(current_price,
-                                                                                                       sell_percent,
-                                                                                                       max_price,
-                                                                                                       max_price_5,
-                                                                                                       max_price_20,
-                                                                                                       max_price_60, up_percent))
         percent_factor /= 20
         percent_factor = 0 if percent_factor < 0 else percent_factor
         percent_factor = 0.3 if percent_factor > 0.3 else percent_factor
 
         sell_percent *= config.RISK
         sell_percent += percent_factor
+
+        still_up = False
+        if is_still_up(symbol):
+            logger.info("sell high, still up *0.5")
+            sell_percent *= 0.5
+            still_up = True
+        else:
+            logger.info("sell high, not still up *1.3")
+            sell_percent *= 1.3
+
+        logger.warning(
+            "sell high sell, current price={}, percent={}, mp={}, m5={}, m20={}, m60={}, upp={}, still up={}".format(current_price,
+                                                                                                        sell_percent,
+                                                                                                        max_price,
+                                                                                                        max_price_5,
+                                                                                                        max_price_20,
+                                                                                                        max_price_60,
+                                                                                                        up_percent, still_up))
+
         msg = "[卖出{}]高抛 卖出比例={}%, 当前价格={}, 最高价={}, 最近5/20/60周期内最高价={}/{}/{}.".format(
             symbol, round(sell_percent * 100, 2), round(current_price, 3), round(max_price, 3), round(max_price_5, 3),
             round(max_price_20, 3), round(max_price_60, 3))
@@ -1913,10 +1980,12 @@ def sell_high():
 
             log_config.output2ui(msg, 7)
             logger.warning(msg)
-            log_config.notify_user(msg, owe=True)
+            log_config.notify_user(msg, own=True)
             log_config.notify_user(log_config.make_msg(1, symbol, current_price=current_price, percent=sell_percent))
             logger.info("-----SELL_RECORD = {}".format(SELL_RECORD))
 
+            if still_up:
+                return False
             return True
 
     return False

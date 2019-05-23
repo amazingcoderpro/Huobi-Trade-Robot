@@ -7,7 +7,9 @@ from tkinter import Toplevel, Label, Button, Entry, StringVar, IntVar, Checkbutt
     Frame, messagebox, OptionMenu, DoubleVar,Text, END, Scale, HORIZONTAL
 import log_config
 import logging
+import config
 logger = logging.getLogger(__name__)
+
 
 class PopupSystem(Toplevel):
     def __init__(self, value_dict, title="System Configuration"):
@@ -15,14 +17,17 @@ class PopupSystem(Toplevel):
         self.is_ok = False
         self.value_dict = value_dict
         postion_low, force_position_low, postion_high, force_position_high, risk_factor, is_email, is_wechat, is_alarm, trade_min, trade_max, wait_buy_price, \
-        wait_buy_account, wait_sell_price, wait_sell_amount, alarm_time, alarm_trade, trade_history_report_interval, account_report_interval = value_dict.get("position_low", 0), value_dict.get("force_position_low", 0),value_dict.get("position_high", 100), value_dict.get("force_position_high", 0), value_dict.get("risk", 1.0), value_dict.get("is_email", True), value_dict.get("is_wechat", True), value_dict.get("is_alarm", False), \
+        wait_buy_account, wait_sell_price, wait_sell_amount, alarm_time, alarm_trade, trade_history_report_interval, account_report_interval, nick_name = value_dict.get("position_low", 0), value_dict.get("force_position_low", 0),value_dict.get("position_high", 100), value_dict.get("force_position_high", 0), value_dict.get("risk", 1.0), value_dict.get("is_email", True), value_dict.get("is_wechat", True), value_dict.get("is_alarm", False), \
                                                    value_dict.get("trade_min", 10), value_dict.get("trade_max", 1000), value_dict.get("wait_buy_price"), \
-                                                              value_dict.get("wait_buy_account"), value_dict.get("wait_sell_price"), value_dict.get("wait_sell_account"), value_dict.get("alarm_time", 30), value_dict.get("is_alarm_trade", True), value_dict.get("trade_history_report_interval", 86400), value_dict.get("account_report_interval", 7200)
+                                                              value_dict.get("wait_buy_account"), value_dict.get("wait_sell_price"), value_dict.get("wait_sell_account"), value_dict.get("alarm_time", 30), value_dict.get("is_alarm_trade", True), value_dict.get("trade_history_report_interval", 86400), value_dict.get("account_report_interval", 7200),value_dict.get("nick_name", "")
 
         self.trade_min = DoubleVar()
         self.trade_min.set(trade_min)
         self.trade_max = DoubleVar()
         self.trade_max.set(trade_max)
+
+        self.nick_name = StringVar()
+        self.nick_name.set(nick_name)
 
         self.is_email = StringVar()
         self.is_email.set('YES' if is_email else 'NO')
@@ -75,7 +80,6 @@ class PopupSystem(Toplevel):
         self.account_report_interval = IntVar()
         self.account_report_interval.set(account_report_interval)
 
-
         self.wait_buy_price1 = DoubleVar()
         self.wait_buy_price1.set(wait_buy_price[0])
         self.wait_buy_account1 = DoubleVar()
@@ -122,6 +126,11 @@ class PopupSystem(Toplevel):
         self.title(title)
 
     def setup_ui(self):
+        row0 = Frame(self)
+        row0.pack(fill="x")
+        Label(row0, text=u"请输入当前用户昵称: ", width=15).pack(side=LEFT)
+        Entry(row0, textvariable=self.nick_name, width=15).pack(side=LEFT)
+
         row1 = Frame(self)
         row1.pack(fill="x")
         lst_yes_no = ['YES', 'NO']
@@ -178,11 +187,14 @@ class PopupSystem(Toplevel):
         row3.pack(fill="x")
         Label(row3, text=u"历史交易记录播报周期(小时): ", width=25).pack(side=LEFT)
         Entry(row3, textvariable=self.trade_history_report_interval, width=15).pack(side=LEFT)
+        Button(row3, text="立即发送", command=lambda: self.on_send_history(), width=10).pack(side=RIGHT)
+
 
         row3 = Frame(self)
         row3.pack(fill="x")
         Label(row3, text=u"账户信息播报周期(小时): ", width=25).pack(side=LEFT)
         Entry(row3, textvariable=self.account_report_interval, width=15).pack(side=LEFT)
+        Button(row3, text="立即发送", command=lambda: self.on_send_account_info(), width=10).pack(side=RIGHT)
 
         row3 = Frame(self)
         row3.pack(fill="x")
@@ -317,6 +329,7 @@ class PopupSystem(Toplevel):
             account_report_interval = self.account_report_interval.get()
 
             risk = float(self.risk_scale.get())
+            nick_name = self.nick_name.get()
 
             # risk = float(self.risk_factor.get())
             # if risk < 0.5:
@@ -377,6 +390,7 @@ class PopupSystem(Toplevel):
         self.value_dict["login_wechat_now"] = login_wechat_now
         self.value_dict["trade_history_report_interval"] = trade_history_interval
         self.value_dict["account_report_interval"] = account_report_interval
+        self.value_dict["nick_name"] = nick_name
 
         self.is_ok = True
         # messagebox.showinfo("Info", "System settings change have taken effect！")
@@ -389,6 +403,16 @@ class PopupSystem(Toplevel):
         self.is_ok = False
         self.destroy()
 
+    def on_send_history(self):
+        try:
+            trade_history_interval = int(self.trade_history_report_interval.get())
+        except:
+            trade_history_interval = 24
+
+        config.SEND_HISTORY_NOW = trade_history_interval
+
+    def on_send_account_info(self):
+        config.SEND_ACCOUNT_NOW = 1
 
 if __name__ == '__main__':
     value_dict = {}

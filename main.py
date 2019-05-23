@@ -118,6 +118,12 @@ class MainUI():
         self.origin_label = Label(root, textvariable=self.origin_text, foreground='red', background="gray",
                                font=("", 12, 'bold'), width=30)
 
+        self.nick_name_text = StringVar()
+        self.nick_name_text.set(config.NICK_NAME)
+        self.nick_name_text_label = Label(root, textvariable=self.nick_name_text, foreground='green', background="gray",
+                               font=("", 12, 'bold'), width=10)
+
+
         self.label_now = Label(root, text="大盘涨跌幅/账户涨跌幅: ", width=22)
         self.now_text = StringVar()
         self.now_text.set("")
@@ -160,6 +166,7 @@ class MainUI():
 
         self.label_origin.grid(row=0, column=3)
         self.origin_label.grid(row=0, column=4)
+        self.nick_name_text_label.grid(row=0, column=5)
 
         self.label_bal.grid(row=1, column=1)
         self.bal_label.grid(row=1, column=2)#columnspan=2
@@ -519,14 +526,24 @@ class MainUI():
                         else:
                             run_total_seconds = (now_time-daily_report_start_time).total_seconds()
                             logger.info("system run total seconds={}, trade_notify_interval={}".format(run_total_seconds, config.TRADE_HISTORY_REPORT_INTERVAL))
-                            if run_total_seconds > config.TRADE_HISTORY_REPORT_INTERVAL*3600:
-                                today_logs = [y for x, y in config.TRADE_ALL_LOG.items() if x > daily_report_start_time]
-                                daily_report_start_time = now_time
-                                if today_logs:
-                                    today_logs.sort()
-                                    daily_msg = u"最近{}小时的交易记录如下:\n".format(int(config.TRADE_HISTORY_REPORT_INTERVAL))+"\n".join(today_logs)
+                            if (run_total_seconds > config.TRADE_HISTORY_REPORT_INTERVAL*3600) or config.SEND_HISTORY_NOW > 0:
+                                if config.SEND_HISTORY_NOW > 0:
+                                    # 立即发送，　不影响周期发送逻辑
+                                    beg = now_time-datetime.timedelta(hours=config.SEND_HISTORY_NOW)
+                                    interval = int(config.SEND_HISTORY_NOW)
                                 else:
-                                    daily_msg = u"最近{}小时无交易记录！\n".format(int(config.TRADE_HISTORY_REPORT_INTERVAL))
+                                    beg = daily_report_start_time
+                                    interval = int(config.TRADE_HISTORY_REPORT_INTERVAL)
+
+                                # 只要发送过，就把起始时间重新置成当前时间　
+                                config.SEND_HISTORY_NOW = 0
+                                daily_report_start_time = now_time
+                                recent_trade_logs = [y for x, y in config.TRADE_ALL_LOG.items() if x > beg]
+                                if recent_trade_logs:
+                                    recent_trade_logs.sort()
+                                    daily_msg = u"最近{}小时共交易{}次, 记录如下:\n".format(interval, len(recent_trade_logs))+"\n\n".join(recent_trade_logs)
+                                else:
+                                    daily_msg = u"最近{}小时无交易记录！\n".format(interval)
 
                                 log_config.output2ui(daily_msg, 8)
                                 logger.warning(daily_msg)
@@ -534,8 +551,9 @@ class MainUI():
                         if not hour_report_start_time:
                             hour_report_start_time = now_time
                         else:
-                            if (now_time-hour_report_start_time).total_seconds() > config.ACCOUNT_REPORT_INTERVAL*3600:
+                            if (now_time-hour_report_start_time).total_seconds() > config.ACCOUNT_REPORT_INTERVAL*3600 or config.SEND_ACCOUNT_NOW:
                                 hour_report_start_time = now_time
+                                config.SEND_ACCOUNT_NOW = 0
 
                                 global CURRENT_PRICE
                                 bal0, bal0_f, bal1, bal1_f = strategies.update_balance()
@@ -710,7 +728,8 @@ class MainUI():
                       "risk": config.RISK, "emails": config.EMAILS, "wechats": config.WECHATS, "position_low": config.LIMIT_MIN_POSITION,
                       "force_position_low": config.FORCE_POSITION_MIN, "position_high": config.LIMIT_MAX_POSITION,
                       "force_position_high": config.FORCE_POSITION_MAX,"trade_history_report_interval": config.TRADE_HISTORY_REPORT_INTERVAL,
-                      "account_report_interval": config.ACCOUNT_REPORT_INTERVAL, "emails_vip": config.EMAILS_VIP, "wechats_vip": config.WECHATS_VIP}
+                      "account_report_interval": config.ACCOUNT_REPORT_INTERVAL, "emails_vip": config.EMAILS_VIP, "wechats_vip": config.WECHATS_VIP,
+                      "nick_name": config.NICK_NAME}
 
         pop = PopupSystem(value_dict)
         self.root.wait_window(pop)
@@ -737,6 +756,8 @@ class MainUI():
 
             config.TRADE_HISTORY_REPORT_INTERVAL = value_dict["trade_history_report_interval"]
             config.ACCOUNT_REPORT_INTERVAL = value_dict["account_report_interval"]
+            config.NICK_NAME = value_dict["nick_name"]
+            self.nick_name_text.set(config.NICK_NAME)
 
             emails = value_dict.get("emails", "").strip().split("\n")
             wechats = value_dict.get("wechats", "").strip().split("\n")
@@ -768,7 +789,7 @@ class MainUI():
 
             # if (config.EMAIL_NOTIFY and (config.WECHATS or config.WECHATS_VIP)) or login_wechat_now:
             if login_wechat_now:
-                log_config.output2ui("需要扫码登录微信！")
+                log_config.output2ui(u"需要扫码登录微信！")
                 self.first_login = False
                 th = threading.Thread(target=login_wechat)
                 th.setDaemon(True)
@@ -788,8 +809,8 @@ if __name__ == '__main__':
     my_gui = MainUI(root)
     config.ROOT = root
     root.protocol('WM_DELETE_WINDOW', my_gui.close_window)
-    my_gui.center_window(1350, 610)
-    root.maxsize(1350, 610)
+    my_gui.center_window(1400, 610)
+    root.maxsize(1400, 610)
     # root.minsize(320, 240)
     # root.iconbitmap('spider_128px_1169260_easyicon.net.ico')
     my_gui.update_ui()

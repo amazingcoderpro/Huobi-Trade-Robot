@@ -59,7 +59,7 @@ KL_1WEEK = "1week"
 KL_1MON = "1mon"
 KL_1YEAR = "1year"
 #KL_ALL = [KL_1MIN, KL_5MIN, KL_15MIN, KL_30MIN, KL_60MIN, KL_1DAY, KL_1WEEK, KL_1MON]
-KL_ALL = [KL_1MIN, KL_15MIN]#,KL_5MIN,KL_30MIN KL_1DAY
+KL_ALL = [KL_1MIN, KL_15MIN, KL_5MIN]#,KL_5MIN,KL_30MIN KL_1DAY
 KL_HISTORY = [KL_1MIN, KL_15MIN]#, KL_1DAY KL_5MIN,, KL_30MIN
 KL_REALTIME = KL_1MIN
 
@@ -131,7 +131,8 @@ ACCOUNT_REPORT_INTERVAL = 2     # 账户情况播报周期, 小时
 
 
 # 邮件\微信通知对象
-EMAILS = ["wcadaydayup@163.com", "2879230281@qq.com", "371606063@qq.com", "790840993@qq.com", "383362849@qq.com", "351172940@qq.com", "182089859@qq.com", "278995617@qq.com", "2931429366@qq.com"]
+# EMAILS = ["wcadaydayup@163.com", "2879230281@qq.com", "371606063@qq.com", "790840993@qq.com", "383362849@qq.com", "351172940@qq.com", "182089859@qq.com", "278995617@qq.com", "2931429366@qq.com"]
+EMAILS = []
 WECHATS = [u"信链众创量化1.0版"]
 EMAILS_VIP = ["wcadaydayup@163.com", "1447385994@qq.com", "bbb201@126.com"]
 WECHATS_VIP = [u"长城1211", u"追风少年人"]
@@ -143,3 +144,6 @@ FORCE_POSITION_MIN = 0       #是否强制保持最 少持仓比，如果是，�
 LIMIT_MAX_POSITION = 0.8      #期望的最高持仓比
 FORCE_POSITION_MAX = 0       #是否强制保持最大持仓比，如果是，无论何种情况都保持不超过该持仓比，否则系统将在持仓比高于最大持仓比后降低卖出准以尽快降低持仓比
 
+SEND_HISTORY_NOW = 0
+SEND_ACCOUNT_NOW = 0
+NICK_NAME = u"你是谁"
