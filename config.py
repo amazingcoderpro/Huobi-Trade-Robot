@@ -133,9 +133,12 @@ ACCOUNT_REPORT_INTERVAL = 2     # 账户情况播报周期, 小时
 # 邮件\微信通知对象
 # EMAILS = ["wcadaydayup@163.com", "2879230281@qq.com", "371606063@qq.com", "790840993@qq.com", "383362849@qq.com", "351172940@qq.com", "182089859@qq.com", "278995617@qq.com", "2931429366@qq.com"]
 EMAILS = []
-WECHATS = [u"信链众创量化1.0版"]
-EMAILS_VIP = ["wcadaydayup@163.com", "1447385994@qq.com", "bbb201@126.com"]
-WECHATS_VIP = [u"长城1211", u"追风少年人"]
+# WECHATS = [u"信链众创量化1.0版"]
+WECHATS=[]
+# EMAILS_VIP = ["wcadaydayup@163.com", "1447385994@qq.com", "bbb201@126.com"]
+EMAILS_VIP = []
+# WECHATS_VIP = [u"长城1211", u"追风少年人"]
+WECHATS_VIP = [u"追风少年人"]
 
 TRADE_ALL_LOG = {}
 LIMIT_MIN_POSITION = 0.2    #期望最低持仓比
