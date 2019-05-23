@@ -562,7 +562,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
 
     limit_kd = 35 if limit_kd < 35 else limit_kd
     limit_kd = 90 if limit_kd > 90 else limit_kd
-    if cur_k < limit_kd or cur_d < limit_kd:
+    if cur_k < limit_kd or cur_d < limit_kd or cur_k-cur_d > 1:
         logger.info("cur_k={} or cur_d={} < {}".format(cur_k, cur_d, limit_kd))
         return False
 
