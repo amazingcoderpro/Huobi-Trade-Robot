@@ -146,4 +146,4 @@ FORCE_POSITION_MAX = 0       #是否强制保持最大持仓比，如果是，�
 
 SEND_HISTORY_NOW = 0
 SEND_ACCOUNT_NOW = 0
-NICK_NAME = u"你是谁"
+NICK_NAME = ""

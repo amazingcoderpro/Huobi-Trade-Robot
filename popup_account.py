@@ -3,7 +3,7 @@
 # Created by Charles on 2018/6/30
 # Function: 
 
-from tkinter import Toplevel, Label, Button, Entry, StringVar, LEFT, RIGHT, Checkbutton, Frame, messagebox, OptionMenu, IntVar,Text, END
+from tkinter import Toplevel, Label, Button, Entry, StringVar, LEFT, RIGHT, Checkbutton, Frame, messagebox, OptionMenu, IntVar,Text, END, filedialog
 
 
 class PopupAccountConfig(Toplevel):
@@ -39,6 +39,7 @@ class PopupAccountConfig(Toplevel):
         row1.pack(fill="x")
         Label(row1, text="ACCESS_KEY: ", width=15).pack(side=LEFT)
         Entry(row1, textvariable=self.access_key, width=40).pack(side=LEFT)
+        Button(row1, text=u"导入凭据", command=lambda: self.on_open_key(), width=10).pack(side=RIGHT)
 
         row2 = Frame(self)
         row2.pack(fill="x", ipadx=1, ipady=1)
@@ -47,7 +48,9 @@ class PopupAccountConfig(Toplevel):
 
         # row2 = Frame(self)
         # row2.pack(fill="x", ipadx=1, ipady=1)
-        self.ckb_save = Checkbutton(row2, text='Save', variable=self.ckb_save_val, onvalue=1, offvalue=0).pack()
+        # self.ckb_save = Checkbutton(row2, text='Save', variable=self.ckb_save_val, onvalue=1, offvalue=0).pack()
+
+        Button(row2, text=u"保存凭据", command=lambda: self.on_save_key(), width=10).pack(side=RIGHT)
 
         row3 = Frame(self)
         row3.pack(fill="x", ipadx=1, ipady=1)
@@ -105,7 +108,7 @@ class PopupAccountConfig(Toplevel):
         try:
             is_save = self.ckb_save_val.get()
             if is_save:
-                str_key = "{}++++{}++++{}++++{}".format(self.value_dict["access_key"], self.value_dict["secret_key"], self.value_dict["emails"], self.value_dict["wechats"])
+                str_key = "{}++++{}".format(self.value_dict["access_key"], self.value_dict["secret_key"])
                 with open("temp.hbk", 'w') as f:
                     f.write(str_key)
         except Exception as e:
@@ -114,6 +117,27 @@ class PopupAccountConfig(Toplevel):
     def on_cancel(self):
         self.value_dict["ok"] = False
         self.destroy()
+
+    def on_save_key(self):
+        save_path = filedialog.asksaveasfilename()  # 返回文件名
+        try:
+            str_key = "{}++++{}".format(self.value_dict["access_key"], self.value_dict["secret_key"])
+            with open(save_path, 'w') as f:
+                f.write(str_key)
+            print(save_path)
+        except:
+            pass
+
+    def on_open_key(self):
+        save_path = filedialog.askopenfilename()  # 返回文件名
+        try:
+            print(save_path)
+            with open(save_path, 'r') as f:
+                str_key = f.read()
+                self.access_key.set(str_key.split("++++")[0].strip().replace("\n", ""))
+                self.secret_key.set(str_key.split("++++")[1].strip().replace("\n", ""))
+        except Exception as e:
+            pass
 
 if __name__ == '__main__':
     pass

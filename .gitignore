@@ -112,3 +112,7 @@ logs/
 temp.hbk
 itchat.pkl
 *.pkl
+*.png
+*.jpg
+*.pkl
+keys/
