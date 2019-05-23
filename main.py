@@ -541,9 +541,9 @@ class MainUI():
                                 recent_trade_logs = [y for x, y in config.TRADE_ALL_LOG.items() if x > beg]
                                 if recent_trade_logs:
                                     recent_trade_logs.sort()
-                                    daily_msg = u"最近{}小时共交易{}次, 记录如下:\n".format(interval, len(recent_trade_logs))+"\n\n".join(recent_trade_logs)
+                                    daily_msg = u"火币量化交易系统运行中:\n用户昵称:{}\n币种:{}\n最近{}小时共交易{}次, 记录如下:\n".format(config.NICK_NAME, config.NEED_TOBE_SUB_SYMBOL[0].upper(), interval, len(recent_trade_logs))+"\n\n".join(recent_trade_logs)
                                 else:
-                                    daily_msg = u"最近{}小时无交易记录！\n".format(interval)
+                                    daily_msg = u"火币量化交易系统运行中:\n用户昵称:{}\n币种:{}\n最近{}小时无交易记录！\n".format(config.NICK_NAME, config.NEED_TOBE_SUB_SYMBOL[0].upper(), interval)
 
                                 log_config.output2ui(daily_msg, 8)
                                 logger.warning(daily_msg)
@@ -562,14 +562,8 @@ class MainUI():
                                 dapan_profit = round((CURRENT_PRICE - process.ORG_PRICE) * 100 / process.ORG_PRICE, 2)
                                 account_profit = round((total - process.ORG_DOLLAR_TOTAL) * 100 / process.ORG_DOLLAR_TOTAL, 2)
                                 is_win = u"是" if account_profit >= dapan_profit else u"否"
-                                msg_own = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n初始价格:{}" \
-                                          u"\n当前价格:{}" \
-                                          u"\n初始持币量:可用{},冻结{},仓位{}%" \
-                                          u"\n当前持币量:可用{},冻结{},仓位{}%" \
-                                          u"\n初始时持金量:可用{},冻结{}" \
-                                          u"\n初始持金量:可用{},冻结{}" \
-                                          u"\n初始账户总价值:${}\n当前账户总价值:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}".format(
-                                    config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
+                                msg_own = u"""火币量化交易系统运行中:\n用户昵称:{}\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n初始价格:{}\n当前价格:{}\n初始持币量:可用{},冻结{},仓位{}%\n当前持币量:可用{},冻结{},仓位{}%\n初始时持金量:可用{},冻结{}\n初始持金量:可用{},冻结{}\n初始账户总价值:${}\n当前账户总价值:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}""".format(
+                                    config.NICK_NAME, config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
                                     process.START_TIME.strftime("%Y/%m/%d, %H:%M:%S"),
                                     now_time.strftime("%Y/%m/%d, %H:%M:%S"), round(process.ORG_PRICE, 3),
                                     round(CURRENT_PRICE, 3),
@@ -578,8 +572,8 @@ class MainUI():
                                     round(process.ORG_DOLLAR_TRADE, 2), round(process.ORG_DOLLAR_FROZEN, 2), round(bal1, 2), round(bal1_f, 2),
                                     round(process.ORG_DOLLAR_TOTAL, 2), round(total, 2), dapan_profit, account_profit, round(total - process.ORG_DOLLAR_TOTAL, 2), is_win)
 
-                                msg_other = u"火币量化交易系统运行中:\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n初始价格:{}\n当前价格:{}\n初始持币量:可用{},冻结{},仓位{}%\n当前持币量:可用{},冻结{},仓位{}%\n初始持金量:可用{},冻结{}\n当前持金量:可用{},冻结{}\n初始账户总资产:{}$\n当前账户总资产:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}"\
-                                    .format(config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
+                                msg_other = u"火币量化交易系统运行中:\n用户昵称:{}\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n初始价格:{}\n当前价格:{}\n初始持币量:可用{},冻结{},仓位{}%\n当前持币量:可用{},冻结{},仓位{}%\n初始持金量:可用{},冻结{}\n当前持金量:可用{},冻结{}\n初始账户总资产:{}$\n当前账户总资产:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}"\
+                                    .format(config.NICK_NAME, config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
                                         process.START_TIME.strftime("%Y/%m/%d, %H:%M:%S"),
                                         now_time.strftime("%Y/%m/%d, %H:%M:%S"),
                                         round(process.ORG_PRICE, 3), round(CURRENT_PRICE, 3),
