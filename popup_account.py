@@ -97,7 +97,7 @@ class PopupAccountConfig(Toplevel):
 
     def get_key(self):
         try:
-            with open("temp.hbk", 'r') as f:
+            with open("keys//user.hbk", 'r') as f:
                 str_key = f.read()
                 self.value_dict["access_key"] = str_key.split("++++")[0].strip().replace("\n", "")
                 self.value_dict["secret_key"] = str_key.split("++++")[1].strip().replace("\n", "")
@@ -109,7 +109,7 @@ class PopupAccountConfig(Toplevel):
             is_save = self.ckb_save_val.get()
             if is_save:
                 str_key = "{}++++{}".format(self.value_dict["access_key"], self.value_dict["secret_key"])
-                with open("temp.hbk", 'w') as f:
+                with open("keys//user.hbk", 'w') as f:
                     f.write(str_key)
         except Exception as e:
             pass

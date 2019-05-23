@@ -109,7 +109,8 @@ venv.bak/
 .idea/
 bin/
 logs/
-temp.hbk
+user.hbk
+*.hbk
 itchat.pkl
 *.pkl
 *.png
