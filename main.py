@@ -684,6 +684,7 @@ class MainUI():
         self.price_text.set("")
         self.bal_text.set("")
         self.coin_text.set("")
+        self.nick_name_text.set(config.NICK_NAME)
         self.verify_user_information()
 
 

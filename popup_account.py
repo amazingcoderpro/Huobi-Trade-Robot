@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 # Created by Charles on 2018/6/30
 # Function: 
-
+import os
 from tkinter import Toplevel, Label, Button, Entry, StringVar, LEFT, RIGHT, Checkbutton, Frame, messagebox, OptionMenu, IntVar,Text, END, filedialog
-
+import config
 
 class PopupAccountConfig(Toplevel):
     def __init__(self, value_dict, title="Account Configuration"):
@@ -131,7 +131,8 @@ class PopupAccountConfig(Toplevel):
     def on_open_key(self):
         save_path = filedialog.askopenfilename()  # 返回文件名
         try:
-            print(save_path)
+            # print(save_path)
+            config.NICK_NAME = os.path.basename(save_path).split(".")[0]
             with open(save_path, 'r') as f:
                 str_key = f.read()
                 self.access_key.set(str_key.split("++++")[0].strip().replace("\n", ""))
