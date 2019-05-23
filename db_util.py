@@ -60,5 +60,5 @@ if __name__ == '__main__':
     dbutil = DBUtil()
     dbutil.init()
     clc = dbutil.db.get_collection("test")
-    clc.insert_one({"user": "charles", "age": 30})
+    clc.insert_one({"user": "charles1", "age": 30})
     dbutil.close()

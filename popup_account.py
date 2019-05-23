@@ -119,17 +119,18 @@ class PopupAccountConfig(Toplevel):
         self.destroy()
 
     def on_save_key(self):
-        save_path = filedialog.asksaveasfilename()  # 返回文件名
+        save_path = filedialog.asksaveasfilename(filetypes=[("HBK", ".hbk")])  # 返回文件名
         try:
-            str_key = "{}++++{}".format(self.value_dict["access_key"], self.value_dict["secret_key"])
+            str_key = "{}++++{}".format(self.access_key.get(), self.secret_key.get())
             with open(save_path, 'w') as f:
                 f.write(str_key)
             print(save_path)
-        except:
+        except Exception as e:
+            print(e)
             pass
 
     def on_open_key(self):
-        save_path = filedialog.askopenfilename()  # 返回文件名
+        save_path = filedialog.askopenfilename(filetypes=[("HBK", ".hbk")])  # 返回文件名
         try:
             # print(save_path)
             config.NICK_NAME = os.path.basename(save_path).split(".")[0]
@@ -138,7 +139,7 @@ class PopupAccountConfig(Toplevel):
                 self.access_key.set(str_key.split("++++")[0].strip().replace("\n", ""))
                 self.secret_key.set(str_key.split("++++")[1].strip().replace("\n", ""))
         except Exception as e:
-            pass
+            print(e)
 
 if __name__ == '__main__':
     pass
