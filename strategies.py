@@ -913,6 +913,7 @@ def move_stop_profit():
         ret = sell_market(symbol, last_buy_amount, current_price=current_price)
         if ret[0]:
             trigger = True
+            BUY_RECORD.remove(trade)
             msg = "[卖出{}]移动止盈： 上次买入价={}, 最高价={}, 回撤幅度={}%, 当前卖出价={}, 计划卖出量={}个, 实际卖出量={}个, 盈利比={}%, 盈利金额={}$.".format(symbol,
                                                                                                                round(
                                                                                                                    last_price,
@@ -942,7 +943,6 @@ def move_stop_profit():
 
             if ret[0] == 1:
                 msg += "-交易成功！"
-                BUY_RECORD.remove(trade)
             elif ret[0] == 2:
                 msg += "-交易被取消, 取消原因: {}!".format(ret[2])
             elif ret[0] == 3:
@@ -1047,7 +1047,6 @@ def vol_price_fly():
     if not last_peroid_0 >= last_peroid_1*high_than_last or not last_peroid_1>=high_than_last*last_peroid_2:
         logger.info("current vol not bigger than {}*last vol. current trade vol={}, last vol={}".format(high_than_last, last_peroid_0, last_peroid_1))
         return False
-
 
     last_peroid_21 = local_21 / 7
     if not last_peroid_0 >= mul_21*last_peroid_21:
@@ -1663,7 +1662,7 @@ def get_balance(currency, access_key=None, secret_key=None, retry=2, result_type
     #              state=1, is_after_execute_pause=False, name=""):
 
 
-def is_still_down(symbol, delta=100, percent=1.002):
+def is_still_down(symbol, delta=100, percent=1):
     """
     是否还在下跌，　以近期平均值与远期平均值的关系来衡量，近平大于远平的1.002倍，认为不在下跌了
     :param symbol:
@@ -1703,7 +1702,7 @@ def is_still_down(symbol, delta=100, percent=1.002):
         process.data_lock.release()
 
 
-def is_still_up(symbol, delta=100, percent=1.002):
+def is_still_up(symbol, delta=100, percent=1):
     process.data_lock.acquire()
     try:
         df = process.KLINE_DATA.get(symbol, None)
@@ -1825,9 +1824,10 @@ def buy_low():
 
         still_down = False
         if is_still_down(symbol):
-            logger.info("buy low, still down *0.8")
-            buy_percent *= 0.5
-            still_down = True
+            logger.info("buy low, still down, return False")
+            # buy_percent *= 0.5
+            # still_down = True
+            return False
         else:
             logger.info("buy low, not still down *1.2")
             buy_percent *= 1.3
@@ -1861,8 +1861,8 @@ def buy_low():
             log_config.notify_user(msg, own=True)
             log_config.notify_user(log_config.make_msg(0, symbol, current_price=current_price, percent=buy_percent))
             logger.info("-----BUY_RECORD = {}".format(BUY_RECORD))
-            if still_down:
-                return False    #如果还在跌，先少买，但不暂停此策略
+            # if still_down:
+            #     return False    #如果还在跌，先少买，但不暂停此策略
 
             return True
 
@@ -1938,9 +1938,10 @@ def sell_high():
 
         still_up = False
         if is_still_up(symbol):
-            logger.info("sell high, still up *0.5")
-            sell_percent *= 0.5
-            still_up = True
+            logger.info("sell high, still up, return False")
+            # sell_percent *= 0.5
+            # still_up = True
+            return False
         else:
             logger.info("sell high, not still up *1.3")
             sell_percent *= 1.3
@@ -1984,8 +1985,8 @@ def sell_high():
             log_config.notify_user(log_config.make_msg(1, symbol, current_price=current_price, percent=sell_percent))
             logger.info("-----SELL_RECORD = {}".format(SELL_RECORD))
 
-            if still_up:
-                return False
+            # if still_up:
+            #     return False
             return True
 
     return False
@@ -2137,12 +2138,12 @@ STRATEGY_LIST = [
     # Strategy(kdj_strategy_sell, 240, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
     Strategy(kdj_strategy_buy, 23, -1, after_execute_sleep=900 * 3, name="kdj_strategy_buy"),
     Strategy(kdj_strategy_sell, 25, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
-    Strategy(stop_loss, 35, -1, after_execute_sleep=60, name="stop_loss"),
-    Strategy(move_stop_profit, 30, -1, after_execute_sleep=60, name="move_stop_profit"),
+    Strategy(stop_loss, 35, -1, after_execute_sleep=300, name="stop_loss"),
+    Strategy(move_stop_profit, 30, -1, after_execute_sleep=300, name="move_stop_profit"),
     Strategy(vol_price_fly, 150, -1, name="vol_price_fly", after_execute_sleep=900 * 2),
     Strategy(boll_strategy, 120, -1, name="boll strategy", after_execute_sleep=900 * 2),
     # Strategy(kdj_5min_update, 30, -1, name="kdj_5min_update", after_execute_sleep=1),
-    Strategy(kdj_15min_update, 30, -1, name="kdj_15min_update", after_execute_sleep=1),
+    Strategy(kdj_15min_update, 30, -1, name="kdj_15min_update", after_execute_sleep=3),
     Strategy(buy_low, 15, -1, name="buy_low", after_execute_sleep=600),
     Strategy(sell_high, 17, -1, name="sell_high", after_execute_sleep=600),
 ]

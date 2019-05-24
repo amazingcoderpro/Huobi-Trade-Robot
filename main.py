@@ -712,7 +712,7 @@ class MainUI():
 
     def set_up_system(self):
         def login_wechat():
-            print("需要扫码登录微信！")
+            print("需要扫码登录微信网页版或在你的手机上确认登录！")
             wechat_helper.login_wechat()
 
         from popup_system import PopupSystem
@@ -783,8 +783,8 @@ class MainUI():
                     config.WECHATS_VIP.append(wechat)
 
             # if (config.EMAIL_NOTIFY and (config.WECHATS or config.WECHATS_VIP)) or login_wechat_now:
-            if login_wechat_now:
-                log_config.output2ui(u"需要扫码登录微信！")
+            if login_wechat_now or config.EMAIL_NOTIFY:
+                log_config.output2ui(u"请用您的手机微信扫码登录微信网页版或在您的手机上确认登录！否则您可能无法收到实时交易信息", 8)
                 self.first_login = False
                 th = threading.Thread(target=login_wechat)
                 th.setDaemon(True)
