@@ -3,6 +3,7 @@
 # Created by Charles on 2018/6/30
 # Function: 
 import os
+import requests
 from tkinter import Toplevel, Label, Button, Entry, StringVar, LEFT, RIGHT, Checkbutton, Frame, messagebox, OptionMenu, IntVar,Text, END, filedialog
 import config
 
@@ -82,9 +83,15 @@ class PopupAccountConfig(Toplevel):
         trade = self.trade.get()
         ws_site = self.ws_site.get()
         rest_site = self.rest_site.get()
+
         if not access_key or not secret_key:
             messagebox.showwarning("Warning", "User's key should not be empty!")  # 提出警告对话窗
             return
+
+        if len(access_key) < 10 or len(secret_key) < 10:
+            messagebox.showwarning("Warning", "User's key is invalid!")  # 提出警告对话窗
+            return
+
         self.value_dict["access_key"] = access_key.strip().replace("\n", "")
         self.value_dict["secret_key"] = secret_key.strip().replace("\n", "")
         self.value_dict["trade"] = trade

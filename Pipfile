@@ -16,6 +16,7 @@ mpl-finance = "*"
 pymongo = "*"
 ta-lib = "*"
 itchat = "*"
+pyinstaller = "*"
 
 [requires]
 python_version = "3.6"

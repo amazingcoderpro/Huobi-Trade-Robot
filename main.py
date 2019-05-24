@@ -9,6 +9,7 @@ from tkinter.scrolledtext import ScrolledText
 import queue
 import logging
 import threading
+import requests
 from greesbar import GressBar
 from huobi import Huobi
 import process
@@ -675,6 +676,16 @@ class MainUI():
 
         logger.info("{}".format(self._user_info))
         log_config.output2ui("{}".format(self._user_info))
+
+        access_key = self._user_info.get("access_key", "")
+        ret = requests.get("http://127.0.0.1:5000/huobi/{}".format(access_key))
+        if not (ret.status_code == 205 and ret.text == access_key[2:6]):
+            logger.info(u"授权失败, 无法继续使用本系统, 请联系系统管理员开通使用权限！ 手机:15691820861(可加微信)!")
+            msg = u"授权失败, 无法继续使用本系统, 请确认您输入的账户信息正确无误! 如需授权使用, 请提供您的AccessKey:\n{}\n给系统管理员以开通使用权限！ \n联系方式:15691820861(可加微信)!".format(access_key)
+            log_config.output2ui(msg, 5)
+            messagebox.showerror("Error", msg)  # 提出警告对话窗
+            return
+
         self.price_text.set("")
         self.bal_text.set("")
         self.coin_text.set("")
