@@ -44,9 +44,15 @@ SB_ETHUSDT = "ethusdt"
 SB_XRPUSDT = "xrpusdt"
 SB_EOSUSDT = "eosusdt"
 SB_EOSETH = "eoseth"
+SB_RSRUSDT = "rsrusdt"
 
+SUPPORT_TRADE_LEFT = ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH",
+                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"]
 # 以下是需要订阅的数据
+SUPPORT_TRADE_RIGHT = ["USDT", "HUSD", "BTC", "ETH", "HT"]
 NEED_TOBE_SUB_SYMBOL = []
+SUB_LEFT = ""
+SUB_RIGHT = ""
 
 # klines
 KL_1MIN = "1min"
@@ -109,7 +115,7 @@ NET_TIMEOUT = 45
 RETRY_TIMES = -1  # 小于0无限重试
 
 
-TRADE_MIN_LIMIT_VALUE = 20  # 单次最小交易額不能低於20美金
+TRADE_MIN_LIMIT_VALUE = 5  # 单次最小交易額不能低於20美金
 TRADE_MAX_LIMIT_VALUE = 2000  # 单次最大交易額不能高於1000美金
 
 WAIT_BUY_PRICE = [0, 0, 0]

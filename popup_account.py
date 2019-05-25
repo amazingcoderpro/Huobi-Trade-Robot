@@ -22,8 +22,11 @@ class PopupAccountConfig(Toplevel):
         self.secret_key = StringVar()
         self.secret_key.set(self.value_dict.get("secret_key", ""))
 
-        self.trade = StringVar()
-        self.trade.set(self.value_dict.get("trade", "eosusdt"))
+        self.trade_left = StringVar()
+        self.trade_left.set(self.value_dict.get("trade_left", "EOS"))
+
+        self.trade_right = StringVar()
+        self.trade_right.set(self.value_dict.get("trade_right", "USDT"))
 
         self.ws_site = StringVar()
         self.ws_site.set(self.value_dict.get("ws_site", "PRO"))
@@ -55,10 +58,18 @@ class PopupAccountConfig(Toplevel):
 
         row3 = Frame(self)
         row3.pack(fill="x", ipadx=1, ipady=1)
-        Label(row3, text="TRADE: ", width=10).pack(side=LEFT)
-        lst_trade = ['ethusdt', 'btcusdt', 'eosusdt', 'xrpusdt', 'eoseth']
-        # self.trade.set(lst_trade[0])
-        OptionMenu(row3, self.trade, *lst_trade).pack(side=LEFT)
+        Label(row3, text="交易对: ", width=10).pack(side=LEFT)
+        # lst_trade = ['ethusdt', 'btcusdt', 'eosusdt', 'xrpusdt', 'eoseth', "rsrusdt"]
+
+        lst_trade_left = [x.upper() for x in config.SUPPORT_TRADE_LEFT]
+        lst_trade_right = [x.upper() for x in config.SUPPORT_TRADE_RIGHT]
+
+        self.trade_left.set(lst_trade_left[0])
+        OptionMenu(row3, self.trade_left, *lst_trade_left).pack(side=LEFT)
+
+        self.trade_right.set(lst_trade_right[0])
+        OptionMenu(row3, self.trade_right, *lst_trade_right).pack(side=LEFT)
+
 
         # row3 = Frame(self)
         # row3.pack(fill="x", ipadx=1, ipady=1)
@@ -80,7 +91,9 @@ class PopupAccountConfig(Toplevel):
     def on_ok(self):
         access_key = self.access_key.get()
         secret_key = self.secret_key.get()
-        trade = self.trade.get()
+        trade_left = self.trade_left.get().lower()
+        trade_right = self.trade_right.get().lower()
+        trade = trade_left+trade_right
         ws_site = self.ws_site.get()
         rest_site = self.rest_site.get()
 
@@ -95,6 +108,8 @@ class PopupAccountConfig(Toplevel):
         self.value_dict["access_key"] = access_key.strip().replace("\n", "")
         self.value_dict["secret_key"] = secret_key.strip().replace("\n", "")
         self.value_dict["trade"] = trade
+        self.value_dict["trade_left"] = trade_left
+        self.value_dict["trade_right"] = trade_right
         self.value_dict["ws_site"] = ws_site
         self.value_dict["rest_site"] = rest_site
 

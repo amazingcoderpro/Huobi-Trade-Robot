@@ -303,9 +303,9 @@ def boll_strategy():
         ret = buy_market(symbol, percent=buy_percent, current_price=price)
         if ret[0]:
             msg = "[买入{}]boll 计划买入比例={}%, 实际买入金额={}$, 当前价格={}$, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}.".format(symbol, round(
-                buy_percent * 100, 2), round(ret[1], 3), round(price, 3), round(upper, 2), round(middle, 2), round(lower, 2),
-                                                                                                 round(pdiff1, 2),
-                                                                                                 round(pdiff2, 2))
+                buy_percent * 100, 2), round(ret[1], 3), round(price, 6), round(upper, 6), round(middle, 6), round(lower, 6),
+                                                                                                 round(pdiff1, 6),
+                                                                                                 round(pdiff2, 6))
 
             success = False
             if ret[0] == 1:
@@ -492,7 +492,7 @@ def kdj_strategy_buy():
         buy_percent *= 1.2
 
     msg = "[买入{}]kdj_{} 计划买入比例={}%, 当前价格={}, 指标K={}, D={}, 阶段最低价格={}, 回暖幅度={}%".format(
-        symbol, peroid, round(buy_percent * 100, 2), round(current_price, 3), round(cur_k, 2), round(cur_d, 2), round(min_price, 3),
+        symbol, peroid, round(buy_percent * 100, 2), round(current_price, 5), round(cur_k, 2), round(cur_d, 2), round(min_price, 5),
          round(actual_up_percent * 100, 2))
 
     if not trade_alarm(msg):
@@ -501,8 +501,8 @@ def kdj_strategy_buy():
     ret = buy_market(symbol, percent=buy_percent, current_price=current_price)
     if ret[0]:
         msg = "[买入{}]kdj_{} 计划买入比例={}%, 实际买入金额={}$, 当前价格={}, 指标K={}, D={}, 阶段最低价格={}, 回暖幅度={}%, 买入策略={}.".format(
-            symbol, peroid, round(buy_percent * 100, 2), round(ret[1], 3), round(current_price, 3), round(cur_k, 2), round(cur_d, 2),
-            round(min_price, 3), round(actual_up_percent * 100, 2), strategy_flag)
+            symbol, peroid, round(buy_percent * 100, 2), round(ret[1], 3), round(current_price, 5), round(cur_k, 2), round(cur_d, 2),
+            round(min_price, 5), round(actual_up_percent * 100, 2), strategy_flag)
 
         if ret[0] == 1:
             msg += "-交易成功！"
@@ -527,7 +527,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
 
     peroid = kdj_sell_params.get("peroid", "15min")
     market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], peroid)
-    symbol = market.split(".")[1]
+    symbol = config.NEED_TOBE_SUB_SYMBOL[0]
 
     # if is_still_up(symbol):
     #     logging.info("kdj sell checking, still up!")
@@ -642,7 +642,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
             percent *= 1.2
 
         msg_show = "[卖出{}]kdj_{} 卖出比例={}%, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}．".format(
-            symbol, peroid, round(percent * 100, 2), round(current_price, 3), round(max_price, 3),
+            symbol, peroid, round(percent * 100, 2), round(current_price, 6), round(max_price, 6),
             round(actual_down_percent * 100, 2), round(cur_k, 2), round(cur_d, 2), )
 
         if not trade_alarm(msg_show):
@@ -651,7 +651,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
         ret = sell_market(symbol, percent=percent, current_price=current_price)
         if ret[0]:
             msg = "[卖出{}]kdj_{} 计划卖出比例={}%, 实际卖出数量={}个, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}.".format(
-                symbol, peroid, round(percent * 100, 2), round(ret[1], 3), round(current_price, 3), round(max_price, 3),
+                symbol, peroid, round(percent * 100, 2), round(ret[1], 3), round(current_price, 5), round(max_price, 5),
                 round(actual_down_percent * 100, 2), round(cur_k, 2), round(cur_d, 2), )
 
             success = False
@@ -737,7 +737,7 @@ def stop_loss(percent=0.03):
             logger.warning("stop_loss be cancelled, lock postion")
             return False
 
-    precision = 0.00001
+    precision = 0.000000001
     trigger = False
     for trade in BUY_RECORD:
         last_buy_amount = float(trade.get("field-amount", 0))
@@ -782,8 +782,8 @@ def stop_loss(percent=0.03):
                         current_price, loss_percent))
 
                 msg = "[卖出{}] 移动止损 计划卖出量={}个, 实际卖出量={}个, 之前买入价={}$, 当前价={}$, 损失比例={}%.".format(
-                        symbol, round(last_buy_amount, 3), round(ret[1], 3), round(last_price, 3),
-                        round(current_price, 3), round(loss_percent*100, 2))
+                        symbol, round(last_buy_amount, 3), round(ret[1], 3), round(last_price, 6),
+                        round(current_price, 6), round(loss_percent*100, 2))
 
                 if ret[0] == 1:
                     msg += "-交易成功！"
@@ -902,7 +902,7 @@ def move_stop_profit():
         if not trade_alarm(msg):
             continue
 
-        bal = get_balance(symbol[0:3], result_type=0)
+        bal = get_balance(config.SUB_LEFT, result_type=0)
         if bal and float(bal) <= last_buy_amount:
             last_buy_amount = round(float(bal)*0.98, 3)
 
@@ -917,16 +917,16 @@ def move_stop_profit():
             msg = "[卖出{}]移动止盈： 上次买入价={}, 最高价={}, 回撤幅度={}%, 当前卖出价={}, 计划卖出量={}个, 实际卖出量={}个, 盈利比={}%, 盈利金额={}$.".format(symbol,
                                                                                                                round(
                                                                                                                    last_price,
-                                                                                                                   3),
+                                                                                                                   6),
                                                                                                                round(
                                                                                                                    max_price,
-                                                                                                                   3),
+                                                                                                                   6),
                                                                                                                round(
                                                                                                                    down_back_percent * 100,
                                                                                                                    2),
                                                                                                                round(
                                                                                                                    current_price,
-                                                                                                                   3),
+                                                                                                                   6),
                                                                                                                round(
                                                                                                                    last_buy_amount,
                                                                                                                    3),
@@ -1140,7 +1140,9 @@ def trade_alarm(message, show_time=0):
 
 def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", current_price=0):
     # 按余额比例买
-    currency = symbol[3:]
+    # currency = symbol[3:]
+    currency = config.SUB_RIGHT
+
     balance = get_balance(currency)
     if amount <= 0:
         if percent > 0:
@@ -1205,7 +1207,8 @@ def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", cur
 
 
 def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
-    currency = symbol[0:3]
+    # currency = symbol[0:3]
+    currency = config.SUB_LEFT
     balance = get_balance(currency)
 
     if amount <= 0:
@@ -1250,9 +1253,10 @@ def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
             if amount > balance:
                 amount = balance*0.99
 
-
-
-    amount = round(amount, 4)
+    if current_price > 1:
+        amount = round(amount, 4)
+    else:
+        amount = round(amount, 2)
     logger.warning(
         "sell {} amount {}(个), current price={}, balance={}(个), total value={}$, min trade={}$, max trade={}$!record={}".format(symbol,
                                                                                                              amount,
@@ -1551,6 +1555,7 @@ def get_kdj(market, pos=0, fastk_period=9, slowk_period=3, slowk_matype=0, slowd
         return k, d, j
     except Exception as e:
         logger.exception("get_kdj exception={}".format(e))
+        return k,d,j
     finally:
         process.data_lock.release()
 
@@ -1612,24 +1617,24 @@ def get_trade_vol_from_local(symbol, beg=0, size=3):
 
 def update_balance(is_first=False):
     try:
-        for symbol in config.NEED_TOBE_SUB_SYMBOL:
-            s0 = symbol[0:3]
-            s1 = symbol[3:]
-            bal0 = get_balance(s0, result_type=2)
-            bal1 = get_balance(s1, result_type=2)
-            str_balance = ""
-            if bal0 and bal1:
-                str_balance += "{}/{}".format(round(bal0.get("trade", 0), 4),
-                                                 round(bal0.get("frozen", 0), 4))
+        # for symbol in config.NEED_TOBE_SUB_SYMBOL:
+        s0 = config.SUB_LEFT    #symbol[0:3]
+        s1 = config.SUB_RIGHT   #symbol[3:]
+        bal0 = get_balance(s0, result_type=2)
+        bal1 = get_balance(s1, result_type=2)
+        str_balance = ""
+        if bal0 and bal1:
+            str_balance += "{}/{}".format(round(bal0.get("trade", 0), 4),
+                                             round(bal0.get("frozen", 0), 4))
 
-                str_balance += ", {}/{}".format(round(bal1.get("trade", 0), 2),
-                                                   round(bal1.get("frozen", 0), 2))
-                logger.info("update_balance = {}".format(str_balance))
-                process.REALTIME_BALANCE = str_balance #.put(str_balance)
-                return bal0.get("trade", 0), bal0.get("frozen", 0), bal1.get("trade", 0), bal1.get("frozen", 0)
-            else:
-                logger.warning("update_balance failed.")
-                return 0,0,0,0
+            str_balance += ", {}/{}".format(round(bal1.get("trade", 0), 2),
+                                               round(bal1.get("frozen", 0), 2))
+            logger.info("update_balance = {}".format(str_balance))
+            process.REALTIME_BALANCE = str_balance #.put(str_balance)
+            return bal0.get("trade", 0), bal0.get("frozen", 0), bal1.get("trade", 0), bal1.get("frozen", 0)
+        else:
+            logger.warning("update_balance failed.")
+            return 0,0,0,0
 
     except Exception as e:
         logger.exception("update_balance e= {}".format(e))
@@ -2124,7 +2129,7 @@ def get_current_position():
         sell_factor = 0.7 if sell_factor < 0.7 else sell_factor
         sell_factor = 1.3 if sell_factor > 1.3 else sell_factor
     except Exception as e:
-        logger.warning("get_current_position e={}".format(e))
+        logger.exception("get_current_position e={}".format(e))
 
     logger.info("get_current_position position={}, limit position={}, buy_factor={}, sell_factor={}, ".format(position, config.LIMIT_MIN_POSITION, buy_factor, sell_factor))
     return position, buy_factor, sell_factor

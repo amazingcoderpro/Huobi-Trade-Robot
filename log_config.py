@@ -110,6 +110,10 @@ def output2ui(msg, level=UI_LOG_LEVEL):
         format_msg = "--- {} ---\n".format(msg)
     else:
         format_msg = "[{}]{} {} \n".format(str_time, UI_LOG_LEVEL_LIST[level], msg)
+
+    if level in [6, 7]:
+        format_msg = "\n" + format_msg
+
     msg_dict = {"level": UI_LOG_LEVEL_LIST[level], "msg": format_msg}
     REALTIME_LOG.put(msg_dict)
 
@@ -224,9 +228,9 @@ def make_msg(flag, symbol, current_price, percent=0, amount=0, last_price=0, par
             amount = round(amount, 4)
 
         if last_price > 0:
-            last_price = round(last_price, 3)
+            last_price = round(last_price, 5)
 
-        current_price = round(current_price, 3)
+        current_price = round(current_price, 5)
 
         if flag == 0:
             flag = u"买入"

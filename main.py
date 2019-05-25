@@ -26,7 +26,7 @@ CURRENT_PRICE = 1
 
 class MainUI():
     def __init__(self, root):
-        self.verify = False
+        self.verify = True
         self.notify_queue = queue.Queue()
         self.gress_bar_init_history = GressBar()
         self.gress_bar_verify_user = GressBar()
@@ -75,26 +75,26 @@ class MainUI():
         self.label_pop = Label(root, text="实时价格: ", width=15)
         self.price_text = StringVar()
         self.price_text.set("")
-        self.price_label = Label(root, textvariable=self.price_text, foreground='red', background="gray",
+        self.price_label = Label(root, textvariable=self.price_text, foreground='blue', background="gray",
                                  font=("", 12, 'bold'), width=25)
         # self.price_label.pack()
 
         self.label_bal = Label(root, text="当前账户余额(币,金): ", width=15)
         self.bal_text = StringVar()
         self.bal_text.set("")
-        self.bal_label = Label(root, textvariable=self.bal_text, foreground='red', background="gray",
+        self.bal_label = Label(root, textvariable=self.bal_text, foreground='blue', background="gray",
                                font=("", 12, 'bold'), width=25)
 
         self.label_coin = Label(root, text="当前账户总资产(按币/金/仓位): ", width=22)
         self.coin_text = StringVar()
         self.coin_text.set("")
-        self.coin_label = Label(root, textvariable=self.coin_text, foreground='red', background="gray",
+        self.coin_label = Label(root, textvariable=self.coin_text, foreground='blue', background="gray",
                                 font=("", 12, 'bold'), width=30)
 
         self.label_profit = Label(root, text="盈利情况(币/金本位): ", width=20)
         self.profit_text = StringVar()
         self.profit_text.set("")
-        self.profit_label = Label(root, textvariable=self.profit_text, foreground='red', background="gray",
+        self.profit_label = Label(root, textvariable=self.profit_text, foreground='blue', background="gray",
                                   font=("", 12, 'bold'), width=25)
         self.clean_profit_button = Button(root, text="重置", command=self.reset_profit, width=8)
 
@@ -104,32 +104,31 @@ class MainUI():
         self.label_kdj = Label(root, text="15分钟KDJ: ", width=15)
         self.kdj_text = StringVar()
         self.kdj_text.set("")
-        self.kdj_label = Label(root, textvariable=self.kdj_text, foreground='red', background="gray",
+        self.kdj_label = Label(root, textvariable=self.kdj_text, foreground='#9A32CD', background="gray",
                                font=("", 12, 'bold'), width=25)
 
         self.label_uml = Label(root, text="布林线: ", width=15)
         self.uml_text = StringVar()
         self.uml_text.set("")
-        self.uml_label = Label(root, textvariable=self.uml_text, foreground='red', background="gray",
-                               font=("", 12, 'bold'), width=40)
+        self.uml_label = Label(root, textvariable=self.uml_text, foreground='#9A32CD', background="gray",
+                               font=("", 12, 'bold'), width=30)
 
         # 初始信息
         self.label_origin = Label(root, text="初始价格/币数/USDT/总价值: ", width=25)
         self.origin_text = StringVar()
         self.origin_text.set("")
-        self.origin_label = Label(root, textvariable=self.origin_text, foreground='red', background="gray",
+        self.origin_label = Label(root, textvariable=self.origin_text, foreground='blue', background="gray",
                                font=("", 12, 'bold'), width=30)
 
         self.nick_name_text = StringVar()
         self.nick_name_text.set(config.NICK_NAME)
-        self.nick_name_text_label = Label(root, textvariable=self.nick_name_text, foreground='green', background="gray",
+        self.nick_name_text_label = Label(root, textvariable=self.nick_name_text, foreground='blue', background="gray",
                                font=("", 12, 'bold'), width=10)
-
 
         self.label_now = Label(root, text="大盘涨跌幅/账户涨跌幅: ", width=22)
         self.now_text = StringVar()
         self.now_text.set("")
-        self.now_label = Label(root, textvariable=self.now_text, foreground='red', background="gray",
+        self.now_label = Label(root, textvariable=self.now_text, foreground='blue', background="gray",
                                font=("", 12, 'bold'), width=30)
 
         self.label_run_log = Label(root, text="运行日志: ", width=10)
@@ -138,8 +137,8 @@ class MainUI():
         self.trade_text = ScrolledText(root, width=60, height=26)
         # self.log_text.pack()
         # 创建一个TAG，其前景色为红色
-        self.log_text.tag_config('BUY', foreground='green', background="orange", font=("", 11, 'bold'))
-        self.log_text.tag_config('SELL', foreground='red', background="orange", font=("", 11, 'bold'))
+        self.log_text.tag_config('BUY', foreground='green', background="#C1CDC1", font=("", 11, 'bold'))
+        self.log_text.tag_config('SELL', foreground='red', background="#BC8F8F", font=("", 11, 'bold'))
         self.log_text.tag_config('WARNING', foreground='orange')
         self.log_text.tag_config('ERROR', foreground='red')
         self.log_text.tag_config('EXCEPTION', foreground='red')
@@ -195,7 +194,7 @@ class MainUI():
 
         self.label_run_log.grid(row=4, column=1)
         self.log_text.grid(row=5, column=1, rowspan=5, columnspan=3)
-        self.label_trade_log.grid(row=4, column=4)
+        self.label_trade_log.grid(row=4, column=3)
         self.trade_text.grid(row=5, column=4, rowspan=5, columnspan=3)
 
         self.start_button.config(state="disabled")
@@ -242,8 +241,17 @@ class MainUI():
 
         if not self.verify:
             log_config.output2ui(u"授权认证检查失败, 系统暂时无法使用, 请稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!", 5)
-            messagebox.showerror("")
+            messagebox.showerror(u"授权认证检查失败, 系统暂时无法使用, 请稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!")
             return
+
+        process.ORG_COIN_TRADE = None
+        process.ORG_COIN_FROZEN = None
+        process.ORG_DOLLAR_TRADE = None
+        process.ORG_DOLLAR_FROZEN = None
+        process.ORG_COIN_TOTAL = None
+        process.ORG_DOLLAR_TOTAL = None
+        process.ORG_PRICE = None
+        process.ORG_DOLLAR_TOTAL = None  # 总价值金量, 所有资产换成usdt
 
         if not self._hb:
             self._hb = Huobi()
@@ -258,7 +266,6 @@ class MainUI():
 
     def stop_work(self):
         logger.info("stop_work!")
-        log_config.output2ui("系统停止工作!")
         if self._hb:
             self._hb.exit()
         self.stop_check_strategy()
@@ -271,7 +278,8 @@ class MainUI():
         self.init_history_button.config(state="normal")
         self.verify_identity_button.config(state="normal")
 
-        log_config.output2ui("Stop work successfully!", 8)
+        # log_config.output2ui("Stop work successfully!", 8)
+        log_config.output2ui("系统已停止工作!", 8)
         self.working = False
 
     def start_check_strategy(self):
@@ -330,7 +338,7 @@ class MainUI():
 
     def wait_buy_sell(self, price):
         if not price or not self.working:
-            logger.info("wait_buy_sell not be trigger!")
+            logger.info("wait_buy_sell not be trigger!, price={}, working={}".format(price, self.working))
             return False
 
         buy_prices = config.WAIT_BUY_PRICE
@@ -415,12 +423,19 @@ class MainUI():
                 dollar_trade = float(dollar_str[0])
                 dollar_frozen = float(dollar_str[1])
                 total_coin_value = coin_trade + coin_frozen + (dollar_trade + dollar_frozen) / price
+
                 total_dollar_value = (coin_trade + coin_frozen) * price + dollar_trade + dollar_frozen
-                position = (coin_trade + coin_frozen)*price / total_dollar_value
+                if total_dollar_value>0:
+                    position = (coin_trade + coin_frozen)*price / total_dollar_value
+                else:
+                    position = 0
                 self.coin_text.set("{}/{}/{}%".format(round(total_coin_value, 4), round(total_dollar_value, 2), round(position*100, 2)))
                 if not process.ORG_COIN_TOTAL:
                     process.START_TIME = datetime.datetime.now()
-                    process.ORG_CHICANG = (coin_trade+coin_frozen)*price/total_dollar_value
+                    if total_dollar_value>0:
+                        process.ORG_CHICANG = (coin_trade+coin_frozen)*price/total_dollar_value
+                    else:
+                        process.ORG_CHICANG = 0
                     process.ORG_COIN_TRADE = coin_trade
                     process.ORG_COIN_FROZEN = coin_frozen
                     process.ORG_DOLLAR_TRADE = dollar_trade
@@ -436,7 +451,12 @@ class MainUI():
                 self.profit_text.set("{}/{}".format(profit_coin, profit_dollar))
 
                 #更新大盘涨跌幅和当前账户的涨跌幅
-                self.now_text.set("{}% / {}%".format(round((price-process.ORG_PRICE)*100/process.ORG_PRICE, 2), round((total_dollar_value - process.ORG_DOLLAR_TOTAL)*100 / process.ORG_DOLLAR_TOTAL, 3)))
+                if process.ORG_DOLLAR_TOTAL>0:
+                    account_zhang = round((total_dollar_value - process.ORG_DOLLAR_TOTAL)*100 / process.ORG_DOLLAR_TOTAL, 3)
+                else:
+                    account_zhang = 0
+
+                self.now_text.set("{}% / {}%".format(round((price-process.ORG_PRICE)*100/process.ORG_PRICE, 2), account_zhang))
         except Exception as e:
             logger.exception("update_coin e={}".format(e))
 
@@ -448,7 +468,7 @@ class MainUI():
         log_config.output2ui("Please Click [Verify Identity] to authenticate", 8)
 
         def update_price(price_text):
-            while True:
+            while self.verify:
                 try:
                     time.sleep(1)
                     msg = process.REALTIME_PRICE    #.get(block=True)
@@ -467,7 +487,7 @@ class MainUI():
                     continue
 
         def update_balance(bal_text):
-            while True:
+            while self.verify:
                 try:
                     time.sleep(5)
                     msg = process.REALTIME_BALANCE #.get(block=True)
@@ -478,7 +498,7 @@ class MainUI():
                     continue
 
         def update_ui_log(log_text, trade_text):
-            while True:
+            while 1:
                 try:
                     if not log_config.REALTIME_LOG.empty():
                         try:
@@ -505,7 +525,7 @@ class MainUI():
 
         def update_kdj(kdj_text):
 
-            while True:
+            while self.verify:
                 try:
                     time.sleep(5)
                     kdj_15min = process.REALTIME_KDJ_15MIN #.get(block=True)
@@ -516,17 +536,18 @@ class MainUI():
                     log_config.output2ui("update_kdj exception....", 3)
 
         def update_uml(uml_text):
-            while True:
+            while self.verify:
                 try:
                     time.sleep(5)
                     global CURRENT_PRICE
                     uml = process.REALTIME_UML#.get(block=True)
                     diff1 = uml[0] - uml[1]
                     diff2 = uml[1] - uml[2]
-                    uml_text.set("{}/{}/{}-{}/{}-{}/{}".format(round(uml[0], 3), round(uml[1], 3), round(uml[2], 3), round(diff1, 3), round(diff2, 3), round(diff1 / CURRENT_PRICE, 4), round(diff2 / CURRENT_PRICE, 4)))
+                    # uml_text.set("{}/{}/{}-{}/{}-{}/{}".format(round(uml[0], 6), round(uml[1], 6), round(uml[2], 6), round(diff1, 6), round(diff2, 6), round(diff1 / CURRENT_PRICE, 5), round(diff2 / CURRENT_PRICE, 5)))
+                    uml_text.set("{}/{}/{}".format(round(uml[0], 6), round(uml[1], 6), round(uml[2], 6)))
 
                     if process.LAST_VERIFY_TIME:
-                        if (datetime.datetime.now() - process.LAST_VERIFY_TIME).total_seconds() > 24*3600:
+                        if (datetime.datetime.now() - process.LAST_VERIFY_TIME).total_seconds() > 3600*24:
                             ret = self.verify_huobi(config.ACCESS_KEY)
                             if not ret[0]:
                                 self.clean_strategy()
@@ -547,7 +568,7 @@ class MainUI():
         def notify_profit_info():
             hour_report_start_time = None
             daily_report_start_time = None
-            while 1:
+            while self.verify:
                 time.sleep(60)
                 if self.working:
                     try:
@@ -590,14 +611,14 @@ class MainUI():
                                 bal0, bal0_f, bal1, bal1_f = strategies.update_balance()
                                 total = (bal0+bal0_f)*CURRENT_PRICE+bal1+bal1_f
                                 chicang = ((bal0 + bal0_f) * CURRENT_PRICE) / total
-                                dapan_profit = round((CURRENT_PRICE - process.ORG_PRICE) * 100 / process.ORG_PRICE, 2)
-                                account_profit = round((total - process.ORG_DOLLAR_TOTAL) * 100 / process.ORG_DOLLAR_TOTAL, 2)
+                                dapan_profit = round((CURRENT_PRICE - process.ORG_PRICE) * 100 / process.ORG_PRICE, 3)
+                                account_profit = round((total - process.ORG_DOLLAR_TOTAL) * 100 / process.ORG_DOLLAR_TOTAL, 3)
                                 is_win = u"是" if account_profit >= dapan_profit else u"否"
                                 msg_own = u"""火币量化交易系统运行中:\n用户昵称:{}\n币种:{}\n用户风险承受力:{}\n启动时间:{}\n当前时间:{}\n初始价格:{}\n当前价格:{}\n初始持币量:可用{},冻结{},仓位{}%\n当前持币量:可用{},冻结{},仓位{}%\n初始时持金量:可用{},冻结{}\n初始持金量:可用{},冻结{}\n初始账户总价值:${}\n当前账户总价值:${}\n大盘涨跌幅:{}%\n当前账户涨跌幅:{}%\n当前盈利：{}$\n是否跑羸大盘:{}""".format(
                                     config.NICK_NAME, config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
                                     process.START_TIME.strftime("%Y/%m/%d, %H:%M:%S"),
-                                    now_time.strftime("%Y/%m/%d, %H:%M:%S"), round(process.ORG_PRICE, 3),
-                                    round(CURRENT_PRICE, 3),
+                                    now_time.strftime("%Y/%m/%d, %H:%M:%S"), round(process.ORG_PRICE, 6),
+                                    round(CURRENT_PRICE, 6),
                                     round(process.ORG_COIN_TRADE, 4), round(process.ORG_COIN_FROZEN, 4),
                                     round(process.ORG_CHICANG * 100, 2), round(bal0, 4), round(bal0_f, 4), round(chicang * 100, 2),
                                     round(process.ORG_DOLLAR_TRADE, 2), round(process.ORG_DOLLAR_FROZEN, 2), round(bal1, 2), round(bal1_f, 2),
@@ -607,7 +628,7 @@ class MainUI():
                                     .format(config.NICK_NAME, config.NEED_TOBE_SUB_SYMBOL[0].upper(), config.RISK,
                                         process.START_TIME.strftime("%Y/%m/%d, %H:%M:%S"),
                                         now_time.strftime("%Y/%m/%d, %H:%M:%S"),
-                                        round(process.ORG_PRICE, 3), round(CURRENT_PRICE, 3),
+                                        round(process.ORG_PRICE, 6), round(CURRENT_PRICE, 6),
                                         "***", "***", round(process.ORG_CHICANG * 100, 2), "***", "***", round(chicang * 100, 2),
                                         "***", "***", "***", "***",
                                         "***", "***",
@@ -620,7 +641,6 @@ class MainUI():
                                 ret2 = log_config.notify_user(msg_other)
                     except Exception as e:
                         logger.warning("notify_profit_info exception.e={}".format(e))
-
 
         th = threading.Thread(target=update_price, args=(self.price_text,))
         th.setDaemon(True)
@@ -676,6 +696,9 @@ class MainUI():
                 config.SECRET_KEY = self._user_info.get("secret_key", None)
                 config.NEED_TOBE_SUB_SYMBOL.clear()
                 config.NEED_TOBE_SUB_SYMBOL.append(self._user_info.get("trade", None))
+                config.SUB_LEFT = self._user_info.get("trade_left", None)
+                config.SUB_RIGHT = self._user_info.get("trade_right", None)
+
                 self._is_user_valid = True
                 # self.verify_identity_button.config(state="disabled")
                 self.init_history_button.config(state="normal")
@@ -687,7 +710,7 @@ class MainUI():
                 log_config.output2ui("Authentication failed!", 3)
 
         th = threading.Thread(target=verify_user_by_get_balance, args=(
-            self._user_info.get("trade", None)[0:3],
+            self._user_info.get("trade_left", None),
             self._user_info.get("access_key", None),
             self._user_info.get("secret_key", None),
             self._user_info.get("ws_site", "BR"),
@@ -701,7 +724,6 @@ class MainUI():
         retry = 3
         status_code = 0
         error_info = ""
-        log_config.output2ui(u"正在进行权限验证, 请稍等...", 8)
         try:
             while retry >= 0:
                 time.sleep(1)
@@ -709,8 +731,8 @@ class MainUI():
                 ret = requests.get("http://{}:5000/huobi/{}".format(host, access_key))
                 if ret.status_code == 200:
                     self.verify = True
-                    logger.info(u"授权认证成功！ 过期时间: {}".format(ret.text))
-                    return True, u"授权认证成功！ 过期时间: {}".format(ret.text)
+                    logger.info(u"系统授权认证成功！ 过期时间: {}".format(ret.text))
+                    return True, u"系统授权认证成功！ 过期时间: {}".format(ret.text)
                 else:
                     #201-invalid, 202-does not exist, 203-expired, 204-exception
                     if ret.status_code == 204:
@@ -721,23 +743,23 @@ class MainUI():
                         continue
                     elif ret.status_code == 203:
                         logger.error("verify_huobi expired. status code={}, text={}".format(ret.status_code, ret.text))
-                        msg = u"您的授权截止: {} 已过期, 无法继续使用本系统, 如需继续授权使用, 请提供您的AccessKey:\n{}\n给系统管理员续费使用！ \n联系方式:15691820861(可加微信)!".format(ret.text, access_key)
+                        msg = u"您的系统授权截止: {} 已过期, 无法继续使用本系统, 如需继续授权使用, 请提供您的AccessKey:\n{}\n给系统管理员进行续费！ \n联系方式:15691820861(可加微信)!".format(ret.text, access_key)
                         self.verify = False
                         return False, msg
                     else:
                         logger.error("verify_huobi failed. status code={}, text={}".format(ret.status_code, ret.text))
-                        msg = u"授权认证失败, 错误码: {}.\n无法继续使用本系统, 请确认您输入的账户信息正确无误! 如需授权使用, 请提供您的AccessKey:\n{}\n给系统管理员以开通使用权限！ \n联系方式:15691820861(可加微信)!".format(ret.status_code, access_key)
+                        msg = u"系统授权认证失败, 错误码: {}.\n无法继续使用本系统, 请确认您输入的账户信息正确无误! 如需授权使用, 请提供您的AccessKey:\n{}\n给系统管理员以开通使用权限！ \n联系方式:15691820861(可加微信)!".format(ret.status_code, access_key)
                         self.verify = False
                         return False, msg
         except Exception as e:
             status_code = -1
             error_info = str(e)
-            error_info.replace("47.75.10.215", "47.77.13.207")
-            error_info.replace("5000", "1009")
+            error_info = error_info.replace(host, "47.77.13.207")
+            error_info = error_info.replace("5000", "1009")
             logger.error("verify_huobi e={}".format(error_info))
 
         self.verify = False
-        return False, u"授权认证检查失败, 系统暂时无法使用, 错误码：{},错误信息:{}.\n请检查您的网络情况, 稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!".format(status_code, error_info)
+        return False, u"系统授权认证检查失败, 暂时无法使用本系统, 错误码：{},错误信息:{}.\n请检查您的网络情况, 稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!".format(status_code, error_info)
 
     def set_up_account(self):
         from popup_account import PopupAccountConfig
@@ -755,6 +777,7 @@ class MainUI():
         self.nick_name_text.set(config.NICK_NAME)
 
         access_key = self._user_info.get("access_key", "")
+        log_config.output2ui(u"正在进行权限验证, 请稍等...", 8)
         ret = self.verify_huobi(access_key)
         if ret[0]:
             logger.info(u"认证成功, key={}".format(access_key))
@@ -890,8 +913,8 @@ if __name__ == '__main__':
     my_gui = MainUI(root)
     config.ROOT = root
     root.protocol('WM_DELETE_WINDOW', my_gui.close_window)
-    my_gui.center_window(1400, 610)
-    root.maxsize(1400, 610)
+    my_gui.center_window(1350, 620)
+    root.maxsize(1350, 620)
     # root.minsize(320, 240)
     # root.iconbitmap('spider_128px_1169260_easyicon.net.ico')
     my_gui.update_ui()
