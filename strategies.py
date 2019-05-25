@@ -30,11 +30,11 @@ BUY_RECORD = []
 SELL_RECORD = []
 TRADE_RECORD = []
 
-move_stop_profit_params = {"check": 1, "msf_min": 0.02, "msf_back": 0.22}
+move_stop_profit_params = {"check": 1, "msf_min": 0.018, "msf_back": 0.21}
 stop_loss_params = {"check": 0, "percent": 0.03}
-kdj_buy_params = {"check": 1, "k": 20, "d": 22, "buy_percent": 0.2, "up_percent": 0.005, "peroid": "15min"}
+kdj_buy_params = {"check": 1, "k": 23, "d": 21, "buy_percent": 0.25, "up_percent": 0.004, "peroid": "15min"}
 kdj_sell_params = {"check": 1, "k": 82, "d": 80, "sell_percent": 0.3, "down_percent": 0.005, "peroid": "15min"}
-vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 2, "price_up_limit": 0.02, "buy_percent": 0.5,
+vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 2, "price_up_limit": 0.01, "buy_percent": 0.3,
                         "peroid": "5min"}
 boll_strategy_params = {"check": 1, "peroid": "15min", "open_diff1_percent": 0.012, "open_diff2_percent": 0.012,
                         "close_diff1_percent": 0.0025, "close_diff2_percent": 0.0025, "open_down_percent": -0.03,
@@ -293,10 +293,10 @@ def boll_strategy():
 
         # msg = "[BUY]boll_strategy buy {} percent: {}, current price={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(symbol, buy_percent, price, upper, middle, lower, pdiff1, pdiff2)
         msg = "[买入{}]boll 买入比例={}%, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
-            buy_percent * 100, 2), round(price, 3), round(upper, 2), round(middle, 2),
-                                                                                                     round(lower, 2),
-                                                                                                     round(pdiff1, 2),
-                                                                                                     round(pdiff2, 2))
+            buy_percent * 100, 2), round(price, 6), round(upper, 6), round(middle, 6),
+                                                                                                     round(lower, 6),
+                                                                                                     round(pdiff1, 6),
+                                                                                                     round(pdiff2, 6))
         if not trade_alarm(msg):
             return False
 
@@ -340,9 +340,9 @@ def boll_strategy():
         ret = sell_market(symbol, percent=sell_percent, current_price=price)
         if ret[0]:
             msg = "[卖出{}]boll 计划卖出比例={}%, 实际卖出量={}个, 当前价格={}$, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}.".format(symbol, round(
-                sell_percent * 100, 2), round(ret[1], 3), round(price, 3), round(upper, 2), round(middle, 2), round(lower, 2),
-                                                                                                 round(pdiff1, 2),
-                                                                                                 round(pdiff2, 2))
+                sell_percent * 100, 2), round(ret[1], 3), round(price, 6), round(upper, 6), round(middle, 6), round(lower, 6),
+                                                                                                 round(pdiff1, 6),
+                                                                                                 round(pdiff2, 6))
 
             success = False
             if ret[0] == 1:
@@ -419,14 +419,14 @@ def kdj_strategy_buy():
         limit_kd /= already[1]
 
     limit_kd = 15 if limit_kd < 15 else limit_kd
-    limit_kd = 40 if limit_kd > 40 else limit_kd
+    limit_kd = 35 if limit_kd > 35 else limit_kd
     now = int(time.time()) * 1000
     min_price = get_min_price(symbol, last_time=now - (15 * 60 * 1000))
     actual_up_percent = 0
 
     if cur_k <= limit_kd or cur_d <= limit_kd:
         # 回暖幅度超过0.008
-        up_percent = kdj_buy_params.get("up_percent", 0.005)
+        up_percent = kdj_buy_params.get("up_percent", 0.003)
         up_percent *= (1/config.RISK)
 
         # 如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
@@ -443,12 +443,11 @@ def kdj_strategy_buy():
                                                                                                                     up_percent,
                                                                                                                     actual_up_percent))
             if actual_up_percent >= up_percent:
-
                 logger.info("kdj buy actual_up_percent{} big than need up_percent{}.".format(actual_up_percent, up_percent))
                 # 最近三个周期内出现过kd小于20
                 last_k, last_d, last_j = get_kdj(market, 1)
                 last_k_2, last_d_2, last_j_2 = get_kdj(market, 2)
-                need_k = kdj_buy_params.get("k", 20)*config.RISK*(actual_up_percent/up_percent) # 回弹幅度越大，自然kd值也会变大，需要放宽限制条件
+                need_k = kdj_buy_params.get("k", 22)*config.RISK*(actual_up_percent/up_percent) # 回弹幅度越大，自然kd值也会变大，需要放宽限制条件
                 need_d = kdj_buy_params.get("d", 22)*config.RISK*(actual_up_percent/up_percent) # 回弹幅度越大，自然kd值也会变大，需要放宽限制条件
 
                 # 如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
@@ -461,26 +460,35 @@ def kdj_strategy_buy():
                     need_k /= already[1]
                     need_d /= already[1]
 
-                need_k = 15 if need_k < 15 else need_k
-                need_d = 18 if need_d < 18 else need_d
-                need_k = 25 if need_k > 25 else need_k
-                need_d = 30 if need_d > 30 else need_d
+                need_k = 16 if need_k < 16 else need_k
+                need_d = 14 if need_d < 14 else need_d
+                need_k = 26 if need_k > 25 else need_k
+                need_d = 24 if need_d > 24 else need_d
                 logger.info("kdj buy, need_k={}, need_d={}, cur_k={} cur_d={}, lk1={} ld1={} lk2={} ld2={}".format(need_k, need_d, cur_k, cur_d, last_k, last_d, last_k_2, last_d_2))
-                if (cur_k <= need_k and cur_d <= need_d) \
-                        or (last_k <= need_k and last_d <= need_d) \
-                        or (last_k_2 <= need_k and last_d_2 <= need_d):
 
-                    logging.warning("KDJ 低位回弹, k={}, d={}, cp={}, upp={}".format(cur_k, cur_d, current_price, actual_up_percent))
-                    buy_percent += kdj_buy_params.get("buy_percent", 0.2)
+
+                # if (cur_k <= need_k and cur_d <= need_d) \
+                #         or (last_k <= need_k and last_d <= need_d) \
+                #         or (last_k_2 <= need_k and last_d_2 <= need_d):
+
+                if (last_k <= need_k and last_d <= need_d and cur_k > last_k) or (cur_k<15 and cur_d<15 and (cur_k-cur_d)>-5) or (last_k_2<need_k and last_d_2<need_d):
+                    logging.warning("KDJ 低位回弹, k={}, d={}, k1={}, d1={}, cp={}, upp={}".format(cur_k, cur_d, last_k, last_d, current_price, actual_up_percent))
+                    buy_percent += kdj_buy_params.get("buy_percent", 0.25)
+
                     strategy_flag.append(u"低位回弹")
                     ret = is_buy_big_than_sell(symbol, 2)
                     if ret:
                         logger.info("is_buy_big_than_sell return True")
                         log_config.output2ui("is_buy_big_than_sell return True")
-                        buy_percent += 0.1
+                        buy_percent += 0.05
                         strategy_flag.append(u"买盘活跃")
+            else:
+                logger.info("kdj buy actual_up_percent={}<limit_up_percent={}".format(actual_up_percent, up_percent))
 
-    if buy_percent <=0:
+    else:
+        logger.info("kdj buy, curk={}, curd={}>limit_kd={}".format(cur_k, cur_d, limit_kd))
+
+    if buy_percent <= 0:
         return False
 
     buy_percent *= config.RISK
@@ -491,8 +499,8 @@ def kdj_strategy_buy():
         logger.info("kdj buy, not still down *1.2")
         buy_percent *= 1.2
 
-    msg = "[买入{}]kdj_{} 计划买入比例={}%, 当前价格={}, 指标K={}, D={}, 阶段最低价格={}, 回暖幅度={}%".format(
-        symbol, peroid, round(buy_percent * 100, 2), round(current_price, 5), round(cur_k, 2), round(cur_d, 2), round(min_price, 5),
+    msg = "[买入{}]kdj_{} 计划买入比例={}%, 当前价格={}, 指标K={}, D={}, k1={}, D1={}, 阶段最低价格={}, 回暖幅度={}%".format(
+        symbol, peroid, round(buy_percent * 100, 2), round(current_price, 6), round(cur_k, 2), round(cur_d, 2), round(last_k, 2), round(last_d, 2), round(min_price, 6),
          round(actual_up_percent * 100, 2))
 
     if not trade_alarm(msg):
@@ -501,8 +509,8 @@ def kdj_strategy_buy():
     ret = buy_market(symbol, percent=buy_percent, current_price=current_price)
     if ret[0]:
         msg = "[买入{}]kdj_{} 计划买入比例={}%, 实际买入金额={}$, 当前价格={}, 指标K={}, D={}, 阶段最低价格={}, 回暖幅度={}%, 买入策略={}.".format(
-            symbol, peroid, round(buy_percent * 100, 2), round(ret[1], 3), round(current_price, 5), round(cur_k, 2), round(cur_d, 2),
-            round(min_price, 5), round(actual_up_percent * 100, 2), strategy_flag)
+            symbol, peroid, round(buy_percent * 100, 2), round(ret[1], 3), round(current_price, 6), round(cur_k, 2), round(cur_d, 2),
+            round(min_price, 6), round(actual_up_percent * 100, 2), strategy_flag)
 
         if ret[0] == 1:
             msg += "-交易成功！"
@@ -651,7 +659,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
         ret = sell_market(symbol, percent=percent, current_price=current_price)
         if ret[0]:
             msg = "[卖出{}]kdj_{} 计划卖出比例={}%, 实际卖出数量={}个, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}.".format(
-                symbol, peroid, round(percent * 100, 2), round(ret[1], 3), round(current_price, 5), round(max_price, 5),
+                symbol, peroid, round(percent * 100, 2), round(ret[1], 3), round(current_price, 6), round(max_price, 6),
                 round(actual_down_percent * 100, 2), round(cur_k, 2), round(cur_d, 2), )
 
             success = False
@@ -862,10 +870,7 @@ def move_stop_profit():
             continue
 
         # 当前回撤幅度
-        down_back_percent = round((max_price - current_price) / (max_price - last_price), 3)
-
-        # 当前盈利
-        profit = round(((current_price-last_price)/last_price)*100, 3)
+        down_back_percent = round((max_price - current_price) / (max_price - last_price), 5)
 
         # 回撤幅度超过25％（涨幅在2个点以内的）, 如果超过两个点，则要求回撤幅度需要缩小，以保证更多的盈利, 激进者可以承受更大的风险
         limit_down_back_percent = move_stop_profit_params.get("msf_back", 0.20) * (0.02/max_upper) * config.RISK
@@ -886,17 +891,21 @@ def move_stop_profit():
         # 最多允许回撤一半, 最小回撤5个点
         limit_down_back_percent = 0.05 if limit_down_back_percent < 0.05 else limit_down_back_percent
         limit_down_back_percent = 0.5 if limit_down_back_percent > 0.5 else limit_down_back_percent
-        logger.warning("move_stop_profit limit_down_back_percent={}".format(limit_down_back_percent))
+        logger.info("move_stop_profit limit_down_back_percent={}, down_back_percent={}".format(limit_down_back_percent, down_back_percent))
         if down_back_percent < limit_down_back_percent:
             continue
 
+        # 当前盈利
+        profit = (current_price-last_price)/last_price
         # 盈利小于１个点不卖
         limit_profit = 0.013*config.RISK
         limit_profit *= sell_factor
         limit_profit = 0.01 if limit_profit < 0.01 else limit_profit
         if profit < limit_profit:
+            logger.info("Move stop profit  profit{} less than limit profit({})".format(profit, limit_profit))
             continue
 
+        profit = round(profit*100, 2)
         msg = "[SELL]Move stop profit be trigger sell {},  current price={}, last_price={}, max_price={} max_upper={}, profit={}% down_back_percent={}%".format(
                     symbol, current_price, last_price, max_price, max_upper, profit, down_back_percent)
         if not trade_alarm(msg):
@@ -1097,7 +1106,7 @@ def vol_price_fly():
 
     ret = buy_market(symbol, percent=percent, strategy_type="vol_price_fly", current_price=current_price)
     if ret[0]:
-        msg = "[买入{}]量价齐升 计划买入比例={}%, 实际买入金额={}$, 当前价格={}.".format(symbol, round(percent*100, 2), round(ret[1],2), round(current_price, 3))
+        msg = "[买入{}]量价齐升, 计划买入比例={}%, 实际买入金额={}$, 当前价格={}.".format(symbol, round(percent*100, 2), round(ret[1],2), round(current_price, 6))
 
         success = False
         if ret[0] == 1:
@@ -1778,7 +1787,7 @@ def buy_low():
 
     k, d, j = get_kdj(market)
     if k-d < -7:
-        logging.info(u"低吸时k远小于d, 暂时不买．　k={}, d={}, cp={}".format(k, d, current_price))
+        logging.info(u"低吸时k远小于d, 暂时不买, k={}, d={}, cp={}".format(k, d, current_price))
         return False
 
     min_price_5 = get_min_price(symbol, now - (15 * 60 * 1000)*5, current=now - (7 * 60 * 1000))
@@ -1842,7 +1851,7 @@ def buy_low():
                 current_price, buy_percent, min_price, min_price_5, min_price_20, min_price_60, still_down))
 
         msg = "[买入{}]抄底 买入比例={}%, 当前价格={}, 最低价={}, 最近5/20/60周期内最低价={}/{}/{}.".format(
-            symbol, round(buy_percent*100, 2), round(current_price, 3), round(min_price, 3),round(min_price_5, 3), round(min_price_20, 3), round(min_price_60, 3))
+            symbol, round(buy_percent*100, 2), round(current_price, 6), round(min_price, 6),round(min_price_5, 6), round(min_price_20, 6), round(min_price_60, 6))
 
         if not trade_alarm(msg):
             return False
@@ -1850,8 +1859,8 @@ def buy_low():
         ret = buy_market(symbol, percent=buy_percent, current_price=current_price)
         if ret[0]:
             msg = "[买入{}]抄底 计划买入比例={}%, 实际买入金额={}$, 当前价格={}, 最低价={}, 最近5/20/60周期内最低价={}/{}/{}.".format(
-                symbol, round(buy_percent * 100, 2), round(ret[1], 2), round(current_price, 3), round(min_price, 3), round(min_price_5, 3),
-                round(min_price_20, 3), round(min_price_60, 3))
+                symbol, round(buy_percent * 100, 2), round(ret[1], 2), round(current_price, 6), round(min_price, 6), round(min_price_5, 6),
+                round(min_price_20, 6), round(min_price_60, 6))
             success = False
             if ret[0] == 1:
                 msg += "-交易成功！"
@@ -1961,8 +1970,8 @@ def sell_high():
                                                                                                         up_percent, still_up))
 
         msg = "[卖出{}]高抛 卖出比例={}%, 当前价格={}, 最高价={}, 最近5/20/60周期内最高价={}/{}/{}.".format(
-            symbol, round(sell_percent * 100, 2), round(current_price, 3), round(max_price, 3), round(max_price_5, 3),
-            round(max_price_20, 3), round(max_price_60, 3))
+            symbol, round(sell_percent * 100, 2), round(current_price, 6), round(max_price, 6), round(max_price_5, 6),
+            round(max_price_20, 6), round(max_price_60, 6))
 
         # msg = "[BUY]sell_high sell {} percent: {}, current price={}, max_price_5={}, max_price_20={}, max_price_60={}".format(
         #     symbol, sell_percent, current_price, max_price_5, max_price_20, max_price_60)
@@ -1972,8 +1981,8 @@ def sell_high():
         ret = sell_market(symbol, percent=sell_percent, current_price=current_price)
         if ret[0]:
             msg = "[卖出{}]高抛 计划卖出比例={}%, 实际卖出量={}个, 当前价格={}, 最高价={}, 最近5/20/60周期内最高价={}/{}/{}.".format(
-                symbol, round(sell_percent * 100, 2), round(ret[1], 2), round(current_price, 3), round(max_price, 3),round(max_price_5, 3),
-                round(max_price_20, 3), round(max_price_60, 3))
+                symbol, round(sell_percent * 100, 2), round(ret[1], 2), round(current_price, 6), round(max_price, 6),round(max_price_5, 6),
+                round(max_price_20, 6), round(max_price_60, 6))
 
             success = False
             if ret[0] == 1:
