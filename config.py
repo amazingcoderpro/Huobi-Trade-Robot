@@ -6,7 +6,13 @@
 # APIKEY
 ACCESS_KEY = ""
 SECRET_KEY = ""
-PRIVATE_KEY = open("secp256k1-key.pem", "rb").read()
+# PRIVATE_KEY = open("secp256k1-key.pem", "rb").read()
+PRIVATE_KEY = """-----BEGIN EC PRIVATE KEY-----
+MHQCAQEEIJxC7lk2nTcVUj+Dh3iIelrGIFwt/lPwJYcUsX10fkr9oAcGBSuBBAAK
+oUQDQgAEJYDjtP9s7i1FU0Gp3xXq0KQptrtxy63bb3TwlTo49GyasdhZYPF1HILk
+TskvXRsWal24HAelzpJWnFzXwZnRpw==
+-----END EC PRIVATE KEY-----
+"""
 ACCOUNT_ID = 0
 
 

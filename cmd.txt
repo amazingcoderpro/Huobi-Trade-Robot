@@ -1,1 +1,1 @@
-pyinstaller --onedir --noupx main.spec --icon=""
+pyinstaller --onedir --noupx main.spec --icon="favicon.ico"

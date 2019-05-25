@@ -32,7 +32,7 @@ is_exists = os.path.exists(os.path.join(BASE_DIR, "logs"))
 if not is_exists:
     os.makedirs(os.path.join(BASE_DIR, "logs"))
 LOG_FILE_PREFIX = "HuobiTrade"
-LOG_FILE_NAME = "logs//{}_{}.log".format(LOG_FILE_PREFIX, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))       # your_log_file_name.log
+LOG_FILE_NAME = "{}_{}.log".format(LOG_FILE_PREFIX, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))       # your_log_file_name.log
 # LOG_FILE_PATH = os.path.join(BASE_DIR, "log", LOG_FILE_NAME)   # your log full path
 LOG_FILE_PATH = LOG_FILE_NAME
 LOG_FILE_SIZE = 10 * 1024 * 1024                        # the limit of log file size
