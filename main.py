@@ -26,6 +26,7 @@ CURRENT_PRICE = 1
 
 class MainUI():
     def __init__(self, root):
+        self.verify = False
         self.notify_queue = queue.Queue()
         self.gress_bar_init_history = GressBar()
         self.gress_bar_verify_user = GressBar()
@@ -34,7 +35,7 @@ class MainUI():
         self._is_user_valid = False
         self._user_info = {}
         self._strategy_dict = {}
-        root.title("Huobi Trade")
+        root.title("火币量化交易系统(15691820861)")
         log_config.init_log_config(use_mail=False)
         self.first_login = True
         self._hb = None
@@ -234,10 +235,15 @@ class MainUI():
     def start_work(self):
         def start(hb):
             logger.info("start work!!")
-            log_config.output2ui("start work!!", 1)
+            log_config.output2ui("系统启动!!", 1)
             hb.run()
             logger.warning("work over!!")
             log_config.output2ui("work over!!", 2)
+
+        if not self.verify:
+            log_config.output2ui(u"授权认证检查失败, 系统暂时无法使用, 请稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!", 5)
+            messagebox.showerror("")
+            return
 
         if not self._hb:
             self._hb = Huobi()
@@ -252,7 +258,7 @@ class MainUI():
 
     def stop_work(self):
         logger.info("stop_work!")
-        log_config.output2ui("stop_work!")
+        log_config.output2ui("系统停止工作!")
         if self._hb:
             self._hb.exit()
         self.stop_check_strategy()
@@ -269,6 +275,10 @@ class MainUI():
         self.working = False
 
     def start_check_strategy(self):
+        if not self.verify:
+            log_config.output2ui(u"授权认证检查失败, 系统暂时无法使用, 请稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!", 5)
+            return
+
         # 策略检测线程启动
         logger.info("start_check_strategy...")
         log_config.output2ui("start_check_strategy...")
@@ -286,6 +296,10 @@ class MainUI():
         log_config.output2ui("Stop check strategy successfully!", 8)
 
     def register_strategy(self):
+        if not self.verify:
+            log_config.output2ui(u"授权认证检查失败, 系统暂时无法使用, 请稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!", 5)
+            return
+
         logger.info("register_strategy.")
         log_config.output2ui("register_strategy.")
         self._strategy_pool.clean_all()
@@ -510,6 +524,22 @@ class MainUI():
                     diff1 = uml[0] - uml[1]
                     diff2 = uml[1] - uml[2]
                     uml_text.set("{}/{}/{}-{}/{}-{}/{}".format(round(uml[0], 3), round(uml[1], 3), round(uml[2], 3), round(diff1, 3), round(diff2, 3), round(diff1 / CURRENT_PRICE, 4), round(diff2 / CURRENT_PRICE, 4)))
+
+                    if process.LAST_VERIFY_TIME:
+                        if (datetime.datetime.now() - process.LAST_VERIFY_TIME).total_seconds() > 24*3600:
+                            ret = self.verify_huobi(config.ACCESS_KEY)
+                            if not ret[0]:
+                                self.clean_strategy()
+                                self.stop_check_strategy()
+                                self.stop_work()
+                                time.sleep(2)
+                                log_config.output2ui(ret[1], 5)
+                                messagebox.showwarning("Error", ret[1])
+                            else:
+                                process.LAST_VERIFY_TIME = datetime.datetime.now()
+
+                    else:
+                        process.LAST_VERIFY_TIME = datetime.datetime.now()
                 except Exception as e:
                     logger.exception("update_uml exception....")
                     log_config.output2ui("update_uml exception....", 3)
@@ -667,6 +697,48 @@ class MainUI():
         th.start()
         self.gress_bar_verify_user.start(text="Verifying user identity, please wait a moment...")
 
+    def verify_huobi(self, access_key):
+        retry = 3
+        status_code = 0
+        error_info = ""
+        log_config.output2ui(u"正在进行权限验证, 请稍等...", 8)
+        try:
+            while retry >= 0:
+                time.sleep(1)
+                host = "47.75.10.215"
+                ret = requests.get("http://{}:5000/huobi/{}".format(host, access_key))
+                if ret.status_code == 200:
+                    self.verify = True
+                    logger.info(u"授权认证成功！ 过期时间: {}".format(ret.text))
+                    return True, u"授权认证成功！ 过期时间: {}".format(ret.text)
+                else:
+                    #201-invalid, 202-does not exist, 203-expired, 204-exception
+                    if ret.status_code == 204:
+                        retry -= 1
+                        status_code = 204
+                        error_info = ret.text
+                        logger.error("verify_huobi, server exception 204")
+                        continue
+                    elif ret.status_code == 203:
+                        logger.error("verify_huobi expired. status code={}, text={}".format(ret.status_code, ret.text))
+                        msg = u"您的授权截止: {} 已过期, 无法继续使用本系统, 如需继续授权使用, 请提供您的AccessKey:\n{}\n给系统管理员续费使用！ \n联系方式:15691820861(可加微信)!".format(ret.text, access_key)
+                        self.verify = False
+                        return False, msg
+                    else:
+                        logger.error("verify_huobi failed. status code={}, text={}".format(ret.status_code, ret.text))
+                        msg = u"授权认证失败, 错误码: {}.\n无法继续使用本系统, 请确认您输入的账户信息正确无误! 如需授权使用, 请提供您的AccessKey:\n{}\n给系统管理员以开通使用权限！ \n联系方式:15691820861(可加微信)!".format(ret.status_code, access_key)
+                        self.verify = False
+                        return False, msg
+        except Exception as e:
+            status_code = -1
+            error_info = str(e)
+            error_info.replace("47.75.10.215", "47.77.13.207")
+            error_info.replace("5000", "1009")
+            logger.error("verify_huobi e={}".format(error_info))
+
+        self.verify = False
+        return False, u"授权认证检查失败, 系统暂时无法使用, 错误码：{},错误信息:{}.\n请检查您的网络情况, 稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!".format(status_code, error_info)
+
     def set_up_account(self):
         from popup_account import PopupAccountConfig
         pop = PopupAccountConfig(self._user_info, "Verify identity")
@@ -677,19 +749,22 @@ class MainUI():
         logger.info("{}".format(self._user_info))
         log_config.output2ui("{}".format(self._user_info))
 
-        access_key = self._user_info.get("access_key", "")
-        ret = requests.get("http://47.75.10.215:5000/huobi/{}".format(access_key))
-        if not (ret.status_code == 205 and ret.text == access_key[2:6]):
-            logger.info(u"授权失败, 无法继续使用本系统, 请联系系统管理员开通使用权限！ 手机:15691820861(可加微信)!")
-            msg = u"授权失败, 无法继续使用本系统, 请确认您输入的账户信息正确无误! 如需授权使用, 请提供您的AccessKey:\n{}\n给系统管理员以开通使用权限！ \n联系方式:15691820861(可加微信)!".format(access_key)
-            log_config.output2ui(msg, 5)
-            messagebox.showerror("Error", msg)  # 提出警告对话窗
-            return
-
         self.price_text.set("")
         self.bal_text.set("")
         self.coin_text.set("")
         self.nick_name_text.set(config.NICK_NAME)
+
+        access_key = self._user_info.get("access_key", "")
+        ret = self.verify_huobi(access_key)
+        if ret[0]:
+            logger.info(u"认证成功, key={}".format(access_key))
+            log_config.output2ui(ret[1], 8)
+        else:
+            logger.error(u"授权认证失败, key={}".format(access_key))
+            log_config.output2ui(ret[1], 5)
+            messagebox.showerror("Error", ret[1])  # 提出警告对话窗
+            return
+
         self.verify_user_information()
 
 

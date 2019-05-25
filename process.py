@@ -25,6 +25,7 @@ pd.set_option('expand_frame_repr', False)  # 当列太多时不换行
 """eg:
     {"market.btcusdt.kline.15min": Dataframe["ts", "tick_id", "open", "high", "low", 'close', 'amount', 'vol', 'count']}
 """
+LAST_VERIFY_TIME = None
 KLINE_DATA = {}
 REALTIME_PRICE = {}#queue.Queue()
 REALTIME_BALANCE = "" # queue.Queue()
