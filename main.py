@@ -194,7 +194,7 @@ class MainUI():
 
         self.label_run_log.grid(row=4, column=1)
         self.log_text.grid(row=5, column=1, rowspan=5, columnspan=3)
-        self.label_trade_log.grid(row=4, column=3)
+        self.label_trade_log.grid(row=4, column=4)
         self.trade_text.grid(row=5, column=4, rowspan=5, columnspan=3)
 
         self.start_button.config(state="disabled")
