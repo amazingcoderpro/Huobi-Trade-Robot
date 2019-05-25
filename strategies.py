@@ -32,7 +32,7 @@ TRADE_RECORD = []
 
 move_stop_profit_params = {"check": 1, "msf_min": 0.018, "msf_back": 0.21}
 stop_loss_params = {"check": 0, "percent": 0.03}
-kdj_buy_params = {"check": 1, "k": 23, "d": 21, "buy_percent": 0.25, "up_percent": 0.004, "peroid": "15min"}
+kdj_buy_params = {"check": 1, "k": 23, "d": 21, "buy_percent": 0.22, "up_percent": 0.004, "peroid": "15min"}
 kdj_sell_params = {"check": 1, "k": 82, "d": 80, "sell_percent": 0.3, "down_percent": 0.005, "peroid": "15min"}
 vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 2, "price_up_limit": 0.01, "buy_percent": 0.3,
                         "peroid": "5min"}
@@ -395,11 +395,11 @@ def kdj_strategy_buy():
     if last_diff_kd < 0 and diff_kd >= -3 and diff_kd > last_diff_kd and cur_k > cur_k1 and diff_kd > last_diff_kd2:
         if cur_k < 30 and cur_d < 30:
             logging.warning(u"KDJ 低位即将金叉, k1={}, k={}, d1={}, d={}, cp={}. curk2={}, last_diff_kd2={}".format(cur_k1, cur_k, cur_d1, cur_d, current_price, cur_k2, last_diff_kd2))
-            buy_percent += 0.25
+            buy_percent += 0.22
             strategy_flag.append(u"低位金叉")
         elif cur_k <= 55 and cur_d <= 55 and current_price < middle and cur_d >= cur_d1:  # 中位金叉,且未出中轨
             logging.warning(u"KDJ 中位即将金叉, k1={}, k={}, d1={}, d={}, cp={}, upper={}, curk2={}, last_diff_kd2={}".format(cur_k1, cur_k, cur_d1, cur_d, current_price, upper, cur_k2, last_diff_kd2))
-            buy_percent += 0.15
+            buy_percent += 0.12
             strategy_flag.append(u"中位金叉")
     else:
         logger.info(u"没有趋近金叉, k1={}, k={}, d1={}, d={}, last_diff_kd={}, diff_kd={}, cp={}. curk2={}, last_diff_kd2={}".format(cur_k1, cur_k, cur_d1, cur_d, last_diff_kd, diff_kd, current_price, cur_k2, last_diff_kd2))
@@ -473,7 +473,7 @@ def kdj_strategy_buy():
 
                 if (last_k <= need_k and last_d <= need_d and cur_k > last_k) or (cur_k<15 and cur_d<15 and (cur_k-cur_d)>-5) or (last_k_2<need_k and last_d_2<need_d):
                     logging.warning("KDJ 低位回弹, k={}, d={}, k1={}, d1={}, cp={}, upp={}".format(cur_k, cur_d, last_k, last_d, current_price, actual_up_percent))
-                    buy_percent += kdj_buy_params.get("buy_percent", 0.25)
+                    buy_percent += kdj_buy_params.get("buy_percent", 0.2)
 
                     strategy_flag.append(u"低位回弹")
                     ret = is_buy_big_than_sell(symbol, 2)
@@ -2150,16 +2150,16 @@ STRATEGY_LIST = [
     # Strategy(macd_strategy_1day, 20, 1, "macd_strategy_1day"),
     # Strategy(kdj_strategy_buy, 240, -1, after_execute_sleep=900 * 3, name="kdj_strategy_buy"),
     # Strategy(kdj_strategy_sell, 240, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
-    Strategy(kdj_strategy_buy, 23, -1, after_execute_sleep=900 * 3, name="kdj_strategy_buy"),
-    Strategy(kdj_strategy_sell, 25, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
-    Strategy(stop_loss, 35, -1, after_execute_sleep=300, name="stop_loss"),
-    Strategy(move_stop_profit, 30, -1, after_execute_sleep=300, name="move_stop_profit"),
-    Strategy(vol_price_fly, 150, -1, name="vol_price_fly", after_execute_sleep=900 * 2),
-    Strategy(boll_strategy, 120, -1, name="boll strategy", after_execute_sleep=900 * 2),
+    Strategy(kdj_strategy_buy, 10, -1, after_execute_sleep=900 * 2, name="kdj_strategy_buy"),
+    Strategy(kdj_strategy_sell, 10, -1, after_execute_sleep=900 * 2, name="kdj_strategy_sell"),
+    Strategy(stop_loss, 20, -1, after_execute_sleep=300, name="stop_loss"),
+    Strategy(move_stop_profit, 12, -1, after_execute_sleep=300, name="move_stop_profit"),
+    Strategy(vol_price_fly, 20, -1, name="vol_price_fly", after_execute_sleep=900 * 2),
+    Strategy(boll_strategy, 20, -1, name="boll strategy", after_execute_sleep=900 * 2),
     # Strategy(kdj_5min_update, 30, -1, name="kdj_5min_update", after_execute_sleep=1),
-    Strategy(kdj_15min_update, 30, -1, name="kdj_15min_update", after_execute_sleep=3),
-    Strategy(buy_low, 15, -1, name="buy_low", after_execute_sleep=600),
-    Strategy(sell_high, 17, -1, name="sell_high", after_execute_sleep=600),
+    Strategy(kdj_15min_update, 10, -1, name="kdj_15min_update", after_execute_sleep=3),
+    Strategy(buy_low, 10, -1, name="buy_low", after_execute_sleep=600),
+    Strategy(sell_high, 11, -1, name="sell_high", after_execute_sleep=600),
 ]
 
 
