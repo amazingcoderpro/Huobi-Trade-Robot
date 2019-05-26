@@ -107,7 +107,7 @@ def output2ui(msg, level=UI_LOG_LEVEL):
 
     global REALTIME_LOG
     if level == 8:
-        format_msg = "--- {} ---\n".format(msg)
+        format_msg = "\n--- {} \n".format(msg)
     else:
         format_msg = "[{}]{} {} \n".format(str_time, UI_LOG_LEVEL_LIST[level], msg)
 

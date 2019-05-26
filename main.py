@@ -48,73 +48,73 @@ class MainUI():
         #
         # self.init_history_button = Button(root, text="Init History", command=self.init_history, width=20)
         #
-        self.start_button = Button(root, text="Start Work", command=self.start_work, width=20)
+        self.start_button = Button(root, text=u"开始工作", command=self.start_work, width=20)
         # self.start_button.pack()
 
-        self.stop_button = Button(root, text="Stop Work", command=self.stop_work, width=20)
+        self.stop_button = Button(root, text=u"停止工作", command=self.stop_work, width=20)
         # self.stop_button.pack()
 
-        self.register_button = Button(root, text="Register Strategy", command=self.register_strategy, width=20)
+        self.register_button = Button(root, text=u"注册策略", command=self.register_strategy, width=20)
         # self.register_button.pack()
 
-        self.start_check_strategy_button = Button(root, text="Start Check Strategy", command=self.start_check_strategy, width=20)
+        self.start_check_strategy_button = Button(root, text=u"开始执行策略", command=self.start_check_strategy, width=20)
         # self.start_check_strategy_button.pack()
 
-        self.stop_check_strategy_button = Button(root, text="Stop Check Strategy", command=self.stop_check_strategy, width=20)
+        self.stop_check_strategy_button = Button(root, text="停止执行策略", command=self.stop_check_strategy, width=20)
         # self.stop_check_strategy_button.pack()
 
-        self.clean_st_button = Button(root, text="Clean Strategy", command=self.clean_strategy, width=20)
+        self.clean_st_button = Button(root, text="清空策略", command=self.clean_strategy, width=20)
         # self.clean_st_button.pack()
-        self.verify_identity_button = Button(root, text="Verify Identity", command=self.set_up_account, width=20)
+        self.verify_identity_button = Button(root, text="身份验证", command=self.set_up_account, width=20)
 
-        self.init_history_button = Button(root, text="Init History", command=self.init_history_asyn, width=20)
+        self.init_history_button = Button(root, text="系统初始化", command=self.init_history_asyn, width=20)
 
-        self.strategy_setting_button = Button(root, text="Strategy Config", command=self.set_up_strategy, width=20)
-        self.system_setting_button = Button(root, text="System Config", command=self.set_up_system, width=20)
+        self.strategy_setting_button = Button(root, text="策略配置", command=self.set_up_strategy, width=20)
+        self.system_setting_button = Button(root, text="系统配置", command=self.set_up_system, width=20)
 
-        self.label_pop = Label(root, text="实时价格: ", width=15)
+        self.label_pop = Label(root, text=u"实时价格: ", width=15)
         self.price_text = StringVar()
         self.price_text.set("")
         self.price_label = Label(root, textvariable=self.price_text, foreground='blue', background="gray",
                                  font=("", 12, 'bold'), width=25)
         # self.price_label.pack()
 
-        self.label_bal = Label(root, text="当前账户余额(币,金): ", width=15)
+        self.label_bal = Label(root, text=u"当前账户余额(币,金): ", width=15)
         self.bal_text = StringVar()
         self.bal_text.set("")
         self.bal_label = Label(root, textvariable=self.bal_text, foreground='blue', background="gray",
                                font=("", 12, 'bold'), width=25)
 
-        self.label_coin = Label(root, text="当前账户总资产(按币/金/仓位): ", width=22)
+        self.label_coin = Label(root, text=u"当前账户总资产(按币/金/仓位): ", width=22)
         self.coin_text = StringVar()
         self.coin_text.set("")
         self.coin_label = Label(root, textvariable=self.coin_text, foreground='blue', background="gray",
                                 font=("", 12, 'bold'), width=30)
 
-        self.label_profit = Label(root, text="盈利情况(币/金本位): ", width=20)
+        self.label_profit = Label(root, text=u"盈利情况(币/金本位): ", width=20)
         self.profit_text = StringVar()
         self.profit_text.set("")
         self.profit_label = Label(root, textvariable=self.profit_text, foreground='blue', background="gray",
                                   font=("", 12, 'bold'), width=25)
-        self.clean_profit_button = Button(root, text="重置", command=self.reset_profit, width=8)
+        self.clean_profit_button = Button(root, text=u"重置", command=self.reset_profit, width=8)
 
         # row6 = Frame(root)
         # row6.pack(fill="x", ipadx=1, ipady=1)
 
-        self.label_kdj = Label(root, text="15分钟KDJ: ", width=15)
+        self.label_kdj = Label(root, text=u"15分钟KDJ: ", width=15)
         self.kdj_text = StringVar()
         self.kdj_text.set("")
         self.kdj_label = Label(root, textvariable=self.kdj_text, foreground='#9A32CD', background="gray",
                                font=("", 12, 'bold'), width=25)
 
-        self.label_uml = Label(root, text="布林线: ", width=15)
+        self.label_uml = Label(root, text=u"布林线: ", width=15)
         self.uml_text = StringVar()
         self.uml_text.set("")
         self.uml_label = Label(root, textvariable=self.uml_text, foreground='#9A32CD', background="gray",
                                font=("", 12, 'bold'), width=30)
 
         # 初始信息
-        self.label_origin = Label(root, text="初始价格/币数/USDT/总价值: ", width=25)
+        self.label_origin = Label(root, text=u"初始价格/币数/USDT/总价值: ", width=25)
         self.origin_text = StringVar()
         self.origin_text.set("")
         self.origin_label = Label(root, textvariable=self.origin_text, foreground='blue', background="gray",
@@ -125,15 +125,15 @@ class MainUI():
         self.nick_name_text_label = Label(root, textvariable=self.nick_name_text, foreground='blue', background="gray",
                                font=("", 12, 'bold'), width=10)
 
-        self.label_now = Label(root, text="大盘涨跌幅/账户涨跌幅: ", width=22)
+        self.label_now = Label(root, text=u"大盘涨跌幅/账户涨跌幅: ", width=22)
         self.now_text = StringVar()
         self.now_text.set("")
         self.now_label = Label(root, textvariable=self.now_text, foreground='blue', background="gray",
                                font=("", 12, 'bold'), width=30)
 
-        self.label_run_log = Label(root, text="运行日志: ", width=10)
+        self.label_run_log = Label(root, text=u"运行日志: ", width=10)
         self.log_text = ScrolledText(root, width=60, height=26)
-        self.label_trade_log = Label(root, text="交易日志: ", width=10)
+        self.label_trade_log = Label(root, text=u"交易日志: ", width=10)
         self.trade_text = ScrolledText(root, width=60, height=26)
         # self.log_text.pack()
         # 创建一个TAG，其前景色为红色
@@ -156,11 +156,11 @@ class MainUI():
         self.strategy_setting_button.grid(row=3, column=0)
         self.start_button.grid(row=4, column=0)
 
-        self.register_button.grid(row=5, column=0)
-        self.start_check_strategy_button.grid(row=6, column=0)
-        self.clean_st_button.grid(row=7, column=0)
-        self.stop_check_strategy_button.grid(row=8, column=0)
-        self.stop_button.grid(row=9, column=0)
+        # self.register_button.grid(row=5, column=0)
+        # self.start_check_strategy_button.grid(row=6, column=0)
+        # self.clean_st_button.grid(row=7, column=0)
+        # self.stop_check_strategy_button.grid(row=8, column=0)
+        self.stop_button.grid(row=5, column=0)
 
         self.label_pop.grid(row=0, column=1)
         self.price_label.grid(row=0, column=2)
@@ -214,10 +214,10 @@ class MainUI():
             self.gress_bar_init_history.quit()
             if not (ret and ret2):
                 logger.error("init service failed.")
-                log_config.output2ui("init service failed.", 3)
-                messagebox.showwarning("Error", "init history data failed.")
+                log_config.output2ui(u"系统初始化失败!", 3)
+                messagebox.showwarning("Error", u"系统初始化失败!")
                 return False
-            log_config.output2ui("Init history data successfully!", 8)
+            log_config.output2ui(u"系统初始化成功!", 8)
             self.start_button.config(state="normal")
             self.register_button.config(state="normal")
             self.init_history_button.config(state="disabled")
@@ -234,10 +234,10 @@ class MainUI():
     def start_work(self):
         def start(hb):
             logger.info("start work!!")
-            log_config.output2ui("系统启动!!", 1)
+            log_config.output2ui(u"系统启动!!", 1)
             hb.run()
             logger.warning("work over!!")
-            log_config.output2ui("work over!!", 2)
+            log_config.output2ui(u"工作结束!!", 2)
 
         if not self.verify:
             log_config.output2ui(u"授权认证检查失败, 系统暂时无法使用, 请稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!", 5)
@@ -279,7 +279,7 @@ class MainUI():
         self.verify_identity_button.config(state="normal")
 
         # log_config.output2ui("Stop work successfully!", 8)
-        log_config.output2ui("系统已停止工作!", 8)
+        log_config.output2ui(u"系统已停止工作!", 8)
         self.working = False
 
     def start_check_strategy(self):
@@ -289,19 +289,19 @@ class MainUI():
 
         # 策略检测线程启动
         logger.info("start_check_strategy...")
-        log_config.output2ui("start_check_strategy...")
+        log_config.output2ui(u"启动策略...")
         self._strategy_pool.start_work()
         self.start_check_strategy_button.config(state="disabled")
         self.stop_check_strategy_button.config(state="normal")
-        log_config.output2ui("Start check strategy successfully!", 8)
+        log_config.output2ui(u"启动策略成功，将为您智能发现最佳交易时机并进行自动交易！", 8)
 
     def stop_check_strategy(self):
         logger.warning("stop_check_strategy...")
-        log_config.output2ui("stop_check_strategy...", 2)
+        log_config.output2ui(u"停止执行策略...", 2)
         self._strategy_pool.stop_work()
         self.start_check_strategy_button.config(state="normal")
         self.stop_check_strategy_button.config(state="disabled")
-        log_config.output2ui("Stop check strategy successfully!", 8)
+        log_config.output2ui(u"停止执行策略成功!", 8)
 
     def register_strategy(self):
         if not self.verify:
@@ -309,7 +309,7 @@ class MainUI():
             return
 
         logger.info("register_strategy.")
-        log_config.output2ui("register_strategy.")
+        log_config.output2ui(u"注册策略...")
         self._strategy_pool.clean_all()
         for strategy in strategies.STRATEGY_LIST:
             logger.info("register_strategy, strategy={}".format(strategy.name))
@@ -317,15 +317,15 @@ class MainUI():
             self._strategy_pool.register(strategy)
         self.clean_st_button.config(state="normal")
         self.register_button.config(state="disabled")
-        log_config.output2ui("Register strategy successfully!", 8)
+        log_config.output2ui(u"注册策略成功!", 8)
 
     def clean_strategy(self):
         logger.warning("clean_strategy...")
-        log_config.output2ui("clean_strategy...", 2)
+        log_config.output2ui(u"清空所有策略...", 2)
         self._strategy_pool.clean_all()
         self.clean_st_button.config(state="disabled")
         self.register_button.config(state="normal")
-        log_config.output2ui("Clean strategy successfully!", 8)
+        log_config.output2ui(u"清空所有策略成功!", 8)
 
     # def call_ckb_macd(self):
     #     print("check macd val=%d" % self.ckb_macd_val.get())
@@ -354,16 +354,16 @@ class MainUI():
                 if price <= buy_price:
                     ret = strategies.buy_market(symbol, amount=buy_amount, record=True, current_price=price)
                     if ret[0]:
-                        msg = "挂单买入{}成功: 挂单价格={}$, 挂单金额={}$, 实际价格={}$, 实际买入金额={}$.".format(symbol, buy_price, buy_amount, price, ret[1])
+                        msg = u"挂单买入{}成功: 挂单价格={}$, 挂单金额={}$, 实际价格={}$, 实际买入金额={}$.".format(symbol, buy_price, buy_amount, price, ret[1])
                         success = False
                         if ret[0] == 1:
-                            msg += "-交易成功！"
+                            msg += u"-交易成功！"
                             config.WAIT_BUY_ACCOUNT[i] = buy_amount - ret[1]
                             success = True
                         elif ret[0] == 2:
-                            msg += "-交易被取消, 取消原因: {}!".format(ret[2])
+                            msg += u"-交易被取消, 取消原因: {}!".format(ret[2])
                         elif ret[0] == 3:
-                            msg += "-交易失败, 失败原因: {}！".format(ret[2])
+                            msg += u"-交易失败, 失败原因: {}！".format(ret[2])
                         log_config.output2ui(msg, 6)
                         logger.warning(msg)
                         log_config.notify_user(msg, own=True)
@@ -379,17 +379,17 @@ class MainUI():
                     ret = strategies.sell_market(symbol, amount=sell_amount, record=False, current_price=price)
                     if ret[0]:
                         config.WAIT_SELL_ACCOUNT[i] = sell_amount - ret[1]
-                        msg = "挂单卖出{}: 挂单价格={}, 挂单个数={}个, 实际价格={}, 实际挂单卖出个数={}个.".format(symbol,
+                        msg = u"挂单卖出{}: 挂单价格={}, 挂单个数={}个, 实际价格={}, 实际挂单卖出个数={}个.".format(symbol,
                                 sell_price, sell_amount, price, ret[1])
                         success = False
                         if ret[0] == 1:
-                            msg += "-交易成功！"
+                            msg += u"-交易成功！"
                             config.WAIT_SELL_ACCOUNT[i] = sell_amount - ret[1]
                             success = True
                         elif ret[0] == 2:
-                            "-交易被取消, 取消原因: {}!".format(ret[2])
+                            u"-交易被取消, 取消原因: {}!".format(ret[2])
                         elif ret[0] == 3:
-                            msg += "-交易失败, 失败原因: {}！".format(ret[2])
+                            msg += u"-交易失败, 失败原因: {}！".format(ret[2])
                         log_config.output2ui(msg, 7)
                         logger.warning(msg)
                         log_config.notify_user(msg, own=True)
@@ -464,8 +464,17 @@ class MainUI():
         # # 每1000毫秒触发自己，形成递归，相当于死循环
         # self.root.after(1000, self.process_msg)
         logger.info("Welcome to Huobi Trade Tool")
-        log_config.output2ui("Welcome to Huobi Trade Tool", 8)
-        log_config.output2ui("Please Click [Verify Identity] to authenticate", 8)
+        log_config.output2ui(u"-----------------欢迎使用火币量化交易系统！----------------- ---\n　 本系统由资深量化交易专家和算法团队倾力打造，对接火币官方接口，经过长达两年的不断测试与优化，"
+                             u"本地化运行，更加安全可控，策略可定制，使用更方便!　\n   系统结合历史与实时数据进行分析，加上内置的多套专业策略组合算法，根据您的仓位、策略定制因"
+                             u"子和风险接受能力等的不同，智能发现属于您的最佳交易时机进行自动化交易，并可以设置邮件和微信提醒，"
+                             u"真正帮您实现24小时实时盯盘，专业可靠，稳定盈利！", 8)
+        log_config.output2ui(
+            u"免责声明:\n  1. 使用本系统时，系统将会根据程序判断帮您进行自动化交易，因此产生的盈利或亏损均由您个人负责，与系统开发团队无关\n  2. 本系统需要您提供您在火币官网申请的API密钥，获取火币官方授权后方能正常运行，本系统承诺不会上传您的密钥到火币平台以外的地址，请您妥善保管好自己的密钥，发生丢失造成的财产损失与本系统无关\n  3. 因操作失误，断网，断电，程序异常等因素造成的经济损失与系统开发团队无关\n  4.如需商业合作，充值或使用过程中如有任何问题可与售后团队联系，联系方式:15691820861",
+            8)
+        log_config.output2ui(u"使用步骤如下:", 8)
+        log_config.output2ui(u"第一步，请点击 [身份验证] 输入您在火币官网申请的API KEY，选择您想自动化交易的币种，进行授权认证！", 8)
+
+
 
         def update_price(price_text):
             while self.verify:
