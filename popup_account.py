@@ -41,24 +41,24 @@ class PopupAccountConfig(Toplevel):
     def setup_ui(self):
         row1 = Frame(self)
         row1.pack(fill="x")
-        Label(row1, text="ACCESS_KEY: ", width=15).pack(side=LEFT)
+        Label(row1, text="ACCESS　KEY: ", width=15).pack(side=LEFT)
         Entry(row1, textvariable=self.access_key, width=40).pack(side=LEFT)
-        Button(row1, text=u"导入凭据", command=lambda: self.on_open_key(), width=10).pack(side=RIGHT)
+        Button(row1, text=u"导入密钥", command=lambda: self.on_open_key(), width=10).pack(side=RIGHT)
 
         row2 = Frame(self)
         row2.pack(fill="x", ipadx=1, ipady=1)
-        Label(row2, text="SECRET_KEY: ", width=15).pack(side=LEFT)
+        Label(row2, text="SECRET　KEY: ", width=15).pack(side=LEFT)
         Entry(row2, textvariable=self.secret_key, width=40).pack(side=LEFT)
 
         # row2 = Frame(self)
         # row2.pack(fill="x", ipadx=1, ipady=1)
         # self.ckb_save = Checkbutton(row2, text='Save', variable=self.ckb_save_val, onvalue=1, offvalue=0).pack()
 
-        Button(row2, text=u"保存凭据", command=lambda: self.on_save_key(), width=10).pack(side=RIGHT)
+        Button(row2, text=u"保存密钥", command=lambda: self.on_save_key(), width=10).pack(side=RIGHT)
 
         row3 = Frame(self)
         row3.pack(fill="x", ipadx=1, ipady=1)
-        Label(row3, text="交易对: ", width=10).pack(side=LEFT)
+        Label(row3, text=u"选择币种: ", width=10).pack(side=LEFT)
         # lst_trade = ['ethusdt', 'btcusdt', 'eosusdt', 'xrpusdt', 'eoseth', "rsrusdt"]
 
         lst_trade_left = [x.upper() for x in config.SUPPORT_TRADE_LEFT]
@@ -73,15 +73,14 @@ class PopupAccountConfig(Toplevel):
 
         # row3 = Frame(self)
         # row3.pack(fill="x", ipadx=1, ipady=1)
-        Label(row3, text="WS: ", width=10).pack(side=LEFT)
+        Label(row3, text=u"WS站点: ", width=10).pack(side=LEFT)
         lst_site = ['BR', 'PRO', 'HX']
         OptionMenu(row3, self.ws_site, *lst_site).pack(side=LEFT)
 
         # row3 = Frame(self)
         # row3.pack(fill="x", ipadx=1, ipady=1)
-        Label(row3, text="RestAPI: ", width=10).pack(side=LEFT)
+        Label(row3, text=u"RestAPI站点: ", width=10).pack(side=LEFT)
         OptionMenu(row3, self.rest_site, *lst_site).pack(side=LEFT)
-
 
         row3 = Frame(self)
         row3.pack(fill="x")
@@ -98,11 +97,11 @@ class PopupAccountConfig(Toplevel):
         rest_site = self.rest_site.get()
 
         if not access_key or not secret_key:
-            messagebox.showwarning("Warning", "User's key should not be empty!")  # 提出警告对话窗
+            messagebox.showwarning("Warning", "用户密钥不能为空!")  # 提出警告对话窗
             return
 
         if len(access_key) < 10 or len(secret_key) < 10:
-            messagebox.showwarning("Warning", "User's key is invalid!")  # 提出警告对话窗
+            messagebox.showwarning("Warning", "输入的密钥无效!")  # 提出警告对话窗
             return
 
         self.value_dict["access_key"] = access_key.strip().replace("\n", "")

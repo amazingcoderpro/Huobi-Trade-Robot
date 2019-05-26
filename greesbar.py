@@ -20,7 +20,8 @@ class GressBar():
         top.wm_attributes("-topmost", 1)
         top.title("Huobi Trade")
         # Label(top, text="正在初始化网络和历史数据，请稍等……", fg="green").pack(pady=2)
-        default_text = "Initializing network and historical data, please wait a moment..."
+        # default_text = "Initializing network and historical data, please wait a moment..."
+        default_text = u"正在初始化网络和历史数据，请稍等..."
         if text:
             default_text = text
         Label(top, text=default_text, fg="green").pack(pady=2)

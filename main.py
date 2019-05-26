@@ -198,6 +198,10 @@ class MainUI():
         self.trade_text.grid(row=5, column=4, rowspan=5, columnspan=3)
 
         self.start_button.config(state="disabled")
+
+        self.system_setting_button.config(state="disabled")
+        self.strategy_setting_button.config(state="disabled")
+
         self.register_button.config(state="disabled")
         self.stop_button.config(state="disabled")
         self.clean_st_button.config(state="disabled")
@@ -274,6 +278,7 @@ class MainUI():
         self.start_button.config(state="normal")
         self.register_button.config(state="normal")
         self.start_check_strategy_button.config(state="disabled")
+        # self.strategy_setting_button.config(state="disabled")
         # self.verify_identity_button.config(state="normal")
         self.init_history_button.config(state="normal")
         self.verify_identity_button.config(state="normal")
@@ -467,19 +472,20 @@ class MainUI():
         log_config.output2ui(u"-----------------欢迎使用火币量化交易系统！----------------- ---\n　 本系统由资深量化交易专家和算法团队倾力打造，对接火币官方接口，经过长达两年的不断测试与优化，"
                              u"本地化运行，更加安全可控，策略可定制，使用更方便!　\n   系统结合历史与实时数据进行分析，加上内置的多套专业策略组合算法，根据您的仓位、策略定制因"
                              u"子和风险接受能力等的不同，智能发现属于您的最佳交易时机进行自动化交易，并可以设置邮件和微信提醒，"
-                             u"真正帮您实现24小时实时盯盘，专业可靠，稳定盈利！", 8)
+                             u"真正帮您实现24小时实时盯盘，专业可靠，稳定盈利！\n", 8)
         log_config.output2ui(
-            u"免责声明:\n  1. 使用本系统时，系统将会根据程序判断帮您进行自动化交易，因此产生的盈利或亏损均由您个人负责，与系统开发团队无关\n  2. 本系统需要您提供您在火币官网申请的API密钥，获取火币官方授权后方能正常运行，本系统承诺不会上传您的密钥到火币平台以外的地址，请您妥善保管好自己的密钥，发生丢失造成的财产损失与本系统无关\n  3. 因操作失误，断网，断电，程序异常等因素造成的经济损失与系统开发团队无关\n  4.如需商业合作，充值或使用过程中如有任何问题可与售后团队联系，联系方式:15691820861",
+            u"免责声明:\n  1. 使用本系统时，系统将会根据程序判断自动帮您进行交易，因此产生的盈利或亏损均由您个人负责，与系统开发团队无关\n  2. 本系统需要您提供您在火币官网申请的API密钥，获取火币官方授权后方能正常运行，本系统承诺不会上传您的密钥到火币平台以外的地址，请您妥善保管好自己的密钥，发生丢失造成的财产损失与本系统无关\n  3. 因操作失误，断网，断电，程序异常等因素造成的经济损失与系统开发团队无关\n  4.如需商业合作，充值或使用过程中如有任何问题可与售后团队联系，联系方式: 15691820861\n",
             8)
-        log_config.output2ui(u"使用步骤如下:", 8)
-        log_config.output2ui(u"第一步，请点击 [身份验证] 输入您在火币官网申请的API KEY，选择您想自动化交易的币种，进行授权认证！", 8)
-
+        log_config.output2ui(u"--------------------使用步骤如下:", 8)
+        log_config.output2ui(u"第一步，请点击 [身份验证] 然后在弹出框中输入您在火币官网申请的API密钥，选择您想自动化交易的币种，进行授权认证！", 8)
 
 
         def update_price(price_text):
-            while self.verify:
+            while 1:
                 try:
                     time.sleep(1)
+                    if not self.verify:
+                        continue
                     msg = process.REALTIME_PRICE    #.get(block=True)
                     if msg:
                         # print("update_price {}".format(msg))
@@ -496,9 +502,11 @@ class MainUI():
                     continue
 
         def update_balance(bal_text):
-            while self.verify:
+            while 1:
                 try:
                     time.sleep(5)
+                    if not self.verify:
+                        continue
                     msg = process.REALTIME_BALANCE #.get(block=True)
                     bal_text.set(str(msg))
                 except Exception as e:
@@ -533,23 +541,32 @@ class MainUI():
                     continue
 
         def update_kdj(kdj_text):
-
-            while self.verify:
+            while 1:
                 try:
                     time.sleep(5)
+                    if not self.verify:
+                        continue
                     kdj_15min = process.REALTIME_KDJ_15MIN #.get(block=True)
-                    # kdj_5min = process.REALTIME_KDJ_5MIN.get(block=True)
-                    kdj_text.set("{}/{}/{}".format(round(kdj_15min[0], 2), round(kdj_15min[1], 2), round(kdj_15min[2], 2)))
+                    if not kdj_15min:
+                        kdj_text.set("")
+                    else:
+                        # kdj_5min = process.REALTIME_KDJ_5MIN.get(block=True)
+                        kdj_text.set("{}/{}/{}".format(round(kdj_15min[0], 2), round(kdj_15min[1], 2), round(kdj_15min[2], 2)))
                 except Exception as e:
                     logger.exception("update_kdj exception....")
                     log_config.output2ui("update_kdj exception....", 3)
 
         def update_uml(uml_text):
-            while self.verify:
+            while 1:
                 try:
                     time.sleep(5)
+                    if not self.verify:
+                        continue
                     global CURRENT_PRICE
                     uml = process.REALTIME_UML#.get(block=True)
+                    if not uml:
+                        uml_text.set("")
+                        continue
                     diff1 = uml[0] - uml[1]
                     diff2 = uml[1] - uml[2]
                     # uml_text.set("{}/{}/{}-{}/{}-{}/{}".format(round(uml[0], 6), round(uml[1], 6), round(uml[2], 6), round(diff1, 6), round(diff2, 6), round(diff1 / CURRENT_PRICE, 5), round(diff2 / CURRENT_PRICE, 5)))
@@ -577,10 +594,12 @@ class MainUI():
         def notify_profit_info():
             hour_report_start_time = None
             daily_report_start_time = None
-            while self.verify:
+            while 1:
                 time.sleep(60)
                 if self.working:
                     try:
+                        if not self.verify:
+                            continue
                         now_time = datetime.datetime.now()
                         if not daily_report_start_time:
                             daily_report_start_time = now_time
@@ -644,7 +663,7 @@ class MainUI():
                                         dapan_profit,
                                         account_profit,"***",
                                         is_win)
-                                log_config.output2ui(msg_own, level=8)
+                                # log_config.output2ui(msg_own, level=8)
                                 logger.warning(msg_own)
                                 ret1 = log_config.notify_user(msg_own, own=True)
                                 ret2 = log_config.notify_user(msg_other)
@@ -676,7 +695,8 @@ class MainUI():
         return True
 
     def close_window(self):
-        ans = askyesno("Warning", message="Are you sure to quit？")
+        # ans = askyesno("Warning", message="Are you sure to quit？")
+        ans = askyesno("Warning", message=u"确认退出？")
         if ans:
             self.gress_bar_init_history.quit()
             self.gress_bar_verify_user.quit()
@@ -712,11 +732,14 @@ class MainUI():
                 # self.verify_identity_button.config(state="disabled")
                 self.init_history_button.config(state="normal")
                 self.start_button.config(state="normal")
+                self.strategy_setting_button.config(state="normal")
+                self.system_setting_button.config(state="normal")
                 strategies.update_balance(is_first=True)
-                log_config.output2ui("Authentication passed!", 8)
+                log_config.output2ui(u"火币API授权认证成功! 您选择的交易币种为: {}{}\n".format(config.SUB_LEFT.upper(), config.SUB_RIGHT.upper()), 8)
+                log_config.output2ui(u"第二步，请点击 [系统初始化] 按钮，系统将开始初始化历史数据，以方进行便更加精确的数据分析．", 8)
             else:
-                messagebox.showwarning("Error", "Authentication failed!")
-                log_config.output2ui("Authentication failed!", 3)
+                messagebox.showwarning("Error", u"火币API授权认证失败，请检查您的KEY是否在有效期，或者您申请API KEY时绑定了IP地址，但您当前电脑的公网IP发生了变化!")
+                log_config.output2ui(u"火币API授权认证失败，请检查您的KEY是否在有效期，或者您申请API KEY时绑定了IP地址，但您当前电脑的公网IP发生了变化!", 3)
 
         th = threading.Thread(target=verify_user_by_get_balance, args=(
             self._user_info.get("trade_left", None),
@@ -727,7 +750,8 @@ class MainUI():
             3,))
         th.setDaemon(True)
         th.start()
-        self.gress_bar_verify_user.start(text="Verifying user identity, please wait a moment...")
+        # self.gress_bar_verify_user.start(text=u"Verifying user identity, please wait a moment...")
+        self.gress_bar_verify_user.start(text=u"火币API授权认证中, 请稍等...")
 
     def verify_huobi(self, access_key):
         retry = 3
@@ -735,7 +759,6 @@ class MainUI():
         error_info = ""
         try:
             while retry >= 0:
-                time.sleep(1)
                 host = "47.75.10.215"
                 ret = requests.get("http://{}:5000/huobi/{}".format(host, access_key))
                 if ret.status_code == 200:
@@ -760,6 +783,7 @@ class MainUI():
                         msg = u"系统授权认证失败, 错误码: {}.\n无法继续使用本系统, 请确认您输入的账户信息正确无误! 如需授权使用, 请提供您的AccessKey:\n{}\n给系统管理员以开通使用权限！ \n联系方式:15691820861(可加微信)!".format(ret.status_code, access_key)
                         self.verify = False
                         return False, msg
+                time.sleep(1)
         except Exception as e:
             status_code = -1
             error_info = str(e)
@@ -771,14 +795,17 @@ class MainUI():
         return False, u"系统授权认证检查失败, 暂时无法使用本系统, 错误码：{},错误信息:{}.\n请检查您的网络情况, 稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!".format(status_code, error_info)
 
     def set_up_account(self):
+        log_config.output2ui(
+            u"温馨提示：在身份验证弹出窗口上输入您的密钥后, 您可以点击[保存密钥]保存自己的密钥至本地文件中，以后进行身份验证时只需点击[导入密钥]即可．\n   如果您还没有API密钥，请登录火币官方网站，点击个人头像，进入API管理页面进行申请．官网地址: https://www.huobi.co/zh-cn/ \n   如果您还没有火币平台账号，请参考火币平台用户指导书，简单几步带您完成从注册到交易，文章链接: http://github.com/PythonAwesome/HuobiUserGuide/blob/master/README.md", 1)
+
         from popup_account import PopupAccountConfig
-        pop = PopupAccountConfig(self._user_info, "Verify identity")
+        pop = PopupAccountConfig(self._user_info, u"身份验证")
         self.root.wait_window(pop)
         if not self._user_info.get("ok", False):
             return
 
         logger.info("{}".format(self._user_info))
-        log_config.output2ui("{}".format(self._user_info))
+        # log_config.output2ui("{}".format(self._user_info))
 
         self.price_text.set("")
         self.bal_text.set("")
@@ -786,7 +813,7 @@ class MainUI():
         self.nick_name_text.set(config.NICK_NAME)
 
         access_key = self._user_info.get("access_key", "")
-        log_config.output2ui(u"正在进行权限验证, 请稍等...", 8)
+        # log_config.output2ui(u"正在进行权限验证, 请稍等...", 8)
         ret = self.verify_huobi(access_key)
         if ret[0]:
             logger.info(u"认证成功, key={}".format(access_key))

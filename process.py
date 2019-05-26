@@ -44,8 +44,8 @@ REALTIME_KDJ_5MIN = (1, 1, 1)#queue.Queue()
 REALTIME_KDJ_30MIN = queue.Queue()
 REALTIME_KDJ_1DAY = queue.Queue()
 
-REALTIME_KDJ_15MIN = (1, 1, 1) #queue.Queue()
-REALTIME_UML = (1, 1, 1) #queue.Queue()
+REALTIME_KDJ_15MIN = None#(1, 1, 1) #queue.Queue()
+REALTIME_UML = None #(1, 1, 1) #queue.Queue()
 #所有的K线订阅响应都在此处理
 def kline_sub_msg_process(response):
     if not is_valid(response, "sub"):
