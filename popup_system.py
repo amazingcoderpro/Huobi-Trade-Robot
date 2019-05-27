@@ -173,36 +173,36 @@ class PopupSystem(Toplevel):
         Label(row3, text=u"限制最低持仓比(取值0-100): ", width=25).pack(side=LEFT)
         Entry(row3, textvariable=self.position_low, width=5).pack(side=LEFT)
         Label(row3, text=u"%", width=5).pack(side=LEFT)
-        self.ckb_fp_low = Checkbutton(row3, text='低于该仓位后是否强制锁仓（不再卖出）', variable=self.ckb_force_position_low, onvalue=1, offvalue=0).pack()
+        self.ckb_fp_low = Checkbutton(row3, text='低于该仓位后是否强制锁仓（即不再卖出）', variable=self.ckb_force_position_low, onvalue=1, offvalue=0).pack()
 
         row3 = Frame(self)
         row3.pack(fill="x")
         Label(row3, text=u"限制最高持仓比(取值0-100): ", width=25).pack(side=LEFT)
         Entry(row3, textvariable=self.position_high, width=5).pack(side=LEFT)
         Label(row3, text=u"%", width=5).pack(side=LEFT)
-        self.ckb_fp_high = Checkbutton(row3, text='高于该仓位后是否强制锁仓（不再买入）', variable=self.ckb_force_position_high, onvalue=1, offvalue=0).pack()
+        self.ckb_fp_high = Checkbutton(row3, text='高于该仓位后是否强制锁仓（即不再买入）', variable=self.ckb_force_position_high, onvalue=1, offvalue=0).pack()
 
 
         row3 = Frame(self)
         row3.pack(fill="x")
         Label(row3, text=u"历史交易记录播报周期(小时): ", width=25).pack(side=LEFT)
-        Entry(row3, textvariable=self.trade_history_report_interval, width=15).pack(side=LEFT)
-        Button(row3, text="立即发送", command=lambda: self.on_send_history(), width=10).pack(side=RIGHT)
+        Entry(row3, textvariable=self.trade_history_report_interval, width=10).pack(side=LEFT)
+        Button(row3, text=u"立即发送", command=lambda: self.on_send_history(), width=10).pack(side=LEFT)
 
 
         row3 = Frame(self)
         row3.pack(fill="x")
-        Label(row3, text=u"账户信息播报周期(小时): ", width=25).pack(side=LEFT)
-        Entry(row3, textvariable=self.account_report_interval, width=15).pack(side=LEFT)
-        Button(row3, text="立即发送", command=lambda: self.on_send_account_info(), width=10).pack(side=RIGHT)
+        Label(row3, text=u"当前账户信息播报周期(小时): ", width=25).pack(side=LEFT)
+        Entry(row3, textvariable=self.account_report_interval, width=10).pack(side=LEFT)
+        Button(row3, text=u"立即发送", command=lambda: self.on_send_account_info(), width=10).pack(side=LEFT)
 
         row3 = Frame(self)
         row3.pack(fill="x")
         Label(row3, text=u"收件箱地址(多个邮箱地址请换行输入): ", width=30).pack(side=LEFT)
         row3 = Frame(self)
         row3.pack(fill="x")
-        Label(row3, text=u"VIP: ", width=30).pack(side=LEFT)
-        Label(row3, text=u"普通: ", width=30).pack(side=LEFT)
+        Label(row3, text=u"VIP(接收详细的交易信息): ", width=30).pack(side=LEFT)
+        Label(row3, text=u"普通(接收简略的交易信息): ", width=30).pack(side=LEFT)
 
         row3 = Frame(self)
         row3.pack(fill="x")
@@ -214,15 +214,14 @@ class PopupSystem(Toplevel):
         self.txt_emails.insert(END, self.emails)
         self.txt_emails.pack(ipadx=5, side=LEFT)
 
-
         row3 = Frame(self)
         row3.pack(fill="x")
-        Label(row3, text=u"微信昵称(多个微信昵称请换行输入): ", width=30).pack(side=LEFT)
+        Label(row3, text=u"接收通知的微信昵称(多个微信昵称请换行输入): ", width=40).pack(side=LEFT)
         self.ckb_lwn = Checkbutton(row3, text='立即登录', variable=self.ckb_login_wechat_now, onvalue=1, offvalue=0).pack()
         row3 = Frame(self)
         row3.pack(fill="x")
-        Label(row3, text=u"VIP: ", width=30).pack(side=LEFT)
-        Label(row3, text=u"普通: ", width=30).pack(side=LEFT)
+        Label(row3, text=u"VIP(接收详细的交易信息): ", width=30).pack(side=LEFT)
+        Label(row3, text=u"普通(接收简略的交易信息): ", width=30).pack(side=LEFT)
 
         row3 = Frame(self)
         row3.pack(fill="x")
@@ -394,7 +393,8 @@ class PopupSystem(Toplevel):
 
         self.is_ok = True
         # messagebox.showinfo("Info", "System settings change have taken effect！")
-        log_config.output2ui("Setup System successfully!", 8)
+        # log_config.output2ui("Setup System successfully!", 8)
+        log_config.output2ui(u"系统设置成功!", 8)
         logger.info("system setup: {}".format(self.value_dict))
         # print(self.value_dict)
         self.destroy()

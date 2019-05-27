@@ -4,28 +4,29 @@
 # Function:
 
 import logging
-import itchat
-
+# import itchat
+from itchat import get_contact, get_chatrooms, get_friends, send, auto_login
 logger = logging.getLogger()
 
 
 def login_wechat():
     # 登录微信 登录比较费时，大概10s
-    itchat.auto_login(hotReload=True)
+    auto_login(hotReload=True)
 
 
-def send_to_wechat(msg, nick_names=None):
+def send_to_wechat(msg, nick_names=None, own=False):
     msg = str(msg)
     try:
-        rooms = itchat.get_chatrooms(update=True)
+        rooms = get_chatrooms(update=True)
     except:
         login_wechat()
-        rooms = itchat.get_chatrooms(update=True)
+        rooms = get_chatrooms(update=True)
 
-    if not nick_names:
+    if (not nick_names) and own:
         try:
-            itchat.send(msg=msg)
+            send(msg=msg, toUserName="filehelper")
         except:
+            logger.exception("send to filehelper failed.")
             return False
         return True
 
@@ -39,14 +40,14 @@ def send_to_wechat(msg, nick_names=None):
                     break
         else:
             try:
-                fs = itchat.get_friends(update=True)
+                fs = get_friends(update=True)
                 for f in fs:
                     if f["NickName"] in nick_names:
                         find_names.append(f["UserName"])
                         if len(find_names) == len(nick_names):
                             break
                 else:
-                    cts = itchat.get_contact(update=True)
+                    cts = get_contact(update=True)
                     for c in cts:
                         if c["NickName"] in nick_names:
                             find_names.append(c["UserName"])
@@ -69,7 +70,7 @@ def send_to_wechat(msg, nick_names=None):
     ret = True
     for name in find_names:
         try:
-            res = itchat.send(msg=msg, toUserName=name)
+            res = send(msg=msg, toUserName=name)
             if res.get("BaseResponse", {}).get("Ret", -1) == 0:
                 logger.info(f"send to wechat success,to user={name}, res={res}")
             else:
@@ -86,15 +87,5 @@ if __name__ == '__main__':
     print(0)
 
     login_wechat()
-    print(1)
-    fs = itchat.search_friends(wechatAccount="twober8")
-    if fs:
-        for f in fs:
-            itchat.send_msg("shishi", toUserName=f["UserName"])
-    rs = itchat.search_chatrooms(name="信链众创量化1.0版")
-    print(2)
-    if rs:
-        for r in rs:
-            itchat.send_msg("1", toUserName=r["UserName"])
-    print(3)
+
     # send_to_wechat(u"我这边是公司办的，我没跑，好像想不用个人跑．", ["二环小栗旬"])

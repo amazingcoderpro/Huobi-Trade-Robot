@@ -3,18 +3,14 @@
 # Created by Charles on 2018/6/15
 # Function: 
 import pandas as pd
-from mpl_finance import candlestick2_ohlc
-import matplotlib.pyplot as plt
-import numpy as np
 import config
 import db_util
-from util import timestamp2time
-import queue
+from queue import Queue
 import logging
 import log_config
 logger = logging.getLogger(__name__)
-import threading
-data_lock = threading.Lock()
+from threading import Lock
+data_lock = Lock()
 pd.set_option('display.max_rows', None)     #当行太多时全部显示
 pd.set_option('display.max_colwidth', 500)
 # pd.set_option("display.max_columns", None)
@@ -41,8 +37,8 @@ ORG_COIN_TOTAL = None    # 总价值币量, 所有资产换成币
 ORG_DOLLAR_TOTAL = None  # 总价值金量, 所有资产换成usdt
 ORG_PRICE = None
 REALTIME_KDJ_5MIN = (1, 1, 1)#queue.Queue()
-REALTIME_KDJ_30MIN = queue.Queue()
-REALTIME_KDJ_1DAY = queue.Queue()
+REALTIME_KDJ_30MIN = Queue()
+REALTIME_KDJ_1DAY = Queue()
 
 REALTIME_KDJ_15MIN = None#(1, 1, 1) #queue.Queue()
 REALTIME_UML = None #(1, 1, 1) #queue.Queue()
@@ -232,40 +228,43 @@ def save_data_db(data):
         log_config.output2ui("save data catch exception: {}".format(e), 4)
 
 
-
+# from mpl_finance import candlestick2_ohlc
+# import matplotlib.pyplot as plt
+# import numpy as np
+# from util import timestamp2time
 #根据给定的数据绘制k线图，type取值0-"show",1-"pic", 2-"both"】
-def plot_candle_chart(df, type=0, pic_name='candle_chart'):
-    # 对数据进行整理
-    # df.set_index(df['tick_id'], drop=True, inplace=True)
-    # df = df[['open', 'high', 'low', 'close']]
-
-    # 作图
-    ll = np.arange(0, len(df), 1)
-    x_times = []
-    for row in ll:
-        tick_id = df.loc[row, 'tick_id']
-        x_times.append(timestamp2time(tick_id, precision="minute"))
-    # xticks = df.index[ll]
-    print(x_times)
-    xticks = x_times
-
-    fig, ax = plt.subplots()
-    candlestick2_ohlc(ax, df['open'].values, df['high'].values, df['low'].values, df['close'].values,
-                      width=0.6, colorup='g', colordown='r', alpha=1)
-
-    #eg:xticks(np.arange(12), calendar.month_name[1:13], rotation=20)
-    plt.xticks(ll, xticks, rotation=60)
-    plt.title(pic_name)
-    plt.subplots_adjust(left=0.09, bottom=0.20, right=0.94, top=0.90, wspace=0.2, hspace=0)
-
-    # 保存数据
-    if type == 0:
-        plt.show()
-    elif type == 1:
-        plt.savefig("picture//" + pic_name + ".png")
-    else:
-        plt.savefig("picture//" + pic_name + ".png")
-        plt.show()
+# def plot_candle_chart(df, type=0, pic_name='candle_chart'):
+#     # 对数据进行整理
+#     # df.set_index(df['tick_id'], drop=True, inplace=True)
+#     # df = df[['open', 'high', 'low', 'close']]
+#
+#     # 作图
+#     ll = np.arange(0, len(df), 1)
+#     x_times = []
+#     for row in ll:
+#         tick_id = df.loc[row, 'tick_id']
+#         x_times.append(timestamp2time(tick_id, precision="minute"))
+#     # xticks = df.index[ll]
+#     print(x_times)
+#     xticks = x_times
+#
+#     fig, ax = plt.subplots()
+#     candlestick2_ohlc(ax, df['open'].values, df['high'].values, df['low'].values, df['close'].values,
+#                       width=0.6, colorup='g', colordown='r', alpha=1)
+#
+#     #eg:xticks(np.arange(12), calendar.month_name[1:13], rotation=20)
+#     plt.xticks(ll, xticks, rotation=60)
+#     plt.title(pic_name)
+#     plt.subplots_adjust(left=0.09, bottom=0.20, right=0.94, top=0.90, wspace=0.2, hspace=0)
+#
+#     # 保存数据
+#     if type == 0:
+#         plt.show()
+#     elif type == 1:
+#         plt.savefig("picture//" + pic_name + ".png")
+#     else:
+#         plt.savefig("picture//" + pic_name + ".png")
+#         plt.show()
 
 
 

@@ -3,7 +3,6 @@
 # Created by Charles on 2018/6/30
 # Function: 
 import os
-import requests
 from tkinter import Toplevel, Label, Button, Entry, StringVar, LEFT, RIGHT, Checkbutton, Frame, messagebox, OptionMenu, IntVar,Text, END, filedialog
 import config
 

@@ -4,7 +4,8 @@
 # Function: huobi websocket api访问方法
 
 from websocket import create_connection
-import gzip
+# import gzip
+from gzip import decompress
 import time
 import json
 from threading import Thread
@@ -211,7 +212,7 @@ class HuobiWS:
                 continue
 
             try:
-                result = gzip.decompress(compress_data).decode('utf-8')
+                result = decompress(compress_data).decode('utf-8')
             except Exception as e:
                 logger.exception("depress data error, e={}, data={}".format(e, compress_data))
                 # log_config.output2ui("depress data error, e={}, data={}".format(e, compress_data), 4)

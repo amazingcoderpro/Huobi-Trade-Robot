@@ -274,8 +274,9 @@ class PopupStrategy(Toplevel):
         self.boll_params["open_buy_percent"] = open_buy_percent
         # self.value_dict["access_key"] = access_key.strip().replace("\n", "")
         # self.value_dict["secret_key"] = secret_key.strip().replace("\n", "")
-        messagebox.showinfo("Info", "Strategy change have taken effect！")
-        log_config.output2ui("Setup strategy successfully!", 8)
+        # messagebox.showinfo("Info", "Strategy change have taken effect！")
+        # log_config.output2ui("Setup strategy successfully!", 8)
+        log_config.output2ui("策略设置成功!", 8)
         self.destroy()
 
     def on_cancel(self):

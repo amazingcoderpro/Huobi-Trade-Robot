@@ -10,7 +10,7 @@ just call init_log_config before your use the module of logging that build-in py
 
 import os
 import logging
-import threading
+from threading import Thread
 from datetime import datetime
 from logging import handlers
 import queue
@@ -154,7 +154,7 @@ def notify_user(msg, own=False):
             msg = "[{}]\n{}".format(time_str, msg)
             logging.getLogger().info("start to send wechat. own={}, msg={}".format(own,msg))
             if own:
-                ret = wechat_helper.send_to_wechat(msg, config.WECHATS_VIP)
+                ret = wechat_helper.send_to_wechat(msg, config.WECHATS_VIP, own=True)
             else:
                 ret = wechat_helper.send_to_wechat(msg, config.WECHATS)
         except Exception as e:
@@ -205,7 +205,7 @@ def notify_user(msg, own=False):
 
         return ret
 
-    th = threading.Thread(target=send_wechat, args=(msg, own))
+    th = Thread(target=send_wechat, args=(msg, own))
     th.setDaemon(True)
     th.start()
 

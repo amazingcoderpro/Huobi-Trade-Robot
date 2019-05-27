@@ -13,10 +13,10 @@
 
 # if __name__ == '__main__':
 #     pass
-import queue
-aq = queue.Queue(maxsize=2)
-aq.put(1)
-print(11)
-aq.put(2, block=False)
-print(22)
-print(aq.get(block=False))
+# import queue
+# aq = queue.Queue(maxsize=2)
+# aq.put(1)
+# print(11)
+# aq.put(2, block=False)
+# print(22)
+# print(aq.get(block=False))

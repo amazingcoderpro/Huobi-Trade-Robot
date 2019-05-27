@@ -152,7 +152,7 @@ WECHATS=[]
 # EMAILS_VIP = ["wcadaydayup@163.com", "1447385994@qq.com", "bbb201@126.com"]
 EMAILS_VIP = []
 # WECHATS_VIP = [u"长城1211", u"追风少年人"]
-WECHATS_VIP = [u"追风少年人"]
+WECHATS_VIP = []
 
 TRADE_ALL_LOG = {}
 LIMIT_MIN_POSITION = 0.2    #期望最低持仓比

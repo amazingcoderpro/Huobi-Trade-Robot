@@ -3,15 +3,17 @@
 # Created by Charles on 2018/6/15
 # Function: huobi websocket api访问方法
 
-import base64
-import datetime
-import hashlib
+from base64 import b64encode
+from datetime import datetime
+# import hashlib
+from hashlib import sha256
 import hmac
 import json
-import urllib
+# import urllib
 import urllib.parse
-import urllib.request
-import requests
+# import urllib.request
+# import requests
+from requests import get, post
 import logging
 import log_config
 import config
@@ -60,7 +62,7 @@ class HuobiREST:
         try:
             logging.info("RESTAPI, GET: {}".format(url))
             # log_config.output2ui("RESTAPI, GET: {}".format(url))
-            response = requests.get(url, post_data, headers=headers, timeout=self._timeout)
+            response = get(url, post_data, headers=headers, timeout=self._timeout)
             # logger.debug("RESTAPI _http_get url:{}\n post_data:{}\n response: {}".format(url, post_data, response.json()))
             # log_config.output2ui("RESTAPI _http_get url:{}\n post_data:{}\n response: {}".format(url, post_data, response.json()))
             return response.status_code, response.json()
@@ -81,7 +83,7 @@ class HuobiREST:
         try:
             post_data = json.dumps(params)
             logger.info("RESTAPI, POST: {}".format(url))
-            response = requests.post(url, post_data, headers=headers, timeout=self._timeout)
+            response = post(url, post_data, headers=headers, timeout=self._timeout)
             # logger.debug("RESTAPI _http_post, url:{}\n post_data:{}\n response: {}".format(url, post_data, response.json()))
             # log_config.output2ui(
             #     "RESTAPI _http_post, url:{}\n post_data:{}\n response: {}".format(url, post_data, response.json()))
@@ -93,7 +95,7 @@ class HuobiREST:
 
     def _http_get_with_key(self, params, request_path):
         method = 'GET'
-        timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S')
+        timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S')
         params.update({'AccessKeyId': self._access_key,
                        'SignatureMethod': 'HmacSHA256',
                        'SignatureVersion': '2',
@@ -112,7 +114,7 @@ class HuobiREST:
 
     def _http_post_with_key(self, params, request_path):
         method = 'POST'
-        timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S')
+        timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S')
         params_to_sign = {'AccessKeyId': self._access_key,
                           'SignatureMethod': 'HmacSHA256',
                           'SignatureVersion': '2',
@@ -137,8 +139,8 @@ class HuobiREST:
         payload = payload.encode(encoding='UTF8')
         secret_key = secret_key.encode(encoding='UTF8')
 
-        digest = hmac.new(secret_key, payload, digestmod=hashlib.sha256).digest()
-        signature = base64.b64encode(digest)
+        digest = hmac.new(secret_key, payload, digestmod=sha256).digest()
+        signature = b64encode(digest)
         signature = signature.decode()
         return signature
 
@@ -164,7 +166,7 @@ class HuobiREST:
         #  print("ECDSA signature S: {:s}".format(sig_s_bytes.hex()))
         # print("ECDSA signautre: {:s}".format(sig_bytes.hex()))
         # print("ECDSA signautre: " + str(base64.b64encode(sig_bytes)))
-        return base64.b64encode(sig_bytes)
+        return b64encode(sig_bytes)
 
     def _bit_to_bytes(self, a):
         return (a + 7) // 8

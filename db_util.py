@@ -3,7 +3,6 @@
 # Created by Charles on 2018/6/16
 # Function: 
 from pymongo import MongoClient
-from util import Singleton
 DB_INSTANCE = None
 
 

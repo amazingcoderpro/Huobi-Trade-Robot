@@ -11,7 +11,7 @@ import db_util
 import logging
 import log_config
 logger = logging.getLogger(__name__)
-import threading
+from threading import Thread
 
 class Huobi:
     def __init__(self, debug=False):
@@ -90,7 +90,6 @@ class Huobi:
             self._show_result("1")
         self._run = True
         run_time = 0
-        log_config.output2ui("Start work successfully!", 8)
         while self._run:
             time.sleep(1)
             if after and run_time > after:
@@ -156,7 +155,7 @@ def save_history_trade_vol(symbols):
             except Exception as e:
                 logger.exception("get_trade_vol_by_time, e={}".format(e))
             time.sleep(300)
-    th = threading.Thread(target=save_history, args=(symbols,))
+    th = Thread(target=save_history, args=(symbols,))
     th.setDaemon(True)
     th.start()
     return True

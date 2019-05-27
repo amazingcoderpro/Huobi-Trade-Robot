@@ -3,8 +3,8 @@
 # Created by Charles on 2018/6/19
 # Function:
 import time
-import matplotlib.pyplot as plt
-import numpy as np
+# import matplotlib.pyplot as plt
+# import numpy as np
 import pandas as pd
 import talib
 from strategy_pool import Strategy
@@ -38,7 +38,7 @@ vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 2, "pr
                         "peroid": "5min"}
 boll_strategy_params = {"check": 1, "peroid": "15min", "open_diff1_percent": 0.012, "open_diff2_percent": 0.012,
                         "close_diff1_percent": 0.0025, "close_diff2_percent": 0.0025, "open_down_percent": -0.03,
-                        "open_up_percent": 0.01, "open_buy_percent": 0.5, "trade_percent": 1.5, "close_up_percent": 0.03,
+                        "open_up_percent": 0.01, "open_buy_percent": 0.35, "trade_percent": 1.5, "close_up_percent": 0.03,
                         "close_buy_percent": 0.5}
 
 # BUY_LOW_RECORD = {}
@@ -66,8 +66,8 @@ def macd_strategy_5min():
     dw[['DIF', 'DEA']].plot()
     # dw.loc[len(dw)-1]["DIF", "DEA", "MACD"]
 
-    plt.show()
-    plt.savefig("picture//macd_strategy_5min.png")
+    # plt.show()
+    # plt.savefig("picture//macd_strategy_5min.png")
 
 
 def macd_strategy_1min():
@@ -89,8 +89,8 @@ def macd_strategy_1min():
 
     dw[['DIF', 'DEA']].plot()
 
-    plt.show()
-    plt.savefig("picture//macd_strategy_1min.png")
+    # plt.show()
+    # plt.savefig("picture//macd_strategy_1min.png")
 
 
 def macd_strategy_1day():
@@ -112,8 +112,8 @@ def macd_strategy_1day():
 
     dw[['DIF', 'DEA']].plot()
 
-    plt.show()
-    plt.savefig("picture//macd_strategy_1day.png")
+    # plt.show()
+    # plt.savefig("picture//macd_strategy_1day.png")
 
 
 def is_kdj_5min_buy(market, times=3):
@@ -541,8 +541,12 @@ def kdj_strategy_sell(currency=[], max_trade=1):
     #     logging.info("kdj sell checking, still up!")
     #     return False
 
-    cur_k, cur_d, cur_j = get_kdj(market)
     current_price = get_current_price(symbol)
+    if TRADE_RECORD:
+
+    cur_k, cur_d, cur_j = get_kdj(market)
+
+
     limit_diff_kd = 5 - (config.RISK-1)*5
     diff_kd = cur_k - cur_d
 
@@ -729,7 +733,7 @@ def stop_loss(percent=0.03):
     log_config.output2ui("stop loss checking ------stop_loss_params={}".format(stop_loss_params))
 
     if stop_loss_params.get("check", 1) != 1:
-        log_config.output2ui("stop loss is not check", 2)
+        logger.warning("stop loss is not check")
         return False
 
     #最近10分钟内有买入策略被触发，则暂时不卖
@@ -876,21 +880,21 @@ def move_stop_profit():
         limit_down_back_percent = move_stop_profit_params.get("msf_back", 0.20) * (0.02/max_upper) * config.RISK
 
         logger.info(
-            "move_stop_profit last_price={}, max_price={}, current_price={}, max_upper={}, down_back_percent={}, last_buy_amount={}, msf_back={}".format(
-                last_price, max_price, current_price, max_upper, down_back_percent, last_buy_amount, limit_down_back_percent))
+            "move_stop_profit last_price={}, max_price={}, current_price={}, max_upper={}, dbp={}, last_buy={}, msf_back={}, upper={}".format(
+                last_price, max_price, current_price, max_upper, down_back_percent, last_buy_amount, limit_down_back_percent, upper))
 
         # 判断当前价格有没有超过上轨，如果超过了，则认为在危险区域，需要更快的卖出，如果没有超过，则相对安全，可以容忍更大的回撤幅度
         if upper > 0:
             if max_price > upper:
                 # 超过的越多，越危险, 可容忍的回撤幅度越低，这样可以在更高的价格卖出
-                limit_down_back_percent *= (1 - ((max_price-upper)/upper * 30))
+                limit_down_back_percent *= (1 - ((max_price-upper)/upper * 5))
             else:
                 # 这样可以避免被洗盘洗出来
-                limit_down_back_percent *= (1 + ((upper-max_price)/max_price * 30))
+                limit_down_back_percent *= (1 + ((upper-max_price)/max_price * 5))
 
         # 最多允许回撤一半, 最小回撤5个点
-        limit_down_back_percent = 0.05 if limit_down_back_percent < 0.05 else limit_down_back_percent
-        limit_down_back_percent = 0.5 if limit_down_back_percent > 0.5 else limit_down_back_percent
+        limit_down_back_percent = 0.10 if limit_down_back_percent < 0.10 else limit_down_back_percent
+        limit_down_back_percent = 0.35 if limit_down_back_percent > 0.35 else limit_down_back_percent
         logger.info("move_stop_profit limit_down_back_percent={}, down_back_percent={}".format(limit_down_back_percent, down_back_percent))
         if down_back_percent < limit_down_back_percent:
             continue

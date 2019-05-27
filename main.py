@@ -3,13 +3,13 @@
 # Created by Charles on 2018/6/18
 # Function:
 import time
-import datetime
-from tkinter import Frame, Tk, Label, Button, Checkbutton, IntVar, StringVar, Text, END, Toplevel, Entry, messagebox
+from datetime import datetime, timedelta
+from tkinter import Tk, Label, Button, StringVar, END, messagebox
 from tkinter.scrolledtext import ScrolledText
-import queue
+from queue import Queue
 import logging
-import threading
-import requests
+from threading import Thread
+from requests import get
 from greesbar import GressBar
 from huobi import Huobi
 import process
@@ -27,7 +27,7 @@ CURRENT_PRICE = 1
 class MainUI():
     def __init__(self, root):
         self.verify = True
-        self.notify_queue = queue.Queue()
+        self.notify_queue = Queue()
         self.gress_bar_init_history = GressBar()
         self.gress_bar_verify_user = GressBar()
         self.root = root
@@ -218,10 +218,11 @@ class MainUI():
             self.gress_bar_init_history.quit()
             if not (ret and ret2):
                 logger.error("init service failed.")
-                log_config.output2ui(u"系统初始化失败!", 3)
-                messagebox.showwarning("Error", u"系统初始化失败!")
+                log_config.output2ui(u"系统初始化失败! 请检查网络状况并重试!", 3)
+                messagebox.showwarning("Error", u"系统初始化失败! 请检查网络状况并重试!")
                 return False
             log_config.output2ui(u"系统初始化成功!", 8)
+            log_config.output2ui(u"第三步, 请点击[开始工作], 程序将开启自动化交易. 如需进行系统设置, 如风险偏好设置, 交易额度限制, 微信通知, 挂单买卖等, 请点击[系统设置]按钮, 如果需要自定义交易策略请点击[策略设置]按钮, 非专业人士不建议您对策略进行修改. 系统设置和策略设置的修改在程序运行过程当中立即生效, 不需要重新启动工作. ", 8)
             self.start_button.config(state="normal")
             self.register_button.config(state="normal")
             self.init_history_button.config(state="disabled")
@@ -229,7 +230,7 @@ class MainUI():
         huobi.save_history_trade_vol(config.NEED_TOBE_SUB_SYMBOL)
         if not self._hb:
             self._hb = Huobi()
-        th = threading.Thread(target=init_history, args=(self._hb,))
+        th = Thread(target=init_history, args=(self._hb,))
         th.setDaemon(True)
         th.start()
         self.gress_bar_init_history.start()
@@ -238,10 +239,11 @@ class MainUI():
     def start_work(self):
         def start(hb):
             logger.info("start work!!")
-            log_config.output2ui(u"系统启动!!", 1)
+            # log_config.output2ui(u"系统启动中...", 1)
+            log_config.output2ui(u"系统开始工作，将为您智能发现最佳交易时机并进行自动交易!", 8)
+            log_config.output2ui(u"点击 [停止工作] 可停止程序自动交易．", 8)
             hb.run()
-            logger.warning("work over!!")
-            log_config.output2ui(u"工作结束!!", 2)
+            logger.info("work over!!")
 
         if not self.verify:
             log_config.output2ui(u"授权认证检查失败, 系统暂时无法使用, 请稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!", 5)
@@ -259,7 +261,11 @@ class MainUI():
 
         if not self._hb:
             self._hb = Huobi()
-        th = threading.Thread(target=start, args=(self._hb,))
+
+        self.register_strategy()
+        self.start_check_strategy()
+
+        th = Thread(target=start, args=(self._hb,))
         th.setDaemon(True)
         th.start()
         self.stop_button.config(state="normal")
@@ -272,6 +278,8 @@ class MainUI():
         logger.info("stop_work!")
         if self._hb:
             self._hb.exit()
+
+        self.clean_strategy()
         self.stop_check_strategy()
 
         self.stop_button.config(state="disabled")
@@ -280,10 +288,11 @@ class MainUI():
         self.start_check_strategy_button.config(state="disabled")
         # self.strategy_setting_button.config(state="disabled")
         # self.verify_identity_button.config(state="normal")
-        self.init_history_button.config(state="normal")
+        # self.init_history_button.config(state="normal")
         self.verify_identity_button.config(state="normal")
 
         # log_config.output2ui("Stop work successfully!", 8)
+
         log_config.output2ui(u"系统已停止工作!", 8)
         self.working = False
 
@@ -294,15 +303,15 @@ class MainUI():
 
         # 策略检测线程启动
         logger.info("start_check_strategy...")
-        log_config.output2ui(u"启动策略...")
+        log_config.output2ui(u"正在加载策略...")
         self._strategy_pool.start_work()
         self.start_check_strategy_button.config(state="disabled")
         self.stop_check_strategy_button.config(state="normal")
-        log_config.output2ui(u"启动策略成功，将为您智能发现最佳交易时机并进行自动交易！", 8)
+        log_config.output2ui(u"加载策略成功", 8)
 
     def stop_check_strategy(self):
-        logger.warning("stop_check_strategy...")
-        log_config.output2ui(u"停止执行策略...", 2)
+        logger.info("stop_check_strategy...")
+        log_config.output2ui(u"正在停止执行策略...", 8)
         self._strategy_pool.stop_work()
         self.start_check_strategy_button.config(state="normal")
         self.stop_check_strategy_button.config(state="disabled")
@@ -314,7 +323,7 @@ class MainUI():
             return
 
         logger.info("register_strategy.")
-        log_config.output2ui(u"注册策略...")
+        log_config.output2ui(u"正在注册策略...")
         self._strategy_pool.clean_all()
         for strategy in strategies.STRATEGY_LIST:
             logger.info("register_strategy, strategy={}".format(strategy.name))
@@ -326,7 +335,7 @@ class MainUI():
 
     def clean_strategy(self):
         logger.warning("clean_strategy...")
-        log_config.output2ui(u"清空所有策略...", 2)
+        log_config.output2ui(u"正在清空所有策略...", 8)
         self._strategy_pool.clean_all()
         self.clean_st_button.config(state="disabled")
         self.register_button.config(state="normal")
@@ -400,7 +409,6 @@ class MainUI():
                         log_config.notify_user(msg, own=True)
                         log_config.notify_user(log_config.make_msg(1, symbol, price))
 
-
     def update_coin(self, price=None):
         """
         更新盈利信息
@@ -436,7 +444,7 @@ class MainUI():
                     position = 0
                 self.coin_text.set("{}/{}/{}%".format(round(total_coin_value, 4), round(total_dollar_value, 2), round(position*100, 2)))
                 if not process.ORG_COIN_TOTAL:
-                    process.START_TIME = datetime.datetime.now()
+                    process.START_TIME = datetime.now()
                     if total_dollar_value>0:
                         process.ORG_CHICANG = (coin_trade+coin_frozen)*price/total_dollar_value
                     else:
@@ -468,7 +476,7 @@ class MainUI():
     def update_ui(self):
         # # 每1000毫秒触发自己，形成递归，相当于死循环
         # self.root.after(1000, self.process_msg)
-        logger.info("Welcome to Huobi Trade Tool")
+        logger.info("Welcome to Huobi Trade System")
         log_config.output2ui(u"-----------------欢迎使用火币量化交易系统！----------------- ---\n　 本系统由资深量化交易专家和算法团队倾力打造，对接火币官方接口，经过长达两年的不断测试与优化，"
                              u"本地化运行，更加安全可控，策略可定制，使用更方便!　\n   系统结合历史与实时数据进行分析，加上内置的多套专业策略组合算法，根据您的仓位、策略定制因"
                              u"子和风险接受能力等的不同，智能发现属于您的最佳交易时机进行自动化交易，并可以设置邮件和微信提醒，"
@@ -573,7 +581,7 @@ class MainUI():
                     uml_text.set("{}/{}/{}".format(round(uml[0], 6), round(uml[1], 6), round(uml[2], 6)))
 
                     if process.LAST_VERIFY_TIME:
-                        if (datetime.datetime.now() - process.LAST_VERIFY_TIME).total_seconds() > 3600*24:
+                        if (datetime.now() - process.LAST_VERIFY_TIME).total_seconds() > 3600*24:
                             ret = self.verify_huobi(config.ACCESS_KEY)
                             if not ret[0]:
                                 self.clean_strategy()
@@ -583,10 +591,10 @@ class MainUI():
                                 log_config.output2ui(ret[1], 5)
                                 messagebox.showwarning("Error", ret[1])
                             else:
-                                process.LAST_VERIFY_TIME = datetime.datetime.now()
+                                process.LAST_VERIFY_TIME = datetime.now()
 
                     else:
-                        process.LAST_VERIFY_TIME = datetime.datetime.now()
+                        process.LAST_VERIFY_TIME = datetime.now()
                 except Exception as e:
                     logger.exception("update_uml exception....")
                     log_config.output2ui("update_uml exception....", 3)
@@ -600,16 +608,17 @@ class MainUI():
                     try:
                         if not self.verify:
                             continue
-                        now_time = datetime.datetime.now()
+                        now_time = datetime.now()
                         if not daily_report_start_time:
                             daily_report_start_time = now_time
                         else:
                             run_total_seconds = (now_time-daily_report_start_time).total_seconds()
                             logger.info("system run total seconds={}, trade_notify_interval={}".format(run_total_seconds, config.TRADE_HISTORY_REPORT_INTERVAL))
                             if (run_total_seconds > config.TRADE_HISTORY_REPORT_INTERVAL*3600) or config.SEND_HISTORY_NOW > 0:
+                                logger.info("send history now...")
                                 if config.SEND_HISTORY_NOW > 0:
                                     # 立即发送，　不影响周期发送逻辑
-                                    beg = now_time-datetime.timedelta(hours=config.SEND_HISTORY_NOW)
+                                    beg = now_time-timedelta(hours=config.SEND_HISTORY_NOW)
                                     interval = int(config.SEND_HISTORY_NOW)
                                 else:
                                     beg = daily_report_start_time
@@ -632,6 +641,7 @@ class MainUI():
                             hour_report_start_time = now_time
                         else:
                             if (now_time-hour_report_start_time).total_seconds() > config.ACCOUNT_REPORT_INTERVAL*3600 or config.SEND_ACCOUNT_NOW:
+                                logger.info("send account info now...")
                                 hour_report_start_time = now_time
                                 config.SEND_ACCOUNT_NOW = 0
 
@@ -663,32 +673,32 @@ class MainUI():
                                         dapan_profit,
                                         account_profit,"***",
                                         is_win)
-                                # log_config.output2ui(msg_own, level=8)
+                                log_config.output2ui(msg_own, level=8)
                                 logger.warning(msg_own)
                                 ret1 = log_config.notify_user(msg_own, own=True)
                                 ret2 = log_config.notify_user(msg_other)
                     except Exception as e:
                         logger.warning("notify_profit_info exception.e={}".format(e))
 
-        th = threading.Thread(target=update_price, args=(self.price_text,))
+        th = Thread(target=update_price, args=(self.price_text,))
         th.setDaemon(True)
         th.start()
-        th = threading.Thread(target=update_ui_log, args=(self.log_text, self.trade_text, ))
+        th = Thread(target=update_ui_log, args=(self.log_text, self.trade_text, ))
         th.setDaemon(True)
         th.start()
-        th = threading.Thread(target=update_balance, args=(self.bal_text,))
-        th.setDaemon(True)
-        th.start()
-
-        th = threading.Thread(target=update_uml, args=(self.uml_text,))
+        th = Thread(target=update_balance, args=(self.bal_text,))
         th.setDaemon(True)
         th.start()
 
-        th = threading.Thread(target=update_kdj, args=(self.kdj_text,))
+        th = Thread(target=update_uml, args=(self.uml_text,))
         th.setDaemon(True)
         th.start()
 
-        th = threading.Thread(target=notify_profit_info)
+        th = Thread(target=update_kdj, args=(self.kdj_text,))
+        th.setDaemon(True)
+        th.start()
+
+        th = Thread(target=notify_profit_info)
         th.setDaemon(True)
         th.start()
 
@@ -735,13 +745,14 @@ class MainUI():
                 self.strategy_setting_button.config(state="normal")
                 self.system_setting_button.config(state="normal")
                 strategies.update_balance(is_first=True)
+                self.nick_name_text.set(config.NICK_NAME)
                 log_config.output2ui(u"火币API授权认证成功! 您选择的交易币种为: {}{}\n".format(config.SUB_LEFT.upper(), config.SUB_RIGHT.upper()), 8)
-                log_config.output2ui(u"第二步，请点击 [系统初始化] 按钮，系统将开始初始化历史数据，以方进行便更加精确的数据分析．", 8)
+                log_config.output2ui(u"第二步，请点击 [系统初始化] 按钮，系统将开始初始化历史数据，以便进行更加精确的数据分析．", 8)
             else:
                 messagebox.showwarning("Error", u"火币API授权认证失败，请检查您的KEY是否在有效期，或者您申请API KEY时绑定了IP地址，但您当前电脑的公网IP发生了变化!")
                 log_config.output2ui(u"火币API授权认证失败，请检查您的KEY是否在有效期，或者您申请API KEY时绑定了IP地址，但您当前电脑的公网IP发生了变化!", 3)
 
-        th = threading.Thread(target=verify_user_by_get_balance, args=(
+        th = Thread(target=verify_user_by_get_balance, args=(
             self._user_info.get("trade_left", None),
             self._user_info.get("access_key", None),
             self._user_info.get("secret_key", None),
@@ -760,7 +771,7 @@ class MainUI():
         try:
             while retry >= 0:
                 host = "47.75.10.215"
-                ret = requests.get("http://{}:5000/huobi/{}".format(host, access_key))
+                ret = get("http://{}:5000/huobi/{}".format(host, access_key))
                 if ret.status_code == 200:
                     self.verify = True
                     logger.info(u"系统授权认证成功！ 过期时间: {}".format(ret.text))
@@ -810,7 +821,6 @@ class MainUI():
         self.price_text.set("")
         self.bal_text.set("")
         self.coin_text.set("")
-        self.nick_name_text.set(config.NICK_NAME)
 
         access_key = self._user_info.get("access_key", "")
         # log_config.output2ui(u"正在进行权限验证, 请稍等...", 8)
@@ -825,7 +835,7 @@ class MainUI():
             return
 
         self.verify_user_information()
-
+        self.init_history_button.config(state="normal")
 
         # self.top = Toplevel(self.root)
         # label = Label(self.top, text="ACCESS_KEY")
@@ -850,7 +860,7 @@ class MainUI():
                             strategies.kdj_sell_params,
                             strategies.vol_price_fly_params,
                             strategies.boll_strategy_params,
-                            "Strategy config")
+                            u"策略设置")
         self.root.wait_window(pop)
         print(strategies.kdj_buy_params)
 
@@ -871,7 +881,7 @@ class MainUI():
                       "account_report_interval": config.ACCOUNT_REPORT_INTERVAL, "emails_vip": config.EMAILS_VIP, "wechats_vip": config.WECHATS_VIP,
                       "nick_name": config.NICK_NAME}
 
-        pop = PopupSystem(value_dict)
+        pop = PopupSystem(value_dict, u"系统设置")
         self.root.wait_window(pop)
         if pop.is_ok:
             config.EMAIL_NOTIFY = value_dict["is_email"]
@@ -931,7 +941,7 @@ class MainUI():
             if login_wechat_now or config.EMAIL_NOTIFY:
                 log_config.output2ui(u"请用您的手机微信扫码登录微信网页版或在您的手机上确认登录！否则您可能无法收到实时交易信息", 8)
                 self.first_login = False
-                th = threading.Thread(target=login_wechat)
+                th = Thread(target=login_wechat)
                 th.setDaemon(True)
                 th.start()
 

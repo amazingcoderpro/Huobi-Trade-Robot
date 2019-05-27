@@ -3,9 +3,7 @@
 # Created by Charles on 2018/6/18
 # Function: 
 
-from tkinter import *
-from tkinter import ttk
-import time
+from tkinter import Toplevel, Label,ttk
 
 
 class GressBar():
@@ -42,8 +40,10 @@ class GressBar():
         if self.master:
             self.master.destroy()
 
-if __name__ == '__main__':
-    gb = GressBar()
-    gb.start()
-    time.sleep(10)
-    gb.quit()
+# if __name__ == '__main__':
+#     pass
+#     gb = GressBar()
+#     gb.start()
+#     import time
+#     time.sleep(10)
+#     gb.quit()

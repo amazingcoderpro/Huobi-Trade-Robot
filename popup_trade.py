@@ -4,7 +4,7 @@
 # Function: 
 
 import time
-from tkinter import Toplevel, Label, Button,  LEFT, RIGHT, Frame, END
+from tkinter import Toplevel, Button,  LEFT, RIGHT, Frame, END
 from tkinter.scrolledtext import ScrolledText
 import threading
 # import win32com.client
