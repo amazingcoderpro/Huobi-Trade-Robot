@@ -5,8 +5,10 @@
 import time
 # import matplotlib.pyplot as plt
 # import numpy as np
+from requests import get
 import pandas as pd
 import talib
+from threading import Thread
 from strategy_pool import Strategy
 import process
 import config
@@ -382,14 +384,83 @@ def boll_strategy():
     return False
 
 
+def trade_advise_update():
+    def boll_status(market):
+        u5, m5, l5 = get_boll_avrg(market, -5, -1)
+        boll5 = (u5 + m5 + l5) / 3
+        u10, m10, l10 = get_boll_avrg(market, -10, -6)
+        boll10 = (u10 + m10 + l10) / 2
+        if boll5<0 or boll10<0:
+            return 100
+
+        status = 0
+        if boll5 >= boll10 * 1.03:
+            status = 2
+        elif boll5 > boll10:
+            status = 1
+        elif boll5 * 1.03 > boll10:
+            status = -1
+        else:
+            status = -2
+        return status
+
+    def trade_advise_update_process():
+        logger.info("trade_advise_update_process start")
+        day_market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], "1day")
+        hour_market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], "60min")
+
+        day_open = get_open(day_market, 0)
+        day_upper, day_middle, day_lower = get_boll(day_market)
+
+        hour_open = get_open(hour_market, 0)
+        hour_upper, hour_middle, hour_lower = get_boll(hour_market)
+        status_day = boll_status(day_market)
+        status_hour = boll_status(hour_market)
+        msg_dict = {-2: u"整体行情走低, 建议以观望为主, 持仓宜低, 波段操作需谨慎．", -1: u"整体行情低迷, 建议仓位4成以下, 以高抛低吸波段操作为宜．",
+               0: u"整体行情稳定, 震幅较小, 建议减少交易次数, 持续观望, 注意成交量变化．",
+               1: u"整体行情逐渐回暖, 建议以持有, 观望为主, 可逐步逢低建仓.", 2: u"整体行情处于上升通道中, 谨慎追高, 注意行情变化, 以持有和逢高出货为主．"}
+
+        msg_day = msg_dict.get(status_day, u"行情变幻！")
+        if day_open > day_upper:
+            msg_day = u"涨幅过大, 切忌追高, 建议逢高卖出！"
+        if day_open < day_lower:
+            msg_day = u"跌幅过大, 反弹可期, 可适当逢低吸货, 波段操作, 留意行情变化, 仓位不宜过重！"
+
+        msg_hour = msg_dict.get(status_hour, u"行情变幻！")
+        if hour_open > hour_upper:
+            msg_hour = u"涨幅过大, 谨慎追高, 以逢高卖出为主！"
+        if hour_open < hour_lower:
+            msg_hour = u"跌幅过大, 反弹可期, 可适当逢低吸货, 波段操作, 留意行情变化, 仓位不宜过重！"
+
+        advise_day = u"大盘近几日" + msg_day
+        advise_hour = u"大盘近几小时" + msg_hour
+
+        process.REALTIME_ADVISE = (advise_day, advise_hour)
+
+        notify_msg = ""
+        try:
+            host = "47.75.10.215"
+            ret = get("http://{}:5000/notify/{}".format(host, config.ACCESS_KEY), timeout=3)
+            if ret.status_code == 200:
+                notify_msg = ret.text
+        except Exception as e:
+            logger.exception("get notify exception={}".format(e))
+
+        logger.info(u"当前建do={}, du={}, dm={}, dl={}\nho={}, hu={}, hm={}, hl={}\n advise_day={} \nadvise_hour={}\nnotify_msg={}".format(day_open, day_upper, day_middle, day_lower, hour_open, hour_upper, hour_middle, hour_lower, advise_day, advise_hour, notify_msg))
+
+        process.REALTIME_SYSTEM_NOTIFY = notify_msg
+        return advise_day, advise_hour, notify_msg
+
+    th = Thread(target=trade_advise_update_process)
+    th.setDaemon(True)
+    th.start()
+    return False
+
+
 def kdj_strategy_buy():
     if kdj_buy_params.get("check", 1) != 1:
         log_config.output2ui("kdj_buy is not check", 2)
         return False
-    day_market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], "1day")
-    day_open = get_open(day_market, 0)
-    day_upper, day_middle, day_lower = get_boll(day_market)
-    logger.warning("当前day open={}, day_upper={}, day_m={}, day_l".format(day_open, day_upper, day_middle, day_lower))
 
     peroid = kdj_buy_params.get("peroid", "15min")
     market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], peroid)
@@ -1536,6 +1607,37 @@ def get_min_price(symbol, last_time, current=0):
         process.data_lock.release()
 
 
+def get_boll_avrg(market, start=-5, to=-1):
+    """
+    获取boll平均值
+    :param to:
+    :return:
+    """
+    try:
+        process.data_lock.acquire()
+        upper, middle, lower = -1, -1, -1
+        df = process.KLINE_DATA.get(market, None)
+        if df is None:
+            return upper, middle, lower
+
+        num = 0
+        while start <= to:
+            temp_df = df.head(len(df) + start)
+            temp_df["upper"], temp_df["middle"], temp_df["lower"] = talib.BBANDS(temp_df.close.values, timeperiod=15, nbdevup=2, nbdevdn=2, matype=0)
+            upper += temp_df.loc[len(temp_df) +start, "upper"]
+            middle += temp_df.loc[len(temp_df) +start, "middle"]
+            lower += temp_df.loc[len(temp_df) +start, "lower"]
+            num += 1
+            start += 1
+
+        return upper/num, middle/num, lower/num
+    except:
+        logger.exception("get_boll_avrg")
+        return upper, middle, lower
+    finally:
+        process.data_lock.release()
+
+
 def get_boll(market, pos=0, update2ui=True):
     try:
         process.data_lock.acquire()
@@ -1623,8 +1725,8 @@ def kdj_15min_update():
     market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], "15min")
     k,d,j = get_kdj(market)
     process.REALTIME_KDJ_15MIN=(k,d,j) #.put((k, d, j))
-    return k, d, j
-
+    # return k, d, j
+    return False
 
 def kdj_30min_update():
     market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], "30min")
@@ -2229,6 +2331,7 @@ STRATEGY_LIST = [
     Strategy(boll_strategy, 20, -1, name="boll strategy", after_execute_sleep=900 * 2),
     # Strategy(kdj_5min_update, 30, -1, name="kdj_5min_update", after_execute_sleep=1),
     Strategy(kdj_15min_update, 10, -1, name="kdj_15min_update", after_execute_sleep=3),
+    Strategy(trade_advise_update, 3600, -1, name="advise_msg", after_execute_sleep=10),
     Strategy(buy_low, 10, -1, name="buy_low", after_execute_sleep=600),
     Strategy(sell_high, 11, -1, name="sell_high", after_execute_sleep=600),
 ]

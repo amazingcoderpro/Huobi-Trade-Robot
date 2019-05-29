@@ -73,8 +73,8 @@ KL_1WEEK = "1week"
 KL_1MON = "1mon"
 KL_1YEAR = "1year"
 #KL_ALL = [KL_1MIN, KL_5MIN, KL_15MIN, KL_30MIN, KL_60MIN, KL_1DAY, KL_1WEEK, KL_1MON]
-KL_ALL = [KL_1MIN, KL_15MIN, KL_5MIN, KL_1DAY]#,KL_5MIN,KL_30MIN KL_1DAY
-KL_HISTORY = [KL_1MIN, KL_15MIN, KL_1DAY]#, KL_1DAY KL_5MIN,, KL_30MIN
+KL_ALL = [KL_1MIN, KL_15MIN, KL_5MIN, KL_60MIN, KL_1DAY]#,KL_5MIN,KL_30MIN KL_1DAY
+KL_HISTORY = [KL_1MIN, KL_15MIN, KL_60MIN, KL_1DAY]#, KL_1DAY KL_5MIN,, KL_30MIN
 KL_REALTIME = KL_1MIN
 
 # depth type
@@ -123,7 +123,7 @@ NET_TIMEOUT = 45
 RETRY_TIMES = -1  # 小于0无限重试
 
 
-TRADE_MIN_LIMIT_VALUE = 5  # 单次最小交易額不能低於20美金
+TRADE_MIN_LIMIT_VALUE = 1  # 单次最小交易額不能低於20美金
 TRADE_MAX_LIMIT_VALUE = 2000  # 单次最大交易額不能高於1000美金
 
 WAIT_BUY_PRICE = [0, 0, 0]
@@ -155,12 +155,12 @@ EMAILS_VIP = []
 WECHATS_VIP = []
 
 TRADE_ALL_LOG = {}
-LIMIT_MIN_POSITION = 0.2    #期望最低持仓比
+LIMIT_MIN_POSITION = 0.1    #期望最低持仓比
 FORCE_POSITION_MIN = 0       #是否强制保持最 少持仓比，如果是，无论何种情况都保持该持仓比例，否则系统将在持仓比低于最小持仓比后降低买入标准以尽快达到持仓比
 
-LIMIT_MAX_POSITION = 0.8      #期望的最高持仓比
+LIMIT_MAX_POSITION = 0.9      #期望的最高持仓比
 FORCE_POSITION_MAX = 0       #是否强制保持最大持仓比，如果是，无论何种情况都保持不超过该持仓比，否则系统将在持仓比高于最大持仓比后降低卖出准以尽快降低持仓比
 
 SEND_HISTORY_NOW = 0
 SEND_ACCOUNT_NOW = 0
-NICK_NAME = ""
+NICK_NAME = u"用户昵称"

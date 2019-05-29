@@ -61,7 +61,7 @@ sender = 'wcadaydayup@163.com'
 sender_password = "998zhiyao998"
 subject = 'Huobi Trade Notify'
 smtpserver = 'smtp.163.com'
-from_name = 'Huobi Trade Developer'
+from_name = u'火币量化交易系统'
 
 
 def init_log_config(use_mail=False):

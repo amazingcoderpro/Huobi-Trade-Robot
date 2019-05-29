@@ -46,6 +46,9 @@ REALTIME_UML = None #(1, 1, 1) #queue.Queue()
 CURRENT_TOTAL_DOLLAR_VALUE = None
 CURRENT_TOTAL_COIN_VALUE = None
 
+REALTIME_ADVISE = None
+REALTIME_SYSTEM_NOTIFY = None
+
 #所有的K线订阅响应都在此处理
 def kline_sub_msg_process(response):
     if not is_valid(response, "sub"):

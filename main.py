@@ -20,13 +20,18 @@ import log_config
 import huobi
 import config
 import wechat_helper
+import webbrowser
 logger = logging.getLogger(__name__)
 CURRENT_PRICE = 1
+
+
 
 
 class MainUI():
     def __init__(self, root):
         self.verify = True
+        self.coin_trade = 0
+        self.dollar_trade = 0
         self.notify_queue = Queue()
         self.gress_bar_init_history = GressBar()
         self.gress_bar_verify_user = GressBar()
@@ -35,7 +40,7 @@ class MainUI():
         self._is_user_valid = False
         self._user_info = {}
         self._strategy_dict = {}
-        root.title("火币量化交易系统v1.6.2　(联系方式：15691820861)")
+        root.title("火币量化交易系统v1.6.8　(官方微信交流群：火币量化交易官方交流群, QQ群:761222621, 管理员:15691820861)")
         log_config.init_log_config(use_mail=False)
         self.first_login = True
         self._hb = None
@@ -48,10 +53,14 @@ class MainUI():
         #
         # self.init_history_button = Button(root, text="Init History", command=self.init_history, width=20)
         #
+        self.notify_text = ScrolledText(root, width=20, height=15)
+        self.notify_text.insert(END, u"欢迎使用火币量化交易系统, 程序开始工作后这里将显示实时操盘建议, 请您关注！ 如对本系统有任何意见或建议可加\n官方交流QQ群：\n761222621, \n联系管理员:\n15691820861 \n建议一经采纳将赠送30天的免费试用期.", "MSG")
+
         self.start_button = Button(root, text=u"开始工作", command=self.start_work, width=20)
         # self.start_button.pack()
 
         self.stop_button = Button(root, text=u"停止工作", command=self.stop_work, width=20)
+        self.login_wechat_btn = Button(root, text=u"登录微信", command=self.login_wechat, width=20)
         # self.stop_button.pack()
 
         self.register_button = Button(root, text=u"注册策略", command=self.register_strategy, width=20)
@@ -125,6 +134,12 @@ class MainUI():
         self.nick_name_text_label = Label(root, textvariable=self.nick_name_text, foreground='blue', background="gray",
                                font=("", 12, 'bold'), width=10)
 
+        self.run_status_text = StringVar()
+        self.run_status_text.set(u"待验证")
+        self.run_status_text_label = Label(root, textvariable=self.run_status_text, foreground='red', background="gray",
+                               font=("", 10, 'bold'), width=15)
+
+
         self.label_now = Label(root, text=u"大盘涨跌幅/账户涨跌幅: ", width=22)
         self.now_text = StringVar()
         self.now_text.set("")
@@ -144,11 +159,14 @@ class MainUI():
         self.log_text.tag_config('EXCEPTION', foreground='red')
         self.log_text.tag_config('CRITICAL', background="red")
         self.log_text.tag_config('SHOW', foreground='green', font=("", 11, 'bold'))
+        self.log_text.tag_config('link', foreground='blue', underline=True, font=("", 10, 'bold'))
         self.log_text.see(END)
 
         self.trade_text.tag_config('BUY', foreground='green', background="orange", font=("", 11, 'bold'))
         self.trade_text.tag_config('SELL', foreground='red', background="orange", font=("", 11, 'bold'))
         self.log_text.see(END)
+
+        self.notify_text.tag_config('MSG', foreground='blue', background="white", font=("", 11, 'normal'))
 
         self.verify_identity_button.grid(row=0, column=0)
         self.init_history_button.grid(row=1, column=0)
@@ -156,18 +174,22 @@ class MainUI():
         self.strategy_setting_button.grid(row=3, column=0)
         self.start_button.grid(row=4, column=0)
 
+
         # self.register_button.grid(row=5, column=0)
         # self.start_check_strategy_button.grid(row=6, column=0)
         # self.clean_st_button.grid(row=7, column=0)
         # self.stop_check_strategy_button.grid(row=8, column=0)
         self.stop_button.grid(row=5, column=0)
+        self.login_wechat_btn.grid(row=6, column=0)
+        self.notify_text.grid(row=7, column=0, rowspan=3, columnspan=1)
 
         self.label_pop.grid(row=0, column=1)
         self.price_label.grid(row=0, column=2)
 
         self.label_origin.grid(row=0, column=3)
         self.origin_label.grid(row=0, column=4)
-        self.nick_name_text_label.grid(row=0, column=5)
+        self.nick_name_text_label.grid(row=1, column=5)
+        self.run_status_text_label.grid(row=0, column=5)
 
         self.label_bal.grid(row=1, column=1)
         self.bal_label.grid(row=1, column=2)#columnspan=2
@@ -211,6 +233,20 @@ class MainUI():
 
         self.working = False
 
+    def show_hand_cursor(self, event):
+        self.log_text.config(cursor='arrow')
+
+    def show_arrow_cursor(self, event):
+        self.log_text.config(cursor='xterm')
+
+    def click(self, event, x):
+        print(x)
+        webbrowser.open(x)
+
+    def handlerAdaptor(self, fun, **kwds):
+        return lambda event, fun=fun, kwds=kwds: fun(event, **kwds)
+
+
     def init_history_asyn(self):
         def init_history(hb):
             ret = self._hb.init()  # 这一步是必须的，先同步处理
@@ -220,12 +256,14 @@ class MainUI():
                 logger.error("init service failed.")
                 log_config.output2ui(u"系统初始化失败! 请检查网络状况并重试!", 3)
                 messagebox.showwarning("Error", u"系统初始化失败! 请检查网络状况并重试!")
+                self.run_status_text.set(u"初始化失败")
                 return False
             log_config.output2ui(u"系统初始化成功!", 8)
             log_config.output2ui(u"第三步, 请点击[开始工作], 程序将开启自动化交易. 如需进行系统配置, 如风险偏好设置, 交易额度限制, 微信通知, 挂单买卖等, 请点击[系统设置]按钮, 如果需要自定义交易策略请点击[策略设置]按钮, 非专业人士不建议您对策略进行修改. 系统设置和策略设置的修改在程序运行过程当中立即生效, 不需要重新启动工作. ", 8)
             self.start_button.config(state="normal")
             self.register_button.config(state="normal")
             self.init_history_button.config(state="disabled")
+            self.run_status_text.set(u"初始化成功")
 
         huobi.save_history_trade_vol(config.NEED_TOBE_SUB_SYMBOL)
         if not self._hb:
@@ -242,13 +280,17 @@ class MainUI():
             # log_config.output2ui(u"系统启动中...", 1)
             log_config.output2ui(u"系统开始工作，将为您智能发现最佳交易时机并进行自动交易!", 8)
             log_config.output2ui(u"点击 [停止工作] 可停止程序自动交易．", 8)
+            self.run_status_text.set(u"工作中")
             hb.run()
             logger.info("work over!!")
 
         if not self.verify:
             log_config.output2ui(u"授权认证检查失败, 系统暂时无法使用, 请稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!", 5)
             messagebox.showerror(u"授权认证检查失败, 系统暂时无法使用, 请稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!")
+            self.run_status_text.set(u"待授权")
             return
+
+        strategies.trade_advise_update()
 
         process.ORG_COIN_TRADE = None
         process.ORG_COIN_FROZEN = None
@@ -274,6 +316,18 @@ class MainUI():
         self.verify_identity_button.config(state="disabled")
         self.working = True
 
+    def login_wechat_aycn(self):
+        ret = wechat_helper.login_wechat()
+        log_config.output2ui(u"登录微信成功, 实时交易信息和账号周期统计信息将通过微信发送给您的[文件传输助手]．", 8)
+
+    def login_wechat(self):
+        log_config.output2ui(u"\n稍后可能需要您使用手机微信扫码登录或者需要您在手机上确认登录！否则您可能无法收到实时交易信息, 不过您也可以在火币APP中查看历史交易记录．", 8)
+        self.first_login = False
+        th = Thread(target=self.login_wechat_aycn)
+        th.setDaemon(True)
+        th.start()
+
+
     def stop_work(self):
         logger.info("stop_work!")
         if self._hb:
@@ -294,6 +348,7 @@ class MainUI():
         # log_config.output2ui("Stop work successfully!", 8)
 
         log_config.output2ui(u"系统已停止工作!", 8)
+        self.run_status_text.set(u"已停止")
         self.working = False
 
     def start_check_strategy(self):
@@ -364,8 +419,11 @@ class MainUI():
         for i, buy_price in enumerate(buy_prices):
             # 循环遍历挂单买
             buy_amount = buy_amounts[i]
-            if buy_price > 0 and buy_amount > config.TRADE_MIN_LIMIT_VALUE:
+            if buy_price > 0 and buy_amount > config.TRADE_MIN_LIMIT_VALUE*1.02 and self.dollar_trade>config.TRADE_MIN_LIMIT_VALUE*1.02:
                 if price <= buy_price:
+                    if buy_amounts > self.dollar_trade:
+                        buy_amount = self.dollar_trade
+
                     ret = strategies.buy_market(symbol, amount=buy_amount, record=True, current_price=price)
                     if ret[0]:
                         msg = u"挂单买入{}成功: 挂单价格={}$, 挂单金额={}$, 实际价格={}$, 实际买入金额={}$.".format(symbol, buy_price, buy_amount, price, ret[1])
@@ -388,11 +446,13 @@ class MainUI():
             # 循环遍历挂单卖
             sell_price = sell_prices[i]
             sell_amount = sell_amounts[i]
-            if sell_price > 0 and sell_amount > 0.00001:
+            if sell_price > 0 and sell_amount > 0.0001 and self.coin_trade>0.0001 and sell_amount*price>config.TRADE_MIN_LIMIT_VALUE*1.02 and self.coin_trade*price>config.TRADE_MIN_LIMIT_VALUE*1.02:
                 if price >= sell_price:
+                    if sell_amount > self.coin_trade:
+                        sell_amount = self.coin_trade
+
                     ret = strategies.sell_market(symbol, amount=sell_amount, record=False, current_price=price)
                     if ret[0]:
-                        config.WAIT_SELL_ACCOUNT[i] = sell_amount - ret[1]
                         msg = u"挂单卖出{}: 挂单价格={}, 挂单个数={}个, 实际价格={}, 实际挂单卖出个数={}个.".format(symbol,
                                 sell_price, sell_amount, price, ret[1])
                         success = False
@@ -401,7 +461,7 @@ class MainUI():
                             config.WAIT_SELL_ACCOUNT[i] = sell_amount - ret[1]
                             success = True
                         elif ret[0] == 2:
-                            u"-交易被取消, 取消原因: {}!".format(ret[2])
+                            msg += u"-交易被取消, 取消原因: {}!".format(ret[2])
                         elif ret[0] == 3:
                             msg += u"-交易失败, 失败原因: {}！".format(ret[2])
                         log_config.output2ui(msg, 7)
@@ -430,10 +490,13 @@ class MainUI():
             coin_str = bal_text.split(",")[0].split("/")
             dollar_str = bal_text.split(",")[1].split("/")
             if len(coin_str) > 0 and len(dollar_str) > 0:
+
                 coin_trade = float(coin_str[0])
                 coin_frozen = float(coin_str[1])
+                self.coin_trade = coin_trade
 
                 dollar_trade = float(dollar_str[0])
+                self.dollar_trade = dollar_trade
                 dollar_frozen = float(dollar_str[1])
                 total_coin_value = coin_trade + coin_frozen + (dollar_trade + dollar_frozen) / price
 
@@ -484,7 +547,7 @@ class MainUI():
                              u"子和风险接受能力等的不同，智能发现属于您的最佳交易时机进行自动化交易，并可以设置邮件和微信提醒，"
                              u"真正帮您实现24小时实时盯盘，专业可靠，稳定盈利！\n", 8)
         log_config.output2ui(
-            u"免责声明:\n  1. 使用本系统时，系统将会根据程序判断自动帮您进行交易，因此产生的盈利或亏损均由您个人负责，与系统开发团队无关\n  2. 本系统需要您提供您在火币官网申请的API密钥，获取火币官方授权后方能正常运行，本系统承诺不会上传您的密钥到火币平台以外的地址，请您妥善保管好自己的密钥，发生丢失造成的财产损失与本系统无关\n  3. 因操作失误，断网，断电，程序异常等因素造成的经济损失与系统开发团队无关\n  4.如需商业合作，充值或使用过程中如有任何问题可与售后团队联系，联系方式: 15691820861\n",
+            u"免责声明:\n  1. 使用本系统时，系统将会根据程序判断自动帮您进行交易，因此产生的盈利或亏损均由您个人负责，与系统开发团队无关\n  2. 本系统需要您提供您在火币官网申请的API密钥，获取火币官方授权后方能正常运行，本系统承诺不会上传您的密钥到火币平台以外的地址，请您妥善保管好自己的密钥，发生丢失造成的财产损失与本系统无关\n  3. 因操作失误，断网，断电，程序异常等因素造成的经济损失与系统开发团队无关\n  4.如需商业合作，充值或使用过程中如有任何问题可加QQ群：761222621 进行交流，或与售后团队联系，联系方式: 15691820861\n",
             8)
         log_config.output2ui(u"--------------------使用步骤如下:", 8)
         log_config.output2ui(u"第一步，请点击 [身份验证] 然后在弹出框中输入您在火币官网申请的API密钥，选择您想自动化交易的币种，进行授权认证！", 8)
@@ -542,7 +605,7 @@ class MainUI():
                                 log_text.configure(state='normal')
                                 log_text.insert(END, msg_dict["msg"], msg_dict["level"])
                                 log_text.see(END)
-                                log_text.configure(state='disabled')
+                                # log_text.configure(state='disabled')
                     else:
                         time.sleep(1)
                 except Exception as e:
@@ -565,6 +628,31 @@ class MainUI():
                 except Exception as e:
                     logger.exception("update_kdj exception....")
                     log_config.output2ui("update_kdj exception....", 3)
+
+        def update_advise():
+            while 1:
+                try:
+                    time.sleep(15)
+                    if not self.verify:
+                        continue
+                    if process.REALTIME_ADVISE:
+                        # self.notify_text.set(u"[操盘建议]:\n"+process.REALTIME_ADVISE[0]+"\n"+process.REALTIME_ADVISE[1])
+                        # self.notify_text.
+                        msg = u"[操盘建议]:\n" + process.REALTIME_ADVISE[0] + "\n" + process.REALTIME_ADVISE[1] + u"\n程序将为您持续选择最佳交易时机！"
+                        self.notify_text.delete(1.0, END)
+                        self.notify_text.insert(END, msg, "MSG")
+                        # self.notify_text.insert(END, u"[操盘建议]:\n" + process.REALTIME_ADVISE[0] + "\n" + process.REALTIME_ADVISE[1], "MSG")
+
+                        # log_config.output2ui(u"[操盘建议]:", 8)
+                        # log_config.output2ui(process.REALTIME_ADVISE[0], 8)
+                        # log_config.output2ui(process.REALTIME_ADVISE[1], 8)
+
+                    if process.REALTIME_SYSTEM_NOTIFY:
+                        msg = u"------------[管理员通知]----------\n{}".format(process.REALTIME_SYSTEM_NOTIFY)
+                        log_config.output2ui(msg, 6)
+                        log_config.notify_user(msg, own=True)
+                except Exception as e:
+                    logger.exception("update_advise exception....")
 
         def update_uml(uml_text):
             while 1:
@@ -700,6 +788,10 @@ class MainUI():
         th.setDaemon(True)
         th.start()
 
+        th = Thread(target=update_advise)
+        th.setDaemon(True)
+        th.start()
+
         th = Thread(target=notify_profit_info)
         th.setDaemon(True)
         th.start()
@@ -712,6 +804,7 @@ class MainUI():
         if ans:
             self.gress_bar_init_history.quit()
             self.gress_bar_verify_user.quit()
+            self.clean_strategy()
             self.stop_check_strategy()
             self.stop_work()
             self.root.destroy()
@@ -750,6 +843,7 @@ class MainUI():
                 self.nick_name_text.set(config.NICK_NAME)
                 log_config.output2ui(u"火币API授权认证成功! 您选择的交易币种为: {}{}\n".format(config.SUB_LEFT.upper(), config.SUB_RIGHT.upper()), 8)
                 log_config.output2ui(u"第二步，请点击 [系统初始化] 按钮，系统将开始初始化历史数据，以便进行更加精确的数据分析．", 8)
+                self.run_status_text.set(u"验证成功, 待初始化")
             else:
                 messagebox.showwarning("Error", u"火币API授权认证失败，请检查您的KEY是否在有效期，或者您申请API KEY时绑定了IP地址，但您当前电脑的公网IP发生了变化!")
                 log_config.output2ui(u"火币API授权认证失败，请检查您的KEY是否在有效期，或者您申请API KEY时绑定了IP地址，但您当前电脑的公网IP发生了变化!", 3)
@@ -773,7 +867,7 @@ class MainUI():
         try:
             while retry >= 0:
                 host = "47.75.10.215"
-                ret = get("http://{}:5000/huobi/{}".format(host, access_key))
+                ret = get("http://{}:5000/huobi/{}".format(host, access_key), timeout=3)
                 if ret.status_code == 200:
                     self.verify = True
                     logger.info(u"系统授权认证成功！ 过期时间: {}".format(ret.text))
@@ -808,9 +902,31 @@ class MainUI():
         return False, u"系统授权认证检查失败, 暂时无法使用本系统, 错误码：{},错误信息:{}.\n请检查您的网络情况, 稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!".format(status_code, error_info)
 
     def set_up_account(self):
-        log_config.output2ui(
-            u"温馨提示：在身份验证弹出窗口上输入您的密钥后, 您可以点击[保存密钥]保存自己的密钥至本地文件中，以后进行身份验证时只需点击[导入密钥]即可．\n   如果您还没有API密钥，请登录火币官方网站，点击个人头像，进入API管理页面进行申请．官网地址: https://www.huobi.co/zh-cn/ \n   如果您还没有火币平台账号，请参考火币平台用户指导书，简单几步带您完成从注册到交易，文章链接: http://github.com/PythonAwesome/HuobiUserGuide/blob/master/README.md", 1)
+        self.log_text.insert(
+            END, u"  温馨提示：在身份验证弹出窗口中输入您的密钥后, 您可以点击[保存密钥]保存自己的密钥至本地文件中，以后进行身份验证时只需点击[导入密钥]即可．", "INFO")
 
+        self.log_text.insert(END, u"\n\n  如果您还没有火币平台账号，请参考[火币平台用户指导书]，简单几步带您完成从注册到交易．\n\n  注册时使用我们的 [邀请注册链接] (邀请码 8jbg4)可免费获得本系统100天的试用时长.\n\n", "INFO")
+
+        # self.log_text.insert(END, u"\n  https://www.huobi.de.com/topic/invited/?invite_code=8jbg4&from=groupmessage", "link")
+        # self.log_text.insert(END, "\n   http://github.com/PythonAwesome/HuobiUserGuide/blob/master/README.md", "link")
+        #
+        # self.log_text.insert(END, "\n   如果您还没有API密钥，请登录火币官方网站，点击个人头像，进入API管理页面进行申请．官网地址: ", "INFO")
+        # self.log_text.insert(END, "\n   https://www.huobi.co/zh-cn/", "link")
+
+        self.log_text.see(END)
+
+        url = ['https://www.huobi.co/zh-cn/', 'http://github.com/PythonAwesome/HuobiUserGuide/blob/master/README.md', 'https://www.huobi.de.com/topic/invited/?invite_code=8jbg4&from=groupmessage']
+        name = [u'火币全球官方网站', u'火币平台用户指导书', u'邀请注册链接']
+        m = 0
+        for each in name:
+            self.log_text.tag_config(m, foreground='blue', underline=True)
+            self.log_text.tag_bind(m, '<Enter>', self.show_hand_cursor)
+            self.log_text.tag_bind(m, '<Leave>', self.show_arrow_cursor)
+            self.log_text.insert(END, each + '\n\n', m)
+            self.log_text.tag_bind(m, '<Button-1>', self.handlerAdaptor(self.click, x=url[m]))
+            m += 1
+
+        self.log_text.see(END)
         from popup_account import PopupAccountConfig
         pop = PopupAccountConfig(self._user_info, u"身份验证")
         self.root.wait_window(pop)
@@ -869,8 +985,10 @@ class MainUI():
 
     def set_up_system(self):
         def login_wechat():
-            print("需要扫码登录微信网页版或在你的手机上确认登录！")
-            wechat_helper.login_wechat()
+            # log_config.output2ui(u"需要扫码登录微信网页版或在你的手机上确认登录！", 8)
+            ret = wechat_helper.login_wechat()
+            log_config.output2ui(u"登录微信成功, 实时交易信息和账号周期统计信息将通过微信发送给您的[文件传输助手]．", 8)
+
 
         from popup_system import PopupSystem
         value_dict = {"is_email": config.EMAIL_NOTIFY, "is_wechat": config.WECHAT_NOTIFY, "is_alarm": config.ALARM_NOTIFY, "is_alarm_trade": config.ALARM_TRADE_DEFAULT,
@@ -941,7 +1059,7 @@ class MainUI():
 
             # if (config.EMAIL_NOTIFY and (config.WECHATS or config.WECHATS_VIP)) or login_wechat_now:
             if login_wechat_now or config.EMAIL_NOTIFY:
-                log_config.output2ui(u"请用您的手机微信扫码登录微信网页版或在您的手机上确认登录！否则您可能无法收到实时交易信息", 8)
+                log_config.output2ui(u"稍后可能需要您使用手机微信扫码登录或者需要您在手机上确认登录！否则您可能无法收到实时交易信息. 当然, 您也可以在火币APP中查看历史交易记录!", 8)
                 self.first_login = False
                 th = Thread(target=login_wechat)
                 th.setDaemon(True)

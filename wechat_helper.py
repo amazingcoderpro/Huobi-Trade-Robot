@@ -11,7 +11,7 @@ logger = logging.getLogger()
 
 def login_wechat():
     # 登录微信 登录比较费时，大概10s
-    auto_login(hotReload=True)
+    return auto_login(hotReload=True)
 
 
 def send_to_wechat(msg, nick_names=None, own=False):
