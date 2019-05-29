@@ -35,7 +35,7 @@ class MainUI():
         self._is_user_valid = False
         self._user_info = {}
         self._strategy_dict = {}
-        root.title("火币量化交易系统(15691820861)")
+        root.title("火币量化交易系统v1.6.2　(联系方式：15691820861)")
         log_config.init_log_config(use_mail=False)
         self.first_login = True
         self._hb = None
@@ -222,7 +222,7 @@ class MainUI():
                 messagebox.showwarning("Error", u"系统初始化失败! 请检查网络状况并重试!")
                 return False
             log_config.output2ui(u"系统初始化成功!", 8)
-            log_config.output2ui(u"第三步, 请点击[开始工作], 程序将开启自动化交易. 如需进行系统设置, 如风险偏好设置, 交易额度限制, 微信通知, 挂单买卖等, 请点击[系统设置]按钮, 如果需要自定义交易策略请点击[策略设置]按钮, 非专业人士不建议您对策略进行修改. 系统设置和策略设置的修改在程序运行过程当中立即生效, 不需要重新启动工作. ", 8)
+            log_config.output2ui(u"第三步, 请点击[开始工作], 程序将开启自动化交易. 如需进行系统配置, 如风险偏好设置, 交易额度限制, 微信通知, 挂单买卖等, 请点击[系统设置]按钮, 如果需要自定义交易策略请点击[策略设置]按钮, 非专业人士不建议您对策略进行修改. 系统设置和策略设置的修改在程序运行过程当中立即生效, 不需要重新启动工作. ", 8)
             self.start_button.config(state="normal")
             self.register_button.config(state="normal")
             self.init_history_button.config(state="disabled")
@@ -352,7 +352,7 @@ class MainUI():
 
     def wait_buy_sell(self, price):
         if not price or not self.working:
-            logger.info("wait_buy_sell not be trigger!, price={}, working={}".format(price, self.working))
+            # logger.info("wait_buy_sell not be trigger!, price={}, working={}".format(price, self.working))
             return False
 
         buy_prices = config.WAIT_BUY_PRICE
@@ -464,6 +464,8 @@ class MainUI():
                 self.profit_text.set("{}/{}".format(profit_coin, profit_dollar))
 
                 #更新大盘涨跌幅和当前账户的涨跌幅
+                process.CURRENT_TOTAL_DOLLAR_VALUE = total_dollar_value
+                process.CURRENT_TOTAL_COIN_VALUE = total_coin_value
                 if process.ORG_DOLLAR_TOTAL>0:
                     account_zhang = round((total_dollar_value - process.ORG_DOLLAR_TOTAL)*100 / process.ORG_DOLLAR_TOTAL, 3)
                 else:
@@ -860,7 +862,7 @@ class MainUI():
                             strategies.kdj_sell_params,
                             strategies.vol_price_fly_params,
                             strategies.boll_strategy_params,
-                            u"策略设置")
+                            u"策略配置")
         self.root.wait_window(pop)
         print(strategies.kdj_buy_params)
 
@@ -881,7 +883,7 @@ class MainUI():
                       "account_report_interval": config.ACCOUNT_REPORT_INTERVAL, "emails_vip": config.EMAILS_VIP, "wechats_vip": config.WECHATS_VIP,
                       "nick_name": config.NICK_NAME}
 
-        pop = PopupSystem(value_dict, u"系统设置")
+        pop = PopupSystem(value_dict, u"系统配置")
         self.root.wait_window(pop)
         if pop.is_ok:
             config.EMAIL_NOTIFY = value_dict["is_email"]
