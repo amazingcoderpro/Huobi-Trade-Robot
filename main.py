@@ -38,7 +38,7 @@ class MainUI():
         self._is_user_valid = False
         self._user_info = {}
         self._strategy_dict = {}
-        root.title("火币量化交易系统v1.6.8　(官方微信交流群：火币量化交易官方交流群, QQ群:761222621, 管理员:15691820861)")
+        root.title("火币量化交易系统v1.6.81　(官方微信交流群：火币量化交易官方交流群, QQ群:761222621, 管理员:15691820861)")
         log_config.init_log_config(use_mail=False)
         self.first_login = True
         self._hb = None
