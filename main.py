@@ -25,8 +25,6 @@ logger = logging.getLogger(__name__)
 CURRENT_PRICE = 1
 
 
-
-
 class MainUI():
     def __init__(self, root):
         self.verify = True
@@ -123,7 +121,7 @@ class MainUI():
                                font=("", 12, 'bold'), width=30)
 
         # 初始信息
-        self.label_origin = Label(root, text=u"初始价格/币数/USDT/总价值: ", width=25)
+        self.label_origin = Label(root, text=u"初始价格/币对1/币对2/总价值: ", width=25)
         self.origin_text = StringVar()
         self.origin_text.set("")
         self.origin_label = Label(root, textvariable=self.origin_text, foreground='blue', background="gray",
@@ -147,9 +145,9 @@ class MainUI():
                                font=("", 12, 'bold'), width=30)
 
         self.label_run_log = Label(root, text=u"运行日志: ", width=10)
-        self.log_text = ScrolledText(root, width=60, height=26)
+        self.log_text = ScrolledText(root, width=62, height=28)
         self.label_trade_log = Label(root, text=u"交易日志: ", width=10)
-        self.trade_text = ScrolledText(root, width=60, height=26)
+        self.trade_text = ScrolledText(root, width=62, height=28)
         # self.log_text.pack()
         # 创建一个TAG，其前景色为红色
         self.log_text.tag_config('BUY', foreground='green', background="#C1CDC1", font=("", 11, 'bold'))
@@ -179,8 +177,8 @@ class MainUI():
         # self.start_check_strategy_button.grid(row=6, column=0)
         # self.clean_st_button.grid(row=7, column=0)
         # self.stop_check_strategy_button.grid(row=8, column=0)
-        self.stop_button.grid(row=5, column=0)
-        self.login_wechat_btn.grid(row=6, column=0)
+        self.stop_button.grid(row=6, column=0)
+        self.login_wechat_btn.grid(row=5, column=0)
         self.notify_text.grid(row=7, column=0, rowspan=3, columnspan=1)
 
         self.label_pop.grid(row=0, column=1)
@@ -230,6 +228,7 @@ class MainUI():
         self.stop_check_strategy_button.config(state="disabled")
         self.start_check_strategy_button.config(state="disabled")
         self.init_history_button.config(state="disabled")
+        self.login_wechat_btn.config(state="disabled")
 
         self.working = False
 
@@ -344,6 +343,7 @@ class MainUI():
         # self.verify_identity_button.config(state="normal")
         # self.init_history_button.config(state="normal")
         self.verify_identity_button.config(state="normal")
+        # self.login_wechat_btn.config(state="disabled")
 
         # log_config.output2ui("Stop work successfully!", 8)
 
@@ -542,14 +542,14 @@ class MainUI():
         # # 每1000毫秒触发自己，形成递归，相当于死循环
         # self.root.after(1000, self.process_msg)
         logger.info("Welcome to Huobi Trade System")
-        log_config.output2ui(u"-----------------欢迎使用火币量化交易系统！----------------- ---\n　 本系统由资深量化交易专家和算法团队倾力打造，对接火币官方接口，经过长达两年的不断测试与优化，"
+        log_config.output2ui(u"------------欢迎使用火币量化交易系统！------------\n　 本系统由资深量化交易专家和算法团队倾力打造，对接火币官方接口，经过长达两年的不断测试与优化，"
                              u"本地化运行，更加安全可控，策略可定制，使用更方便!　\n   系统结合历史与实时数据进行分析，加上内置的多套专业策略组合算法，根据您的仓位、策略定制因"
                              u"子和风险接受能力等的不同，智能发现属于您的最佳交易时机进行自动化交易，并可以设置邮件和微信提醒，"
                              u"真正帮您实现24小时实时盯盘，专业可靠，稳定盈利！\n", 8)
         log_config.output2ui(
             u"免责声明:\n  1. 使用本系统时，系统将会根据程序判断自动帮您进行交易，因此产生的盈利或亏损均由您个人负责，与系统开发团队无关\n  2. 本系统需要您提供您在火币官网申请的API密钥，获取火币官方授权后方能正常运行，本系统承诺不会上传您的密钥到火币平台以外的地址，请您妥善保管好自己的密钥，发生丢失造成的财产损失与本系统无关\n  3. 因操作失误，断网，断电，程序异常等因素造成的经济损失与系统开发团队无关\n  4.如需商业合作，充值或使用过程中如有任何问题可加QQ群：761222621 进行交流，或与售后团队联系，联系方式: 15691820861\n",
             8)
-        log_config.output2ui(u"--------------------使用步骤如下:", 8)
+        log_config.output2ui(u"------------使用步骤如下:", 8)
         log_config.output2ui(u"第一步，请点击 [身份验证] 然后在弹出框中输入您在火币官网申请的API密钥，选择您想自动化交易的币种，进行授权认证！", 8)
 
 
@@ -835,6 +835,7 @@ class MainUI():
 
                 self._is_user_valid = True
                 # self.verify_identity_button.config(state="disabled")
+                self.login_wechat_btn.config(state="normal")
                 self.init_history_button.config(state="normal")
                 self.start_button.config(state="normal")
                 self.strategy_setting_button.config(state="normal")
@@ -915,8 +916,14 @@ class MainUI():
 
         self.log_text.see(END)
 
-        url = ['https://www.huobi.co/zh-cn/', 'http://github.com/PythonAwesome/HuobiUserGuide/blob/master/README.md', 'https://www.huobi.de.com/topic/invited/?invite_code=8jbg4&from=groupmessage']
-        name = [u'火币全球官方网站', u'火币平台用户指导书', u'邀请注册链接']
+        url = ['https://www.huobi.de.com/topic/invited/?invite_code=8jbg4&from=groupmessage',
+               'https://www.huobi.co/zh-cn/',
+               'https://www.huobi.co/zh-cn/apikey/',
+               'http://github.com/PythonAwesome/HuobiUserGuide/blob/master/README.md',
+               'https://www.jianshu.com/p/c4c4e3325a28',
+               'https://www.jianshu.com/p/de6b120cf8d7'
+            ]
+        name = [u'邀请注册链接', u'火币全球官方网站(火币APP下载也在这里)', u'火币API Key申请(开通授权和身份验证必需)', u'火币平台用户指导书', u"如何提高被动收入", u"本系统使用手册"]
         m = 0
         for each in name:
             self.log_text.tag_config(m, foreground='blue', underline=True)

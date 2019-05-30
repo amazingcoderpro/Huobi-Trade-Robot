@@ -28,10 +28,10 @@ class PopupAccountConfig(Toplevel):
         self.trade_right.set(self.value_dict.get("trade_right", "USDT"))
 
         self.ws_site = StringVar()
-        self.ws_site.set(self.value_dict.get("ws_site", "PRO"))
+        self.ws_site.set(self.value_dict.get("ws_site", "BR"))
 
         self.rest_site = StringVar()
-        self.rest_site.set(self.value_dict.get("rest_site", "PRO"))
+        self.rest_site.set(self.value_dict.get("rest_site", "BR"))
 
         self.setup_ui()
         self.title(title)
