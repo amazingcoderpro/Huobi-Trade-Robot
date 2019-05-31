@@ -420,13 +420,13 @@ def trade_advise_update():
                0: u"整体行情稳定, 震幅较小, 建议减少交易次数, 持续观望, 注意成交量变化．",
                1: u"整体行情逐渐回暖, 建议以持有, 观望为主, 可逐步逢低建仓.", 2: u"整体行情处于上升通道中, 谨慎追高, 注意行情变化, 以持有和逢高出货为主．"}
 
-        msg_day = msg_dict.get(status_day, u"行情变幻！")
+        msg_day = msg_dict.get(status_day, u"行情变幻, 需谨慎操作！")
         if day_open > day_upper:
             msg_day = u"涨幅过大, 切忌追高, 建议逢高卖出！"
         if day_open < day_lower:
             msg_day = u"跌幅过大, 反弹可期, 可适当逢低吸货, 波段操作, 留意行情变化, 仓位不宜过重！"
 
-        msg_hour = msg_dict.get(status_hour, u"行情变幻！")
+        msg_hour = msg_dict.get(status_hour, u"行情变幻, 需谨慎操作！")
         if hour_open > hour_upper:
             msg_hour = u"涨幅过大, 谨慎追高, 以逢高卖出为主！"
         if hour_open < hour_lower:
@@ -2114,7 +2114,7 @@ def sell_high():
             sell_percent_old = sell_percent
             zhekou = (1-(76-d)/76)
             sell_percent *= zhekou
-            logger.info("sell high d={}<75, sell percent={} * {} = {}".format(sell_percent_old, zhekou, sell_percent))
+            logger.info("sell high d={}<75, sell percent={} * {} = {}".format(d, sell_percent_old, zhekou, sell_percent))
 
         close1 = get_close(market)
         # 相比上个收盘价涨幅超过2个点

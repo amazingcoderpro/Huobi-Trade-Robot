@@ -54,7 +54,7 @@ SB_EOSUSDT = "eosusdt"
 SB_EOSETH = "eoseth"
 SB_RSRUSDT = "rsrusdt"
 
-SUPPORT_TRADE_LEFT = ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH",
+SUPPORT_TRADE_LEFT = ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
                       "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"]
 # 以下是需要订阅的数据
 SUPPORT_TRADE_RIGHT = ["USDT", "HUSD", "BTC", "ETH", "HT"]

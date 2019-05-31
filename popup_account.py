@@ -139,20 +139,29 @@ class PopupAccountConfig(Toplevel):
         self.destroy()
 
     def on_save_key(self):
+        import random
+        access_key = self.access_key.get()
+        secret_key = self.secret_key.get()
+        if len(access_key) < 10 or len(secret_key) < 10:
+            messagebox.showwarning("Error", u"请输入合法的key后再保存！")
+            return
+
         save_path = filedialog.asksaveasfilename(filetypes=[("HBK", ".hbk")])  # 返回文件名
+        if not save_path.endswith(".hbk"):
+            save_path += ".hbk"
         try:
             str_key = "{}++++{}".format(self.access_key.get(), self.secret_key.get())
             with open(save_path, 'w') as f:
                 f.write(str_key)
-            print(save_path)
         except Exception as e:
             print(e)
             pass
 
     def on_open_key(self):
         save_path = filedialog.askopenfilename(filetypes=[("HBK", ".hbk")])  # 返回文件名
+        if not save_path:
+            return
         try:
-            # print(save_path)
             config.NICK_NAME = os.path.basename(save_path).split(".")[0]
             with open(save_path, 'r') as f:
                 str_key = f.read()
@@ -160,6 +169,9 @@ class PopupAccountConfig(Toplevel):
                 self.secret_key.set(str_key.split("++++")[1].strip().replace("\n", ""))
         except Exception as e:
             print(e)
+            messagebox.showwarning("Error", u"导入的key文件格式错误！")
+            return
+
 
 if __name__ == '__main__':
     pass

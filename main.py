@@ -487,6 +487,8 @@ class MainUI():
                 price = float(price)
 
             bal_text = self.bal_text.get()
+            if not bal_text:
+                return
             coin_str = bal_text.split(",")[0].split("/")
             dollar_str = bal_text.split(",")[1].split("/")
             if len(coin_str) > 0 and len(dollar_str) > 0:
@@ -846,8 +848,8 @@ class MainUI():
                 log_config.output2ui(u"第二步，请点击 [系统初始化] 按钮，系统将开始初始化历史数据，以便进行更加精确的数据分析．", 8)
                 self.run_status_text.set(u"验证成功, 待初始化")
             else:
-                messagebox.showwarning("Error", u"火币API授权认证失败，请检查您的KEY是否在有效期，或者您申请API KEY时绑定了IP地址，但您当前电脑的公网IP发生了变化!")
-                log_config.output2ui(u"火币API授权认证失败，请检查您的KEY是否在有效期，或者您申请API KEY时绑定了IP地址，但您当前电脑的公网IP发生了变化!", 3)
+                messagebox.showwarning("Error", u"火币API授权认证失败，请检查您的KEY是否在有效期，或者您申请API KEY时绑定了IP地址，但您当前电脑的公网IP与绑定的IP不一致!")
+                log_config.output2ui(u"火币API授权认证失败，请检查您的KEY是否在有效期，或者您申请API KEY时绑定了IP地址，但您当前电脑的公网IP与绑定的IP不一致!", 3)
 
         th = Thread(target=verify_user_by_get_balance, args=(
             self._user_info.get("trade_left", None),
@@ -898,9 +900,10 @@ class MainUI():
             error_info = error_info.replace(host, "47.77.13.207")
             error_info = error_info.replace("5000", "1009")
             logger.error("verify_huobi e={}".format(error_info))
+            error_info = u"网络连接超时！"
 
         self.verify = False
-        return False, u"系统授权认证检查失败, 暂时无法使用本系统, 错误码：{},错误信息:{}.\n请检查您的网络情况, 稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!".format(status_code, error_info)
+        return False, u"系统授权认证检查失败, 暂时无法使用本系统, 错误码：{},错误信息:{}\n请检查您的网络情况, 稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!".format(status_code, error_info)
 
     def set_up_account(self):
         self.log_text.insert(
