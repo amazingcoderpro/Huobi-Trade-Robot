@@ -311,7 +311,7 @@ def boll_strategy():
             # buy_percent *= 1.2
 
         # msg = "[BUY]boll_strategy buy {} percent: {}, current price={}, upper={}, middle={}, lower={}, pdiff1={}, pdiff2={}".format(symbol, buy_percent, price, upper, middle, lower, pdiff1, pdiff2)
-        msg = "[买入{}]boll 买入比例={}%, 当前价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
+        msg = "[买入{}]BLL 买入比例={}%, 买入价格={}, 上轨={}, 中轨={}, 下轨={}, 上－中／价={}, 中－下／价={}".format(symbol, round(
             buy_percent * 100, 2), round(price, 6), round(upper, 6), round(middle, 6),
                                                                                                      round(lower, 6),
                                                                                                      round(pdiff1, 6),
@@ -321,7 +321,7 @@ def boll_strategy():
 
         ret = buy_market(symbol, percent=buy_percent, current_price=price)
         if ret[0]:
-            msg = "[BOLL买入{}] 计划买入比例={}%, 实际买入金额={}$, 当前价格={}$, UL={}, ML={}, LL={}.".format(symbol, round(
+            msg = "[买入{}]BLL 计划买入比例={}%, 实际买入金额={}$, 买入价格={}$, UL={}, ML={}, LL={}.".format(symbol, round(
                 buy_percent * 100, 2), round(ret[1], 3), round(price, 6), round(upper, 6), round(middle, 6), round(lower, 6))
 
             success = False
@@ -334,7 +334,7 @@ def boll_strategy():
             elif ret[0] == 3:
                 msg += "-交易失败, 失败原因: {}！".format(ret[2])
 
-            log_config.output2ui(msg, 7)
+            log_config.output2ui(msg, 6)
             logger.warning(msg)
             log_config.notify_user(msg, own=True)
             log_config.notify_user(log_config.make_msg(0, symbol, current_price=price, percent=buy_percent))
@@ -354,13 +354,13 @@ def boll_strategy():
             logger.info("boll sell, not still up, 1.2")
             # sell_percent *= 1.2
 
-        msg = "[BOLL卖出{}] 卖出比例={}%, 当前价格={}, UL={}, ML={}, LL={}".format(symbol, round(sell_percent*100, 2), round(price,3), round(upper,2), round(middle,2), round(lower,2))
+        msg = "[卖出{}]BLL 卖出比例={}%, 卖出价格={}, UL={}, ML={}, LL={}".format(symbol, round(sell_percent*100, 2), round(price,3), round(upper,2), round(middle,2), round(lower,2))
         if not trade_alarm(msg):
             return False
 
         ret = sell_market(symbol, percent=sell_percent, current_price=price)
         if ret[0]:
-            msg = "[BOLL卖出{}] 计划卖出比例={}%, 实际卖出量={}个, 当前价格={}$, UL={}, ML={}, LL={}.".format(symbol, round(
+            msg = "[卖出{}]BLL 计划卖出比例={}%, 实际卖出量={}个, 卖出价格={}$, UL={}, ML={}, LL={}.".format(symbol, round(
                 sell_percent * 100, 2), round(ret[1], 3), round(price, 6), round(upper, 6), round(middle, 6), round(lower, 6),
                                                                                                  round(pdiff1, 6),
                                                                                                  round(pdiff2, 6))
@@ -446,7 +446,7 @@ def trade_advise_update():
         except Exception as e:
             logger.exception("get notify exception={}".format(e))
 
-        logger.info(u"当前建do={}, du={}, dm={}, dl={}\nho={}, hu={}, hm={}, hl={}\n advise_day={} \nadvise_hour={}\nnotify_msg={}".format(day_open, day_upper, day_middle, day_lower, hour_open, hour_upper, hour_middle, hour_lower, advise_day, advise_hour, notify_msg))
+        logger.info(u"建议do={}, du={}, dm={}, dl={}\nho={}, hu={}, hm={}, hl={}\n advise_day={} \nadvise_hour={}\nnotify_msg={}".format(day_open, day_upper, day_middle, day_lower, hour_open, hour_upper, hour_middle, hour_lower, advise_day, advise_hour, notify_msg))
 
         process.REALTIME_SYSTEM_NOTIFY = notify_msg
         return advise_day, advise_hour, notify_msg
@@ -596,7 +596,7 @@ def kdj_strategy_buy():
 
     buy_percent *= config.RISK
 
-    msg = "[KDJ买入{}] 计划买入比例={}%, 当前价格={}, 指标K={}, D={}, k1={}, D1={}, 阶段最低价格={}, 回暖幅度={}%".format(
+    msg = "[买入{}]KD 计划买入比例={}%, 买入价格={}, 指标K={}, D={}, k1={}, D1={}, 阶段最低价格={}, 回暖幅度={}%".format(
         symbol, round(buy_percent * 100, 2), round(current_price, 6), round(cur_k, 2), round(cur_d, 2), round(last_k, 2), round(last_d, 2), round(min_price, 6),
          round(actual_up_percent * 100, 2))
 
@@ -605,7 +605,7 @@ def kdj_strategy_buy():
 
     ret = buy_market(symbol, percent=buy_percent, current_price=current_price)
     if ret[0]:
-        msg = "[KDJ买入{}] 计划买入比例={}%, 实际买入金额={}$, 当前价格={}, 指标K={}, D={}, 阶段最低价格={}, 回暖幅度={}%, 买入策略={}.".format(
+        msg = "[买入{}]KD 计划买入比例={}%, 实际买入金额={}$, 买入价格={}, 指标K={}, D={}, 阶段最低价格={}, 回暖幅度={}%, 买入策略={}.".format(
             symbol, round(buy_percent * 100, 2), round(ret[1], 3), round(current_price, 6), round(cur_k, 2), round(cur_d, 2),
             round(min_price, 6), round(actual_up_percent * 100, 2), strategy_flag)
 
@@ -748,7 +748,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
         percent = kdj_sell_params.get("sell_percent", 0.3)
         percent *= config.RISK
 
-        msg_show = "[KDJ卖出{}]卖出比例={}%, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}．".format(
+        msg_show = "[卖出{}]KD 卖出比例={}%, 卖出价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}．".format(
             symbol, round(percent * 100, 2), round(current_price, 6), round(max_price, 6),
             round(actual_down_percent * 100, 2), round(cur_k, 2), round(cur_d, 2), )
 
@@ -757,7 +757,7 @@ def kdj_strategy_sell(currency=[], max_trade=1):
 
         ret = sell_market(symbol, percent=percent, current_price=current_price)
         if ret[0]:
-            msg = "[KDJ卖出{}]计划卖出比例={}%, 实际卖出数量={}个, 当前价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}.".format(
+            msg = "[卖出{}]KD 计划卖出比例={}%, 实际卖出数量={}个, 卖出价格={}, 阶段最高价格={}, 回撤幅度={}%, 指标K={}, D={}.".format(
                 symbol, round(percent * 100, 2), round(ret[1], 3), round(current_price, 6), round(max_price, 6),
                 round(actual_down_percent * 100, 2), round(cur_k, 2), round(cur_d, 2), )
 
@@ -888,7 +888,7 @@ def stop_loss(percent=0.03):
                         symbol, last_buy_amount, last_price,
                         current_price, loss_percent))
 
-                msg = "[卖出{}] 移动止损 计划卖出量={}个, 实际卖出量={}个, 之前买入价={}$, 当前价={}$, 损失比例={}%.".format(
+                msg = "[卖出{}]MSL 计划卖出量={}个, 实际卖出量={}个, 之前买入价={}$, 当前卖出价={}$, 损失比例={}%.".format(
                         symbol, round(last_buy_amount, 3), round(ret[1], 3), round(last_price, 6),
                         round(current_price, 6), round(loss_percent*100, 2))
 
@@ -1217,7 +1217,7 @@ def vol_price_fly():
 
     ret = buy_market(symbol, percent=percent, strategy_type="vol_price_fly", current_price=current_price)
     if ret[0]:
-        msg = "[买入{}]量价齐升, 计划买入比例={}%, 实际买入金额={}$, 当前价格={}.".format(symbol, round(percent*100, 2), round(ret[1],2), round(current_price, 6))
+        msg = "[买入{}]VPF, 计划买入比例={}%, 实际买入金额={}$, 买入价格={}.".format(symbol, round(percent*100, 2), round(ret[1],2), round(current_price, 6))
 
         success = False
         if ret[0] == 1:
@@ -2012,7 +2012,7 @@ def buy_low():
             "buy low buy, current price={}, buy percent={}, mp={}, mp5={}, mp20={}, mp60={}, still down={}".format(
                 current_price, buy_percent, min_price, min_price_5, min_price_20, min_price_60, still_down))
 
-        msg = "[BL买入{}]买入比例={}%, 当前价格={}, MP={}, MP5/20/60={}/{}/{}.".format(
+        msg = "[买入{}]BL 买入比例={}%, 买入价格={}, MP={}, MP5/20/60={}/{}/{}.".format(
             symbol, round(buy_percent*100, 2), round(current_price, 6), round(min_price, 6),round(min_price_5, 6), round(min_price_20, 6), round(min_price_60, 6))
 
         if not trade_alarm(msg):
@@ -2020,7 +2020,7 @@ def buy_low():
 
         ret = buy_market(symbol, percent=buy_percent, current_price=current_price)
         if ret[0]:
-            msg = "[BL买入{}]计划买入比例={}%, 实际买入金额={}$, 当前价格={}, RMP={}, RMP5/20/60={}/{}/{}.".format(
+            msg = "[买入{}]BL 计划买入比例={}%, 实际买入金额={}$, 买入价格={}, RMP={}, RMP5/20/60={}/{}/{}.".format(
                 symbol, round(buy_percent * 100, 2), round(ret[1], 2), round(current_price, 6), round(min_price, 6), round(min_price_5, 6),
                 round(min_price_20, 6), round(min_price_60, 6))
             success = False
@@ -2142,7 +2142,7 @@ def sell_high():
                                                                                                         max_price_60,
                                                                                                         up_percent, still_up))
 
-        msg = "[SH卖出{}]计划卖出比例={}%, 实际卖出量={}个, 当前价格={}, RMP={}, RMP5/20/60={}/{}/{}..".format(
+        msg = "[卖出{}]SH 计划卖出比例={}%, 实际卖出量={}个, 卖出价格={}, RMP={}, RMP5/20/60={}/{}/{}..".format(
             symbol, round(sell_percent * 100, 2), round(current_price, 6), round(max_price, 6), round(max_price_5, 6),
             round(max_price_20, 6), round(max_price_60, 6))
 
@@ -2153,7 +2153,7 @@ def sell_high():
 
         ret = sell_market(symbol, percent=sell_percent, current_price=current_price)
         if ret[0]:
-            msg = "[SH卖出{}]计划卖出比例={}%, 实际卖出量={}个, 当前价格={}, RM={}, RM5/20/60={}/{}/{}.".format(
+            msg = "[卖出{}]SH 计划卖出比例={}%, 实际卖出量={}个, 卖出价格={}, RM={}, RM5/20/60={}/{}/{}.".format(
                 symbol, round(sell_percent * 100, 2), round(ret[1], 2), round(current_price, 6), round(max_price, 6),round(max_price_5, 6),
                 round(max_price_20, 6), round(max_price_60, 6))
 
