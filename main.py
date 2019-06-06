@@ -558,7 +558,7 @@ class MainUI():
         def update_price(price_text):
             while 1:
                 try:
-                    time.sleep(1)
+                    time.sleep(0.5)
                     if not self.verify:
                         continue
                     msg = process.REALTIME_PRICE    #.get(block=True)
