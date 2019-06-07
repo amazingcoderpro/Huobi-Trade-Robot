@@ -164,3 +164,126 @@ FORCE_POSITION_MAX = 0       #是否强制保持最大持仓比，如果是，�
 SEND_HISTORY_NOW = 0
 SEND_ACCOUNT_NOW = 0
 NICK_NAME = u"用户昵称"
+
+# 交易风格字典
+TRADE_MODE_CONFIG = {
+    "keep_0": {"display": u"保守-", "rate": 2, "trades": 6, "limit_profit": 0.05, "back_profit": 0.02, "input_multiple": 2, "multiple_list": [10, 20, 40, 80, 160, 320], "first_trade": 0.06, "expect_profit_m": 0.08, "interval": 0.10},
+    "keep": {"display": u"保守", "rate": 2, "trades": 6, "limit_profit": 0.05, "back_profit": 0.02, "input_multiple": 3, "multiple_list": [10, 20, 40, 80, 160, 320], "first_trade": 0.09, "expect_profit_m": 0.10, "interval": 0.1},
+    "keep_1": {"display": u"保守+", "rate": 2, "trades": 6, "limit_profit": 0.05, "back_profit": 0.02, "input_multiple": 4, "multiple_list": [10, 20, 40, 80, 160, 320], "first_trade": 0.12, "expect_profit_m": 0.12, "interval": 0.1},
+    "robust_0": {"display": u"稳健-", "rate": 3, "trades": 8, "limit_profit": 0.04, "back_profit": 0.01, "input_multiple": 5, "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640], "first_trade": 0.041, "expect_profit_m": 0.16, "interval": 0.08},
+    "robust": {"display": u"稳健", "rate": 3, "trades": 8, "limit_profit": 0.04, "back_profit": 0.01, "input_multiple": 6, "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640], "first_trade": 0.049, "expect_profit_m": 0.18, "interval": 0.08},
+    "robust_1": {"display": u"稳健+", "rate": 3, "trades": 8, "limit_profit": 0.04, "back_profit": 0.01, "input_multiple": 7, "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640], "first_trade": 0.057, "expect_profit_m": 0.20, "interval": 0.08},
+    "aggressive_0": {"display": u"激进-", "rate": 4, "trades": 10, "limit_profit": 0.03, "back_profit": 0.01, "input_multiple": 8, "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024], "first_trade": 0.0175, "expect_profit_m": 0.24, "interval": 0.06},
+    "aggressive": {"display": u"激进", "rate": 4, "trades": 10, "limit_profit": 0.03, "back_profit": 0.01, "input_multiple": 9, "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024], "first_trade": 0.0195, "expect_profit_m": 0.26, "interval": 0.06},
+    "aggressive_1": {"display": u"激进+", "rate": 4, "trades": 10, "limit_profit": 0.03, "back_profit": 0.01, "input_multiple": 10, "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024], "first_trade": 0.0215, "expect_profit_m": 0.28, "interval": 0.06},
+}
+
+
+move_stop_profit_params = {"check": 1, "msf_min": 0.018, "msf_back": 0.21}
+stop_loss_params = {"check": 0, "percent": 0.03}
+kdj_buy_params = {"check": 1, "k": 23, "d": 21, "buy_percent": 0.22, "up_percent": 0.004, "peroid": "15min"}
+kdj_sell_params = {"check": 1, "k": 82, "d": 80, "sell_percent": 0.3, "down_percent": 0.005, "peroid": "15min"}
+vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 2, "price_up_limit": 0.01, "buy_percent": 0.3,
+                        "peroid": "5min"}
+boll_strategy_params = {"check": 1, "peroid": "15min", "open_diff1_percent": 0.025, "open_diff2_percent": 0.025,
+                        "close_diff1_percent": 0.0025, "close_diff2_percent": 0.0025, "open_down_percent": -0.02,
+                        "open_up_percent": 0.003, "open_buy_percent": 0.35, "trade_percent": 1.5, "close_up_percent": 0.03,
+                        "close_buy_percent": 0.5}
+
+# 策略配置字典
+STRATEGIES_CONFIG = {
+    "buy": {
+            "kdj": {"display": u"KDJ买入指标", "check": 1, "lk": 23, "ld": 21, "mk":45, "md": 43, "up_percent": 0.004, "period": "15min"},
+            "boll": {"display": u"BOLL买入指标", "check": 1, "period": "15min", "open_diff1_percent": 0.025, "open_diff2_percent": 0.025,
+            "close_diff1_percent": 0.0025, "close_diff2_percent": 0.0025, "open_down_percent": -0.02,
+            "open_up_percent": 0.003, "open_buy_percent": 0.35, "trade_percent": 1.5, "close_up_percent": 0.03,
+            "close_buy_percent": 0.5},
+             "low": {"display": u"阶段低吸", "check": 1, "period": "15min"},
+            "fly": {"display": u"量价齐升", "check": 1, "vol_percent": 1.2, "high_than_last": 2, "price_up_limit": 0.01, "buy_percent": 0.3,
+            "period": "5min"},
+            "right_now": {"display": u"立即买入"}
+            },
+    "sell": {
+            "kdj": {"display": u"KDJ卖出指标", "check": 1, "k": 82, "d": 80, "down_percent": 0.005, "period": "15min"},
+            "boll": {"display": u"BOLL卖出指标", "check": 1, "period": "15min", "open_diff1_percent": 0.025, "open_diff2_percent": 0.025,
+                "close_diff1_percent": 0.0025, "close_diff2_percent": 0.0025, "open_down_percent": -0.02,
+                "open_up_percent": 0.003, "open_buy_percent": 0.35, "trade_percent": 1.5, "close_up_percent": 0.03,
+                "close_buy_percent": 0.5},
+            "high": {"display": u"阶段高抛", "check": 1, "period": "15min"},
+            "move_stop_profit": {"display": u"移动止盈", "check": 1, "profit": 0, "back_profit": 0}
+        }
+}
+
+# 平台及期配置信息字典
+PLATFORMS = {"huobi":
+                 {"display": u"火币",
+                  "trade_pairs": {
+                      "USDT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
+                      "BTC": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
+                      "ETH": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
+                      "HT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
+                      "HUSD": ["USDT", "BTC", "ETH", "XRP", "EOS", "HT"]
+                  }
+                },
+             "binance": {"display": u"币安", "trade_pairs": {"USDT": [], "BTC": [], "ETH": [], "HUSD": []}},
+             "okex": {"display": "OKEx", "trade_pairs": {"USDT": [], "BTC": [], "ETH": [], "HUSD": []}}
+             }
+
+PLATFORM = "huobi"      # 当前平台
+MONEY_NAME = "USDT"     # 当前计价货币
+PRINCIPAL = 0.0         # 本金
+TRADE_MODE = "robust"   # 当前选择的交易风格，稳健
+INTERVAL_REF = {0: "total_avg_price", 1: "last_buy_price"}      # 间隔补单参考，0-参考整体持仓均价，1-参考上一单买入价
+
+
+# 单次交易信息，这样的一次交易记录，将被包含在一组执行单元中, 除非是手动买入的
+TRADE = {
+    "buy_type": "buy_auto",         # 买入模式：buy_auto 自动买入(机器策略买入)，buy_man手动买入,
+    "sell_type": "sell_profit",      # 要求的卖出模式，机器买入的一般都为动止盈卖出。可选：sell_profit 止盈卖出， sell_no-不要卖出，针对手动买入的单，sell_auto-使用高抛，kdj等策略卖出
+    "buy_time": None,
+    "sell_time": None,
+    "coin": "EOS",
+    "coin_num": 0,          # 买入或卖出的币量
+    "coin_price_plan": 0,        # 计划买入币的价格
+    "coin_price": 0,        # 实际挂单成交的价格
+    "money": "USDT",
+    "money_num_plan": 0,    # 计划买入的量
+    "money_num": 0,         # 实际花费的计价货币量
+    "is_sell": 0,           # 是否已经卖出
+    "profit_percent": 0,    # 盈利比，卖出价格相对于买入价格
+    "profit": 0,            # 盈利额，只有卖出后才有
+}
+
+# 一组执行单元，买和卖都在里面
+TRADE_GROUP = {
+    "trigger_reason": "",    # 首单触发原因，如kdj/boll/low
+    "mode": "robust",           # 按何种交易风格执行
+    "coin": "EOS",
+    "money": "USDT",
+    "trades": [],            # 每一次交易记录，
+    "grid": 1,              # 是否开启网格交易
+    "coin_num": 0,         # 持仓数量（币）
+    "cost": 0,           # 持仓费用（计价货币）
+    "avg_price": 0,      # 持仓均价
+    "profit_now": 0,    # 盈利比（整体盈利比，当前价格相对于持仓均价）
+    "profit_last": 0,   # 尾单盈利比（最后一单的盈利比）
+    "limit_profit": 0.04,   # 止盈比例
+    "back_profit": 0.01,    # 追踪比例
+    "buy_num": 0,           # 已建单数，目前处理买入状态的单数
+    "sell_num": 0,          # 卖出单数，卖出的次数，其实就是尾单收割次数
+    "intervals": [],   # 每次补单间隔比例
+    "interval_ref": 0,   # 间隔参考
+    "last_buy_amount": 0,   # 最后一次买入量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
+    "last_buy_sell": 0,     # 尾单收割次数
+    "total_profit": 0,      # 这组策略总收益
+    "start_time": None,
+    "end_time": None
+}
+TRADE_PAIRS = []            # {"coin": "", "money": "", "percent": 1} 当前需要监控的币种，支持一个计价货币下的多个币种同时交易
+TRADE_RECORDS_NOW = []      # 机器人当前所有需要监控的交易
+TRADE_RECORDS_HISTORY = []  # 机器人所有历史交易记录
+MAN_BUY_RECORDS = []    # 人为买入记录

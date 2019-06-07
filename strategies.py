@@ -5,6 +5,7 @@
 import time
 # import matplotlib.pyplot as plt
 # import numpy as np
+from datetime import datetime
 from requests import get
 import pandas as pd
 import talib
@@ -455,6 +456,57 @@ def trade_advise_update():
     th.setDaemon(True)
     th.start()
     return False
+
+
+def auto_trade():
+    for trade_group in config.TRADE_RECORDS_NOW:
+        interval_ref = trade_group.get("interval_ref", 0)
+        if interval_ref == 0:
+            avg_price = trade_group.get("avg_price", 0)
+            coin_name = trade_group.get("coin", "")
+            money_name = trade_group.get("money", "")
+            symbol = "{}{}".format(coin_name, money_name).lower()
+            trade_mode_name = trade_group.get("mode", "robust")
+            trade_mode = config.TRADE_MODE.get(trade_mode_name, {})
+            fill_interval = trade_mode.get("interval", 0.08)    # 补仓间隔
+            current_price = get_current_price(symbol)
+
+            if current_price < avg_price*(1-fill_interval):
+                buy_amount_plan = trade_group.get("last_buy_amount", 0) * 2      # 先直接按倍投的方式来弄
+                ret = buy_market(symbol, buy_amount_plan)
+                # 买入成功
+                if ret[0] == 1:
+
+                    buy_amount_actual = ret[1]
+                    buy_coin_actual = ret[1]
+                    buy_price_actual = ret[1]
+                    time_now = datetime.now()
+                    trade = {
+                        "buy_type": "buy_auto",  # 买入模式：buy_auto 自动买入(机器策略买入)，buy_man手动买入,
+                        "sell_type": "sell_profit",# 要求的卖出模式，机器买入的一般都为动止盈卖出。可选：sell_profit 止盈卖出， sell_no-不要卖出，针对手动买入的单，sell_auto-使用高抛，kdj等策略卖出
+                        "buy_time": time_now,
+                        "sell_time": None,
+                        "coin": coin_name,
+                        "coin_num": buy_coin_actual,  # 买入或卖出的币量
+                        "coin_price_plan": current_price,  # 计划买入币的价格
+                        "coin_price": buy_price_actual,  # 实际挂单成交的价格
+                        "money": money_name,
+                        "money_num_plan": buy_amount_plan,  # 计划买入的量
+                        "money_num": buy_amount_actual,  # 实际花费的计价货币量
+                        "is_sell": 0,  # 是否已经卖出
+                        "profit_percent": 0,  # 盈利比，卖出价格相对于买入价格
+                        "profit": 0,  # 盈利额，只有卖出后才有
+                    }
+                    trade_group["trades"].append(trade)
+
+
+        trades = trade_group.get("trades", [])
+        for trade in trades:
+            if trade.get("is_sell", 0):
+                continue
+
+
+
 
 
 def kdj_strategy_buy():
