@@ -459,54 +459,145 @@ def trade_advise_update():
 
 
 def auto_trade():
+    logger.info("auto trade trigger...group num={}".format(len(config.TRADE_RECORDS_NOW)))
+    def should_stop_profit(buy_price, limit_profit, back_profit, monitor_start):
+        return False
     for trade_group in config.TRADE_RECORDS_NOW:
+        if trade_group["end_time"]:
+            logger.info("trade group is ended.")
+            continue
+
+        logger.info("trade group={}".format(trade_group))
         interval_ref = trade_group.get("interval_ref", 0)
-        if interval_ref == 0:
-            avg_price = trade_group.get("avg_price", 0)
-            coin_name = trade_group.get("coin", "")
-            money_name = trade_group.get("money", "")
-            symbol = "{}{}".format(coin_name, money_name).lower()
-            trade_mode_name = trade_group.get("mode", "robust")
-            trade_mode = config.TRADE_MODE.get(trade_mode_name, {})
-            fill_interval = trade_mode.get("interval", 0.08)    # 补仓间隔
-            current_price = get_current_price(symbol)
-
-            if current_price < avg_price*(1-fill_interval):
-                buy_amount_plan = trade_group.get("last_buy_amount", 0) * 2      # 先直接按倍投的方式来弄
-                ret = buy_market(symbol, buy_amount_plan)
-                # 买入成功
-                if ret[0] == 1:
-
-                    buy_amount_actual = ret[1]
-                    buy_coin_actual = ret[1]
-                    buy_price_actual = ret[1]
-                    time_now = datetime.now()
-                    trade = {
-                        "buy_type": "buy_auto",  # 买入模式：buy_auto 自动买入(机器策略买入)，buy_man手动买入,
-                        "sell_type": "sell_profit",# 要求的卖出模式，机器买入的一般都为动止盈卖出。可选：sell_profit 止盈卖出， sell_no-不要卖出，针对手动买入的单，sell_auto-使用高抛，kdj等策略卖出
-                        "buy_time": time_now,
-                        "sell_time": None,
-                        "coin": coin_name,
-                        "coin_num": buy_coin_actual,  # 买入或卖出的币量
-                        "coin_price_plan": current_price,  # 计划买入币的价格
-                        "coin_price": buy_price_actual,  # 实际挂单成交的价格
-                        "money": money_name,
-                        "money_num_plan": buy_amount_plan,  # 计划买入的量
-                        "money_num": buy_amount_actual,  # 实际花费的计价货币量
-                        "is_sell": 0,  # 是否已经卖出
-                        "profit_percent": 0,  # 盈利比，卖出价格相对于买入价格
-                        "profit": 0,  # 盈利额，只有卖出后才有
-                    }
-                    trade_group["trades"].append(trade)
-
-
         trades = trade_group.get("trades", [])
-        for trade in trades:
-            if trade.get("is_sell", 0):
-                continue
+        grid = trade_group.get("grid", 1)   # 是否开启网格
+        avg_price = trade_group.get("avg_price", 0)
+        coin_num = trade_group.get("coin_num", 0)
+        cost = trade_group.get("cost", 0)
+
+        last_buy_price = trade_group.get("last_buy_price", 0)
+        last_buy_coin = trade_group.get("last_buy_coin", 0)
+        last_buy_amount = trade_group.get("last_buy_amount", 0)
+        limit_profit = trade_group.get("limit_profit", 0.04)
+        back_profit = trade_group.get("back_profit", 0.01)
+        last_update = trade_group.get("last_update", None)
+
+        coin_name = trade_group.get("coin", "")
+        money_name = trade_group.get("money", "")
+        symbol = "{}{}".format(coin_name, money_name).lower()
+        current_price = get_current_price(symbol)
+
+        trade_mode_name = trade_group.get("mode", "robust")
+        trade_mode = config.TRADE_MODE.get(trade_mode_name, {})
+
+        # 判断是否要开始收割了
+        if grid == 1:
+            # 以尾单价格判断是否该收割尾单
+            ref_price = last_buy_price
+            ref_amount = last_buy_amount
+            plan_sell_coin_num = last_buy_coin
+        else:
+            # 以整体均价判断是否该卖出所有
+            ref_price = avg_price
+            ref_amount = cost
+            plan_sell_coin_num = coin_num
+
+        # 判断是否该卖出了
+        if should_stop_profit(ref_price, limit_profit, back_profit, last_update):
+            logger.info("auto trade should_stop_profit, grid={}, plan_sell_coin_num={}, ref_price={}, "
+                        "ref_amount={} cp={}, \ntrade group={}".format(grid, plan_sell_coin_num, ref_price, ref_amount, current_price, trade_group))
+
+            ret = sell_market(symbol, amount=plan_sell_coin_num)
+            if ret[0] == 1:
+                time_now = datetime.now()
+                sell_coin_actual = ret[1]
 
 
+                #卖出盈利
+                sell_profit = (current_price - ref_price) * sell_coin_actual
+                sell_profit_percent = sell_profit / ref_amount
 
+                logger.info("sell succeed! symbol={}, sell_coin_actual={}， sell profit={}, percent={}".format(sell_coin_actual, sell_profit, sell_profit_percent))
+                # 找到最后一单没有卖出的
+                last_index = len(trades)-1
+                for trade in reversed(trades):
+                    if trade.get("is_sell") == 0:
+                        # 修改尾单的信息，置为已卖出，修改卖出价格等
+                        trade["is_sell"] = 1
+                        trade["sell_price"] = current_price
+                        trade["profit"] = sell_profit
+                        trade["profit_percent"] = sell_profit_percent
+                        trade["sell_time"] = time_now
+                        break
+                    last_index -= 1
+
+                trade_group["last_profit_percent"] = sell_profit_percent
+                trade_group["all_profit_percent"] = sell_profit/trade_group["cost"]
+                trade_group["coin_num"] = trade_group["coin_num"]-sell_coin_actual
+                trade_group["cost"] = trade_group["cost"] - last_buy_amount
+                trade_group["total_profit_amount"].append({"time": time_now, "profit": sell_profit})
+                trade_group["last_update"] = time_now
+                trade_group["avg_price"] = trade_group["cost"]/trade_group["coin_num"]
+                trade_group["sell_count"] += 1
+                trade_group["buy_count"] -= 1
+                trade_group["last_buy_sell"] += 1
+
+                # 全部卖完了, ,或者是整体卖出了，这组策略结束
+                if last_index <= 0 or grid == 0:
+                    trade_group["end_time"] = time_now
+                else:
+                    # 将倒数第二单的买入价、买入量置为尾单信息
+                    new_last_trade = trade_group["trades"][last_index-1]
+                    trade_group["last_buy_coin_num"] = new_last_trade["coin_num"]
+                    trade_group["last_buy_price"] = new_last_trade["buy_price"]
+                    trade_group["last_buy_amount"] = new_last_trade["cost"]
+
+        # 是否需要补仓
+        if interval_ref == 0:   #参考是整体均价
+            ref_price = avg_price
+        else:   # 参考上一次买入价
+            ref_price = last_buy_price
+
+        fill_interval = trade_mode.get("interval", 0.08)    # 补仓间隔
+        # 如果当前价格小于整体均价的一定比例，则补单
+        if current_price < ref_price*(1-fill_interval):
+            buy_amount_plan = trade_group.get("last_buy_amount", 0) * 2      # 先直接按倍投的方式来弄
+            ret = buy_market(symbol, buy_amount_plan)
+            # 买入成功
+            if ret[0] == 1:
+                buy_amount_actual = ret[1]
+                buy_coin_actual = ret[2]
+                buy_price_actual = current_price
+                time_now = datetime.now()
+                trade = {
+                    "buy_type": "buy_auto",  # 买入模式：buy_auto 自动买入(机器策略买入)，buy_man手动买入,
+                    "sell_type": "sell_profit",# 要求的卖出模式，机器买入的一般都为动止盈卖出。可选：sell_profit 止盈卖出， sell_no-不要卖出，针对手动买入的单，sell_auto-使用高抛，kdj等策略卖出
+                    "buy_time": time_now,
+                    "sell_time": None,
+                    "coin": coin_name,
+                    "coin_num": buy_coin_actual,  # 买入或卖出的币量
+                    "buy_price": buy_price_actual,  # 实际挂单成交的价格
+                    "money": money_name,
+                    "cost": buy_amount_actual,  # 实际花费的计价货币量
+                    "is_sell": 0,  # 是否已经卖出
+                    "profit_percent": 0,  # 盈利比，卖出价格相对于买入价格
+                    "profit": 0,  # 盈利额，只有卖出后才有
+                }
+                logger.info("auto trade buy succeed, trade={}".format(trade))
+                trade_group["trades"].append(trade)
+                trade_group["coin_num"] += buy_coin_actual
+                trade_group["cost"] += buy_amount_actual
+                trade_group["avg_price"] = trade_group["cost"]/trade_group["coin_num"]
+                trade_group["all_profit_percent"] = (current_price-trade_group["avg_price"])/trade_group["avg_price"]
+                trade_group["buy_count"] += 1
+                trade_group["intervals"].append(fill_interval)
+                trade_group["last_buy_amount"] = buy_amount_actual
+                trade_group["last_buy_coin_num"] = buy_coin_actual
+                trade_group["last_buy_price"] = buy_price_actual
+                if not trade_group["start_time"]:
+                    trade_group["start_time"] = time_now
+                trade_group["last_update"] = time_now
+                logger.info("auto trade buy succeed, trade group={}".format(trade_group))
 
 
 def kdj_strategy_buy():
@@ -673,6 +764,55 @@ def kdj_strategy_buy():
         log_config.notify_user(msg, own=True)
         log_config.notify_user(log_config.make_msg(0, symbol, current_price=current_price, percent=buy_percent))
         logger.info("-----BUY_RECORD = {}".format(BUY_RECORD))
+
+        time_now = datetime.now()
+        trade = {
+            "buy_type": "buy_auto",  # 买入模式：buy_auto 自动买入(机器策略买入)，buy_man手动买入,
+            "sell_type": "sell_profit",
+        # 要求的卖出模式，机器买入的一般都为止盈卖出。可选：sell_profit 止盈卖出（默认）， sell_no-不要卖出，针对手动买入的单，sell_smart-使用高抛，kdj等策略卖出
+            "limit_profit": 0,  # 大于零代表要求必须盈利,否则由系统智能卖出
+            "back_profit": 0,  # 追踪回撤系数
+            "buy_time": time_now,
+            "sell_time": None,
+            "coin": "EOS",
+            "money": "USDT",
+            "coin_num": ret[2],  # 买入或卖出的币量
+            "buy_price": current_price,  # 实际买入成交的价格
+            "cost": ret[1],  # 实际花费的计价货币量
+            "is_sell": 0,  # 是否已经卖出
+            "sell_price": 0,  # 实际卖出的价格
+            "profit_percent": 0,  # 盈利比，卖出价格相对于买入价格
+            "profit": 0,  # 盈利额，只有卖出后才有
+        }
+
+        trade_group = {
+            "trigger_reason": "KDJ",    # 首单触发原因，如kdj/boll/low
+            "mode": "robust",           # 按何种交易风格执行
+            "coin": "EOS",
+            "money": "USDT",
+            "trades": [trade],            # 每一次交易记录，
+            "grid": 1,              # 是否开启网格交易
+            "coin_num": ret[2],         # 持仓数量（币）
+            "cost": ret[1],           # 持仓费用（计价货币）
+            "avg_price": current_price,      # 持仓均价
+            "total_profit_amount": [],  # {"time": xxxx, "profit":1.26}这组策略的总收益， 每次卖出后都进行累加
+            "all_profit_percent": 0,    # 整体盈利比（整体盈利比，当前价格相对于持仓均价,）
+            "last_profit_percent": 0,   # 尾单盈利比（最后一单的盈利比）
+            "limit_profit": 0.04,   # 止盈比例
+            "back_profit": 0.01,    # 追踪比例
+            "buy_count": 1,           # 已建单数，目前处理买入状态的单数
+            "sell_count": 0,          # 卖出单数，卖出的次数，其实就是尾单收割次数
+            "intervals": [],   # 每次补单间隔比例
+            "interval_ref": 0,   # 间隔参考
+            "last_buy_coin_num": ret[2],     # 最后一次买入币量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
+            "last_buy_amount":  ret[1],   # 最后一次买入量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
+            "last_buy_price": current_price,    # 最后一次买入价格，用来做网格交易，如果最后一单已经卖出，则这个价格需要变成倒数第二次买入价格，以便循环做尾单
+            "last_buy_sell": 0,     # 尾单收割次数
+            "start_time": time_now,
+            "end_time": None,
+            "last_update": time_now,
+}
+        config.TRADE_RECORDS_NOW.append(trade_group)
         return True
     return False
 
@@ -1358,6 +1498,7 @@ def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", cur
     if ret[0] == 200 and ret[1]:
         logger.info("buy market success, symbol={}, amount={}, record={}".format(symbol, amount, record))
         log_config.output2ui("buy market success, symbol={}, amount={}, record={}".format(symbol, amount, record))
+        coin_num = 0
         if record:
             order_id = ret[1]
             order_response = hrs.order_info(order_id)
@@ -1370,10 +1511,13 @@ def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", cur
             if order_response[0] == 200:
                 if order_response[1].get("status", "") == config.STATUS_OK:
                     order_detail = order_response[1].get("data", {})
+                    amount = float(order_detail.get("amount", amount))
+                    coin_num = float(order_detail.get("field-amount", 0))
                     order_detail["strategy_type"] = strategy_type
+                    logger.info("buy market order detail={}".format(order_detail))
                     BUY_RECORD.append(order_detail)
         update_balance()
-        return 1, amount, "Trade buy succeed."
+        return 1, amount, coin_num, "Trade buy succeed."
     logger.error("buy market failed, symbol={}, amount={}, record={}".format(symbol, amount, record))
     log_config.output2ui("buy market error, symbol={}, amount={}, record={}".format(symbol, amount, record), 3)
     return 3, amount, "Trade failed. reason={}".format(ret)
@@ -1460,6 +1604,8 @@ def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
             if order_response[0] == 200:
                 if order_response[1].get("status", "") == config.STATUS_OK:
                     order_detail = order_response[1].get("data", {})
+                    logger.info("sell market order detail={}".format(order_detail))
+                    amount = float(order_detail.get("amount", amount))
                     SELL_RECORD.append(order_detail)
         update_balance()
         return 1, amount, "Trade buy succeed."
@@ -2386,6 +2532,7 @@ STRATEGY_LIST = [
     Strategy(trade_advise_update, 3600, -1, name="advise_msg", after_execute_sleep=10),
     Strategy(buy_low, 10, -1, name="buy_low", after_execute_sleep=600),
     Strategy(sell_high, 11, -1, name="sell_high", after_execute_sleep=600),
+    Strategy(auto_trade, 11, -1, name="auto trade", after_execute_sleep=10),
 ]
 
 

@@ -243,17 +243,18 @@ INTERVAL_REF = {0: "total_avg_price", 1: "last_buy_price"}      # 间隔补单�
 # 单次交易信息，这样的一次交易记录，将被包含在一组执行单元中, 除非是手动买入的
 TRADE = {
     "buy_type": "buy_auto",         # 买入模式：buy_auto 自动买入(机器策略买入)，buy_man手动买入,
-    "sell_type": "sell_profit",      # 要求的卖出模式，机器买入的一般都为动止盈卖出。可选：sell_profit 止盈卖出， sell_no-不要卖出，针对手动买入的单，sell_auto-使用高抛，kdj等策略卖出
+    "sell_type": "sell_profit",      # 要求的卖出模式，机器买入的一般都为止盈卖出。可选：sell_profit 止盈卖出（默认）， sell_no-不要卖出，针对手动买入的单，sell_smart-使用高抛，kdj等策略卖出
+    "limit_profit": 0,              # 大于零代表要求必须盈利,否则由系统智能卖出
+    "back_profit": 0,               # 追踪回撤系数
     "buy_time": None,
     "sell_time": None,
     "coin": "EOS",
-    "coin_num": 0,          # 买入或卖出的币量
-    "coin_price_plan": 0,        # 计划买入币的价格
-    "coin_price": 0,        # 实际挂单成交的价格
     "money": "USDT",
-    "money_num_plan": 0,    # 计划买入的量
-    "money_num": 0,         # 实际花费的计价货币量
+    "coin_num": 0,              # 买入或卖出的币量
+    "buy_price": 0,            # 实际买入成交的价格
+    "cost": 0,               # 实际花费的计价货币量
     "is_sell": 0,           # 是否已经卖出
+    "sell_price": 0,        # 实际卖出的价格
     "profit_percent": 0,    # 盈利比，卖出价格相对于买入价格
     "profit": 0,            # 盈利额，只有卖出后才有
 }
@@ -269,19 +270,22 @@ TRADE_GROUP = {
     "coin_num": 0,         # 持仓数量（币）
     "cost": 0,           # 持仓费用（计价货币）
     "avg_price": 0,      # 持仓均价
-    "profit_now": 0,    # 盈利比（整体盈利比，当前价格相对于持仓均价）
-    "profit_last": 0,   # 尾单盈利比（最后一单的盈利比）
+    "total_profit_amount": [],  # {"time": xxxx, "profit":1.26}这组策略的总收益， 每次卖出后都进行累加
+    "all_profit_percent": 0,    # 整体盈利比（整体盈利比，当前价格相对于持仓均价,）
+    "last_profit_percent": 0,   # 尾单盈利比（最后一单的盈利比）
     "limit_profit": 0.04,   # 止盈比例
     "back_profit": 0.01,    # 追踪比例
-    "buy_num": 0,           # 已建单数，目前处理买入状态的单数
-    "sell_num": 0,          # 卖出单数，卖出的次数，其实就是尾单收割次数
+    "buy_count": 0,           # 已建单数，目前处理买入状态的单数
+    "sell_count": 0,          # 卖出单数，卖出的次数，其实就是尾单收割次数
     "intervals": [],   # 每次补单间隔比例
     "interval_ref": 0,   # 间隔参考
+    "last_buy_coin_num": 0,     # 最后一次买入币量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
     "last_buy_amount": 0,   # 最后一次买入量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
+    "last_buy_price": 0,    # 最后一次买入价格，用来做网格交易，如果最后一单已经卖出，则这个价格需要变成倒数第二次买入价格，以便循环做尾单
     "last_buy_sell": 0,     # 尾单收割次数
-    "total_profit": 0,      # 这组策略总收益
     "start_time": None,
-    "end_time": None
+    "end_time": None,
+    "last_update": None,
 }
 TRADE_PAIRS = []            # {"coin": "", "money": "", "percent": 1} 当前需要监控的币种，支持一个计价货币下的多个币种同时交易
 TRADE_RECORDS_NOW = []      # 机器人当前所有需要监控的交易
