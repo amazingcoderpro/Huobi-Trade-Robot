@@ -5,11 +5,15 @@
 import os
 from tkinter import Toplevel, Label, Button, Entry, StringVar, LEFT, RIGHT, Checkbutton, Frame, messagebox, OptionMenu, IntVar,Text, END, filedialog
 import config
+from popup_login import MyDialog
 
-class PopupAccountConfig(Toplevel):
-    def __init__(self, value_dict, title="Account Configuration"):
-        Toplevel.__init__(self)
-        self.value_dict = value_dict
+class PopupAccountConfig(MyDialog):
+    def __init__(self, parent, title=u"API设置", modal=True, delta_x=400, delta_y=200):
+        MyDialog.__init__(self, parent, title, modal, delta_x, delta_y)
+
+
+    def init_widgets(self, frame):
+        self.value_dict = {}
         self.get_key()
 
         self.ckb_save_val = IntVar()
@@ -33,12 +37,7 @@ class PopupAccountConfig(Toplevel):
         self.rest_site = StringVar()
         self.rest_site.set(self.value_dict.get("rest_site", "BR"))
 
-        self.setup_ui()
-        self.title(title)
-
-
-    def setup_ui(self):
-        row1 = Frame(self)
+        row1 = frame
         row1.pack(fill="x")
         Label(row1, text="ACCESS　KEY: ", width=15).pack(side=LEFT)
         Entry(row1, textvariable=self.access_key, width=40).pack(side=LEFT)
@@ -86,7 +85,7 @@ class PopupAccountConfig(Toplevel):
         Button(row3, text="Cancel", command=lambda: self.on_cancel(), width=10).pack(side=RIGHT)
         Button(row3, text="OK", command=lambda: self.on_ok(), width=10).pack(side=RIGHT)
 
-    def on_ok(self):
+    def on_ok(self, event):
         access_key = self.access_key.get()
         secret_key = self.secret_key.get()
         trade_left = self.trade_left.get().lower()

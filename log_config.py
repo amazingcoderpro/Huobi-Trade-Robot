@@ -53,8 +53,8 @@ LOG_CONSOLE_LEVEL = logging.DEBUG
 LOG_MAIL_LEVEL = logging.CRITICAL
 
 REALTIME_LOG = queue.Queue()
-UI_LOG_LEVEL_LIST = ["DEBUG", "INFO", "WARNING", "ERROR", "EXCEPTION", "CRITICAL", "BUY", "SELL", "SHOW"]
-UI_LOG_LEVEL = 1
+UI_LOG_LEVEL_LIST = ["INFO", "SHOW", "WARNING", "ERROR", "BUY", "SELL", "LINK"]
+UI_LOG_LEVEL = 0
 
 # email notify sell/buy
 sender = 'wcadaydayup@163.com'
@@ -96,37 +96,25 @@ def init_log_config(use_mail=False):
 
 
 def output2ui(msg, level=UI_LOG_LEVEL):
-    if level < UI_LOG_LEVEL:
-        return
     level = 0 if level < 0 else level
-    level = 8 if level > 8 else level
+    level = 0 if level > 6 else level
 
     # 转换成新的时间格式(2018-06-16 18:02:20)
-    time_local = time.localtime(int(time.time()))
-    str_time = time.strftime("%Y-%m-%d %H:%M:%S", time_local)
+    time_now = datetime.now()
+    str_time = time_now.strftime("%Y%m%d %H:%M:%S")
 
     global REALTIME_LOG
-    if level == 8:
-        format_msg = "--- {} \n".format(msg)
+    if level != 1:
+        format_msg = "[{}] {}\n".format(str_time, msg)
     else:
-        format_msg = "[{}]{} {} \n".format(str_time, UI_LOG_LEVEL_LIST[level], msg)
-
-    if level in [6, 7]:
-        format_msg = "\n" + format_msg
+        format_msg = msg + "\n"
 
     msg_dict = {"level": UI_LOG_LEVEL_LIST[level], "msg": format_msg}
     REALTIME_LOG.put(msg_dict)
 
-    if level in [6, 7]:
-        time_now = datetime.now()
-        config.TRADE_ALL_LOG[time_now] = "[{}] {}".format(time_now.strftime("%Y/%m/%d, %H:%M:%S"), msg)
-
-    # if level >= 6:
-    #     import smtplib
-    #     smtp = smtplib.SMTP("smtp.163.com")
-    #     smtp.login("email", "password")
-    #     smtp.sendmail("wcadaydayup@163.com", msg)
-    #     smtp.close()
+    # 将所有交易信息保存下来
+    if level in [4, 5]:
+        config.TRADE_ALL_LOG[time_now] = format_msg
 
 
 class UILogHandler(logging.Handler):

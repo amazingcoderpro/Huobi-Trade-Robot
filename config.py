@@ -291,3 +291,6 @@ TRADE_PAIRS = []            # {"coin": "", "money": "", "percent": 1} 当前需�
 TRADE_RECORDS_NOW = []      # 机器人当前所有需要监控的交易
 TRADE_RECORDS_HISTORY = []  # 机器人所有历史交易记录
 MAN_BUY_RECORDS = []    # 人为买入记录
+
+REGISTER_URL = "https://www.baidu.com/"
+TITLE = u"DDU量化交易系统v2.0.0 (官方交流QQ群:761222621, 管理员:15691820861)"

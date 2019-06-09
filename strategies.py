@@ -488,7 +488,7 @@ def auto_trade():
         current_price = get_current_price(symbol)
 
         trade_mode_name = trade_group.get("mode", "robust")
-        trade_mode = config.TRADE_MODE.get(trade_mode_name, {})
+        trade_mode = config.TRADE_MODE_CONFIG.get(trade_mode_name, {})
 
         # 判断是否要开始收割了
         if grid == 1:
