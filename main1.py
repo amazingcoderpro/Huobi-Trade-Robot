@@ -4,7 +4,7 @@
 # Function:
 import time
 from datetime import datetime, timedelta
-from tkinter import Tk, Label, Button, StringVar, END, messagebox, OptionMenu, Menubutton, Menu, ttk, Message, N, S, E, W   #上对齐/下对齐/左对齐/右对齐
+from tkinter import Tk, Label, Button, IntVar, DoubleVar, StringVar, VERTICAL, Entry, END, messagebox, OptionMenu, Menubutton, Menu, ttk, Message, N, S, E, W   #上对齐/下对齐/左对齐/右对齐
 from tkinter.scrolledtext import ScrolledText
 from queue import Queue
 import logging
@@ -24,7 +24,8 @@ import webbrowser
 logger = logging.getLogger(__name__)
 CURRENT_PRICE = 1
 from popup_login import PopupLogin
-from popup_account import PopupAccountConfig
+from popup_api import PopupAPI
+from popup_coins import PopupCoins
 import hashlib
 
 
@@ -37,23 +38,21 @@ def treeview_sort_column(tv, col, reverse):
     tv.heading(col, command=lambda: treeview_sort_column(tv, col, not reverse))
 
 
-
-class MainUI():
-
+class MainUI:
     def __init__(self, root):
         self.account = ""
         self.working = False
-        self.login = False
+        self.is_login = False
 
         self.verify = True
         self.coin_trade = 0
         self.dollar_trade = 0
         self.notify_queue = Queue()
-        self.gress_bar_init_history = GressBar()
-        self.gress_bar_verify_user = GressBar()
+        self.gressbar_init_history = GressBar()
+        self.gressbar_verify_api = GressBar()
         self.root = root
         self.top = None
-        self._is_user_valid = False
+        self.is_api_ok = False
         self._user_info = {}
         self._strategy_dict = {}
         root.title(config.TITLE)
@@ -74,7 +73,7 @@ class MainUI():
         # self.opt_platform = OptionMenu(root, self.platform, *lst_platform)
 
         self.btn_api = Button(root, text=u"API设置", command=self.cmd_api, width=12, font=("", 14, 'bold'))
-        self.btn_coin = Button(root, text=u"交易币种", command=self.cmd_coin, width=12, font=("", 14, 'bold'))
+        self.btn_coin = Button(root, text=u"币种设置", command=self.cmd_coin, width=12, font=("", 14, 'bold'))
 
         # self.label_money = Label(root, text=u"计价货币: ", width=8, font=("", 11, 'bold'))
         # lst_money = ["USDT", "BTC"]
@@ -96,39 +95,56 @@ class MainUI():
         self.btn_pause = Button(root, text=u"全部停止", command=self.cmd_pause, width=12, font=("", 14, 'bold'))
         self.btn_wechat = Button(root, text=u"微信通知", command=self.cmd_wechat, width=12, font=("", 14, 'bold'))
 
-        self.label_account = Label(root, text=u"账户总额:", width=8, font=("", 12, 'bold'))
-        self.label_account_ = Label(root, text="78936.3612", width=10, font=("", 12, 'bold'))
-
-        self.label_account_bal = Label(root, text=u"余额:", width=4, font=("", 12, 'bold'))
-        self.label_account_bal_ = Label(root, text="5632.1236", width=10, font=("", 12, 'bold'))
-
-        self.label_account_position = Label(root, text=u"仓位:", width=4, font=("", 12, 'bold'))
-        self.label_account_position_ = Label(root, text="26.36%", width=6, font=("", 12, 'bold'))
-
         self.label_money = Label(root, text=u"计价货币:", width=8, font=("", 12, 'bold'))
-        self.label_money_ = Label(root, text="USDT", width=3, font=("", 12, 'bold'))
+        # self.label_money_ = Label(root, text="USDT", width=3, font=("", 12, 'bold'))
 
+        self.lst_money = [u"USDT", u"BTC", u"ETH"]
+        self.money = StringVar()
+        self.money.set(self.lst_money[0])
+        self.opt_money = OptionMenu(root, self.money, *self.lst_money, command=self.cmd_money_change)
+
+        self.balance = DoubleVar()
+        self.balance.set(0)
+        self.label_balance = Label(root, text=u"可用余额:", width=8, font=("", 12, 'bold'))
+        self.label_balance_ = Label(root, textvariable=self.balance, width=10, font=("", 12, 'bold'))
+
+        self.principal = DoubleVar()
+        self.principal.set(0)
+        self.label_principal = Label(root, text=u"本金预算:", width=8, font=("", 12, 'bold'))
+        self.ety_principal = Entry(root, textvariable=self.principal, font=("", 11, 'bold'), width=11)
+        self.btn_principal = Button(root, text="确认", command=self.cmd_principal, width=6)
+
+        # self.position = DoubleVar()
+        # self.position.set(0)
+        # self.label_account_position = Label(root, text=u"仓位:", width=4, font=("", 12, 'bold'))
+        # self.label_account_position_ = Label(root, textvariable=self.position, width=6, font=("", 12, 'bold'))
+
+        self.coin_counts = IntVar()
+        self.coin_counts.set(0)
         self.label_coin_num = Label(root, text=u"监控币种数:", width=10, font=("", 12, 'bold'))
-        self.label_coin_num_ = Label(root, text="32", width=2, font=("", 12, 'bold'))
+        self.label_coin_num_ = Label(root, textvariable=self.coin_counts, width=2, font=("", 12, 'bold'))
 
-        self.label_total_run = Label(root, text=u"运行时间:", width=8, font=("", 12, 'bold'))
-        self.label_total_run_ = Label(root, text=u"852时49分", width=8, font=("", 12, 'bold'))
-
+        self.total_profit = DoubleVar()
+        self.total_profit.set(0)
         self.label_total_profit = Label(root, text=u"累计盈利:", width=8, font=("", 12, 'bold'))
-        self.str_total_profit = StringVar()
-        self.label_total_profit_ = Label(root, text="52123.12", width=8, font=("", 12, 'bold'))
+        self.label_total_profit_ = Label(root, textvariable=self.total_profit, width=8, font=("", 12, 'bold'))
+
+        self.run_time = StringVar()
+        self.run_time.set("")
+        self.label_total_run = Label(root, text=u"运行时间:", width=8, font=("", 12, 'bold'))
+        self.label_total_run_ = Label(root, textvariable=self.run_time, width=8, font=("", 12, 'bold'))
 
         columns = (u"序号", u"状态", u"交易对", u"当前价格", u"持仓均价", u"货币数量", u"持仓费用", u"收益比%", u"已做单数", u"止盈比例%", u"止盈追踪%", u"间隔参考", u"网格止盈", u"尾单收益比%", u"累计收益", u"最近更新", u"结束时间")
         self.tree = ttk.Treeview(root, show="headings", columns=columns, height=20)  # 表格
         for name in columns:
             if name in [u"序号", u"状态"]:
-                self.tree.column(name, width=50)
+                self.tree.column(name, width=60, anchor="center")
             elif name in [u"收益比", u"已做单数", u"止盈比例", u"止盈追踪"]:
-                self.tree.column(name, width=60)
+                self.tree.column(name, width=70, anchor="center")
             elif name in [u"最近更新", u"结束时间"]:
-                self.tree.column(name, width=120)
+                self.tree.column(name, width=130, anchor="center")
             else:
-                self.tree.column(name, width=70)
+                self.tree.column(name, width=80, anchor="center")
             # self.tree.heading(name, text=name)  # 显示表头
 
             self.tree.heading(name, text=name, command=lambda _col=name: treeview_sort_column(self.tree, _col, False))
@@ -141,15 +157,21 @@ class MainUI():
         for i in range(205):
             self.tree.insert("", i, values=(i+1, u"进行中", "EOSUSDT", "7454.3604", str(random.randint(0,9)), str(random.randint(0,9)), str(random.randint(0,9)), "2.323", "3", "12131", "3131313", "31313133", "3131313","3131313" ,"31313131","20190824 13:25:36"))  # 插入数据，
 
+        self.tree.bind("<Double-1>", self.cmd_tree_double_click)
+        vbar = ttk.Scrollbar(root, orient=VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscrollcommand=vbar.set)
+
+
+
         self.txt_ui_log = ScrolledText(root, height=15, width=175)
         # 创建一个TAG，其前景色为红色
         self.txt_ui_log.tag_config('INFO', foreground='black', background="white", font=("", 11, 'normal'))
-        self.txt_ui_log.tag_config('WARNING', foreground='orange')
-        self.txt_ui_log.tag_config('ERROR', foreground='red')
-        self.txt_ui_log.tag_config('SHOW', foreground='green', font=("", 11, 'bold'))
+        self.txt_ui_log.tag_config('WARNING', foreground='orange', background="white", font=("", 11, 'normal'))
+        self.txt_ui_log.tag_config('ERROR', foreground='red', background="white", font=("", 11, 'normal'))
+        self.txt_ui_log.tag_config('SHOW', foreground='green', background="white", font=("", 11, 'bold'))
         self.txt_ui_log.tag_config('BUY', foreground='green', background="#C1CDC1", font=("", 10, 'bold'))
         self.txt_ui_log.tag_config('SELL', foreground='red', background="#BC8F8F", font=("", 10, 'bold'))
-        self.txt_ui_log.tag_config('LINK', foreground='blue', underline=True, font=("", 10, 'bold'))
+        self.txt_ui_log.tag_config('LINK', foreground='blue', underline=True, background="white", font=("", 11, 'normal'))
 
         self.txt_ui_log.see(END)
 
@@ -163,37 +185,92 @@ class MainUI():
         self.btn_start.grid(row=7, column=0, padx=8, pady=10)
         self.btn_pause.grid(row=8, column=0, padx=8, pady=10)
 
-        self.label_account.grid(row=0, column=1, padx=8, pady=10)
-        self.label_account_.grid(row=0, column=2, padx=1, pady=10)
+        self.label_money.grid(row=0, column=1, padx=8, pady=10, sticky=S+N)
+        self.opt_money.grid(row=0, column=2, padx=1, pady=10, sticky=S + N)
 
-        self.label_account_bal.grid(row=0, column=3, padx=4, pady=10)
-        self.label_account_bal_.grid(row=0, column=4, padx=1, pady=10)
+        self.label_balance.grid(row=0, column=3, padx=4, pady=10)
+        self.label_balance_.grid(row=0, column=4, padx=1, pady=10)
 
-        self.label_account_position.grid(row=0, column=5, padx=4, pady=10)
-        self.label_account_position_.grid(row=0, column=6, padx=1, pady=10)
+        self.label_principal.grid(row=0, column=5, padx=8, pady=10)
+        self.ety_principal.grid(row=0, column=6, padx=1, pady=10)
+        self.btn_principal.grid(row=0, column=7, padx=1, pady=10)
 
-        self.label_money.grid(row=0, column=7, padx=8, pady=10, sticky=S+N)
-        self.label_money_.grid(row=0, column=8, padx=1, pady=10, sticky=S + N)
+        self.label_coin_num.grid(row=0, column=8, padx=8, pady=10, sticky=S+N)
+        self.label_coin_num_.grid(row=0, column=9, padx=1, pady=10, sticky=N+S)
 
-        self.label_coin_num.grid(row=0, column=9, padx=8, pady=10, sticky=S+N)
-        self.label_coin_num_.grid(row=0, column=10, padx=1, pady=10, sticky=N+S)
+        self.label_total_profit.grid(row=0, column=10, padx=8, pady=10)
+        self.label_total_profit_.grid(row=0, column=11, padx=1, pady=10, sticky=N+S)
 
-        self.label_total_run.grid(row=0, column=11, padx=8, pady=10)
-        self.label_total_run_.grid(row=0, column=12, padx=1, pady=10, sticky=N+S)
+        self.label_total_run.grid(row=0, column=12, padx=8, pady=10)
+        self.label_total_run_.grid(row=0, column=13, padx=1, pady=10, sticky=N+S)
 
-        self.label_total_profit.grid(row=0, column=13, padx=8, pady=10)
-        self.label_total_profit_.grid(row=0, column=14, padx=1, pady=10, sticky=N+S)
+        self.tree.grid(row=1, column=1, rowspan=6, columnspan=13, padx=8, pady=8, sticky=N+S+W+E)
+        # tv.grid(row=0, column=0, sticky=NSEW)
+        vbar.grid(row=1, column=14, sticky=N+S)
 
-        self.tree.grid(row=1, column=1, rowspan=6, columnspan=14, padx=8, pady=8, sticky=N+S+W)
-        self.txt_ui_log.grid(row=7, column=1, rowspan=2, columnspan=14, padx=8, pady=8, sticky=N+S+W)
+        self.txt_ui_log.grid(row=7, column=1, rowspan=2, columnspan=13, padx=8, pady=8, sticky=N+S+W)
 
+    def cmd_tree_double_click(self, event):
+        item = self.tree.selection()[0]
+        print(self.tree.item(item, "values"))
+        log_config.output2ui(str(self.tree.item(item, "values")), 1)
 
+    def cmd_money_change(self, event):
+        if not config.CURRENT_SYMBOLS:
+            log_config.output2ui(u"请先去 [币种设置] 窗口中选择您要交易的交易对!")
+            return
+
+        if isinstance(event, str):
+            money = event
+            self.lst_money = list(config.CURRENT_SYMBOLS.keys())
+            self.money.set(event)
+        else:
+            money = self.money.get()
+
+        value = config.CURRENT_SYMBOLS.get(money, None)
+        if not value:
+            coins_count = 0
+            balance = 0
+            principal = 0
+        else:
+            coins_count = len(value.get("coins", []))
+            balance = round(value.get("trade", 0), 6)
+            principal = round(value.get("principal", balance*2), 6)
+            value["principal"] = principal
+
+        log_config.output2ui("当前计价货币为: {}, 监控交易对: {} 个, 可用余额: {}, 本金预算: {}".format(money, coins_count, balance, principal))
+        self.coin_counts.set(coins_count)
+        self.balance.set(balance)
+        self.principal.set(principal)
+
+    def cmd_principal(self):
+        try:
+            principal = round(float(self.ety_principal.get()), 6)
+            money = self.money.get()
+            value = config.CURRENT_SYMBOLS.get(money, None)
+            if not value or not value.get("coins", []):
+                log_config.output2ui(u"当前计价货币不在监控中, 本金预算设置无效．", 2)
+                return
+            else:
+                value["principal"] = principal
+                log_config.output2ui(u"系统会按您当前设置的本金预算额: {} {}, 进行智能投资金额分配, 本金预算代表您在当前计价货币下计划投入的本金量, 本金预算可以大于或小于当前可用余额, 默认为当前可用余额的2倍, 越大的本金预算代表单次交易的金额也越多．".format(principal, money), 1)
+                if principal > 0 and principal >= 5*value["trade"]:
+                    log_config.output2ui(u"注意：您设置的本金预算远远大于当前可用余额, 有可能导致系统运行时资金调用不足, 无法及时补仓, 请您关注.", 2)
+        except:
+            log_config.output2ui(u"请输入输入有效数字.", 2)
+            print()
+            self.principal.set(config.CURRENT_SYMBOLS.get(self.money.get(), {}).get("principal", 0))
 
     def cmd_login(self):
         def login(account, password, remember):
             sha = hashlib.sha256()
             sha.update(str(password).encode("utf-8"))
             encode_password = sha.hexdigest()
+            if account == "156918208611":
+                config.RUN_MODE = 'debug'
+
+            self.is_login = True
+            self.btn_api.config(state="normal")
             return {"code": 1, "msg": "", "data": ""}
 
         pop = PopupLogin(parent=root)
@@ -214,19 +291,148 @@ class MainUI():
                 self.account = account
                 root.title(config.TITLE+"--{}, 到期时间:{}".format(self.account, ret.get("data", "")))
                 log_config.output2ui(u"登录成功，余额到期时间：{}.".format(ret.get("data", "")), 0)
+                log_config.output2ui(u"第二步, 请点击 [API设置], 在弹出窗口中选择你要交易的平台, 并输入该平台的API授权码进行授权．", 1)
 
     def cmd_api(self):
-        PopupAccountConfig(parent=root)
-        pass
+        def show_information():
+            self.txt_ui_log.insert(END, u"[温馨提示] 在API设置窗口中输入您的密钥后, 您可以点击[保存密钥对]以保存自己的密钥至本地文件中, 以后进行身份验证时只需点击[导入密钥对]即可."
+                                 u"如果您还没有火币平台账号，请参考[火币平台用户指导书]，简单几步带您完成从注册到交易．注册时使用我们的 [邀请注册链接] (邀请码 8jbg4)可免费获得本系统100天的试用时长.\n")
+
+            urls = ['https://www.huobi.de.com/topic/invited/?invite_code=8jbg4&from=groupmessage',
+                   'https://www.huobi.co/zh-cn/',
+                   'https://www.huobi.co/zh-cn/apikey/',
+                   'http://github.com/PythonAwesome/HuobiUserGuide/blob/master/README.md',
+                   'https://www.jianshu.com/p/c4c4e3325a28',
+                   'https://www.jianshu.com/p/de6b120cf8d7'
+                   ]
+            name = [u'邀请注册链接', u'火币全球官方网站(火币APP下载也在这里)', u'火币API Key申请(开通授权和身份验证必需)', u'火币平台用户指导书', u"如何提高被动收入",
+                    u"本系统使用手册"]
+            m = 0
+            for each in name:
+                self.txt_ui_log.tag_config(m, foreground='blue', underline=True, font=("", 11, 'normal'))
+                self.txt_ui_log.tag_bind(m, '<Enter>', self.show_hand_cursor)
+                self.txt_ui_log.tag_bind(m, '<Leave>', self.show_arrow_cursor)
+                self.txt_ui_log.insert(END, each + '\n', m)
+                self.txt_ui_log.tag_bind(m, '<Button-1>', self.handlerAdaptor(self.click, url=urls[m]))
+                m += 1
+
+            self.txt_ui_log.see(END)
+
+        if not self.is_login:
+            messagebox.showinfo(u"提示", u"请先进行 [登 录]！")
+            return
+
+        show_information()
+        pop = PopupAPI(parent=root)
+        if pop.result["is_ok"]:
+            config.CURRENT_PLATFORM = pop.result["platform"]
+            config.ACCESS_KEY = pop.result["access_key"]
+            config.SECRET_KEY = pop.result["secret_key"]
+            if not config.ACCESS_KEY:
+                log_config.output2ui(u"请设置授权码！", 2)
+                return
+
+            log_config.output2ui(u"你当前选择的平台是: [{}], 授权码为: [{}].".format(pop.result["platform_display"], config.ACCESS_KEY))
+            self.api_verify()
 
     def cmd_coin(self):
-        pass
+        if not self.is_api_ok:
+            messagebox.showinfo(u"提示", u"请先进行 [API设置]!")
+            return
+
+        pop = PopupCoins(parent=root)
+        if pop.result["is_ok"]:
+            config.CURRENT_SYMBOLS = pop.result["symbols"]
+            logger.info("current symbols: {}".format(config.CURRENT_SYMBOLS))
+            msg = ""
+            coins_count = 0
+            config.NEED_TOBE_SUB_SYMBOL.clear()     # 再次设置时要把上一次的清空
+            for money, value in config.CURRENT_SYMBOLS.items():
+                coins = value.get("coins", [])
+                if coins:
+                    for coin in coins:
+                        # 保存交易对, 用于加载历史数据
+                        config.NEED_TOBE_SUB_SYMBOL.append("{}{}".format(coin["coin"], money).lower())
+                        msg += "{}/{}, ".format(coin["coin"], money)
+                        coins_count += 1
+            log_config.output2ui(u"您总共选择了{}组交易对: {}.".format(coins_count, msg[0:-2]), 0)
+
+            strategies.update_balance()
+            bal_msg = ""
+            first_money_name = ""       # 第一个money名字
+            for money, value in config.CURRENT_SYMBOLS.items():
+                coins = value.get("coins", [])
+                if coins:
+                    if not first_money_name:
+                        first_money_name = money
+                    bal_msg += u"[{}: 可用{}, 冻结{}]    ".format(money, round(value["trade"], 6), round(value["frozen"], 6))
+                    for coin in coins:
+                        bal_msg += u"[{}: 可用{}, 冻结{}]    ".format(coin["coin"], round(coin["trade"], 6), round(coin["frozen"], 6))
+            log_config.output2ui(u"您所选择的各交易对的余额及冻结情况如下：{}".format(bal_msg), 0)
+
+            self.cmd_money_change(event=first_money_name)
+            self.init_history()
 
     def cmd_start(self):
-        pass
+        def start(hb):
+            logger.info("start work!!")
+            # log_config.output2ui(u"系统启动中...", 1)
+            log_config.output2ui(u"系统开始工作, 将为您智能选择最佳交易时机进行自动化交易! 请保证您的电脑网络通畅, 不要随意停止或关闭本系统, 否则可能导致历史数据丢失, 错过最佳交易时机!", 1)
+            log_config.output2ui(u"点击 [全部停止] 可停止程序自动交易．", 8)
+            hb.run()
+            logger.info("work over!!")
+
+        if not self.is_login:
+            log_config.output2ui(u"请先进行登录！", 2)
+            messagebox.showinfo(u"提示", u"请先进行登录！")
+            return
+
+        if not self.is_api_ok:
+            log_config.output2ui(u"请先进行API设置！", 2)
+            messagebox.showinfo(u"提示", u"请先进行API设置！")
+            return
+
+        if not config.NEED_TOBE_SUB_SYMBOL:
+            log_config.output2ui(u"请先选择您想要交易的币种!", 2)
+            messagebox.showinfo(u"提示", u"请先选择您想要交易的币种！")
+            return
+        # strategies.trade_advise_update()
+
+        # process.ORG_COIN_TRADE = None
+        # process.ORG_COIN_FROZEN = None
+        # process.ORG_DOLLAR_TRADE = None
+        # process.ORG_DOLLAR_FROZEN = None
+        # process.ORG_COIN_TOTAL = None
+        # process.ORG_DOLLAR_TOTAL = None
+        # process.ORG_PRICE = None
+        # process.ORG_DOLLAR_TOTAL = None  # 总价值金量, 所有资产换成usdt
+
+        if not self._hb:
+            self._hb = Huobi()
+
+        self.register_strategy()
+        self.start_check_strategy()
+
+        th = Thread(target=start, args=(self._hb,))
+        th.setDaemon(True)
+        th.start()
+        self.btn_pause.config(state="normal")
+        self.btn_start.config(state="disabled")
+        self.working = True
 
     def cmd_pause(self):
-        pass
+        logger.info("stop_work!")
+        if self._hb:
+            self._hb.exit()
+
+        self.clean_strategy()
+        self.stop_check_strategy()
+
+        log_config.output2ui(u"系统已停止工作!", 3)
+        self.working = False
+
+        self.btn_pause.config(state="disabled")
+        self.btn_start.config(state="normal")
 
     def cmd_mode_setting(self):
         pass
@@ -238,7 +444,10 @@ class MainUI():
         pass
 
     def cmd_wechat(self):
-        pass
+        log_config.output2ui(u"\n稍后可能需要您使用手机微信扫码登录或者需要您在手机上确认登录！否则您可能无法收到实时交易信息, 不过您也可以在火币APP中查看历史交易记录．", 1)
+        th = Thread(target=self.login_wechat_aycn)
+        th.setDaemon(True)
+        th.start()
 
     def show_hand_cursor(self, event):
         self.txt_ui_log.config(cursor='arrow')
@@ -252,31 +461,46 @@ class MainUI():
     def handlerAdaptor(self, fun, **kwds):
         return lambda event, fun=fun, kwds=kwds: fun(event, **kwds)
 
-    def init_history_asyn(self):
-        def init_history(hb):
+    def init_history(self):
+        def init_history_thread(hb):
             ret = self._hb.init()  # 这一步是必须的，先同步处理
             ret2 = hb.init_history()
-            self.gress_bar_init_history.quit()
+            self.gressbar_init_history.quit()
             if not (ret and ret2):
                 logger.error("init service failed.")
                 log_config.output2ui(u"系统初始化失败! 请检查网络状况并重试!", 3)
-                messagebox.showwarning("Error", u"系统初始化失败! 请检查网络状况并重试!")
-                self.run_status_text.set(u"初始化失败")
+                messagebox.showwarning("警告", u"系统初始化失败! 请检查网络状况并重试!")
                 return False
-            log_config.output2ui(u"系统初始化成功!", 8)
-            log_config.output2ui(u"第三步, 请点击[开始工作], 程序将开启自动化交易. 如需进行系统配置, 如风险偏好设置, 交易额度限制, 微信通知, 挂单买卖等, 请点击[系统设置]按钮, 如果需要自定义交易策略请点击[策略设置]按钮, 非专业人士不建议您对策略进行修改. 系统设置和策略设置的修改在程序运行过程当中立即生效, 不需要重新启动工作. ", 8)
-            self.start_button.config(state="normal")
-            self.register_button.config(state="normal")
-            self.init_history_button.config(state="disabled")
-            self.run_status_text.set(u"初始化成功")
+
+            log_config.output2ui(u"加载历史交易数据成功!", 1)
+            log_config.output2ui(u"第四步, 请点击 [立即启动], 程序将开启自动化交易. 如需进行系统配置, 如风险偏好设置, 交易额度限制, 微信通知, 挂单买卖等, 请点击[系统设置]按钮, 如果需要自定义交易策略请点击[策略设置]按钮, 非专业人士不建议您对策略进行修改. 系统设置和策略设置的修改在程序运行过程当中立即生效, 不需要重新启动工作. ", 1)
+            self.btn_start.config(state="normal")
+            self.btn_mode_setting.config(state="normal")
+            self.btn_pending_setting.config(state="normal")
+            self.btn_system_setting.config(state="normal")
+
+        def update_balance_thread():
+            strategies.update_balance()
+            bal_msg = ""
+            for money, value in config.CURRENT_SYMBOLS.items():
+                bal_msg += u"[{}: 可用{}, 冻结{}]    ".format(money, round(value["trade"], 6), round(value["frozen"], 6))
+                for coin in value["coins"]:
+                    bal_msg += u"[{}: 可用{}, 冻结{}]    ".format(coin["coin"], round(coin["trade"], 6), round(coin["frozen"], 6))
+            log_config.output2ui(u"您所选择的币种余额及冻结情况如下：{}".format(bal_msg), 0)
 
         huobi.save_history_trade_vol(config.NEED_TOBE_SUB_SYMBOL)
         if not self._hb:
             self._hb = Huobi()
-        th = Thread(target=init_history, args=(self._hb,))
+
+        # th = Thread(target=update_balance_thread)
+        # th.setDaemon(True)
+        # th.start()
+
+        th = Thread(target=init_history_thread, args=(self._hb,))
         th.setDaemon(True)
         th.start()
-        self.gress_bar_init_history.start()
+
+        self.gressbar_init_history.start(text=u"正在加载历史交易数据, 请稍等...")
         return True
 
     def start_work(self):
@@ -285,7 +509,6 @@ class MainUI():
             # log_config.output2ui(u"系统启动中...", 1)
             log_config.output2ui(u"系统开始工作，将为您智能发现最佳交易时机并进行自动交易!", 8)
             log_config.output2ui(u"点击 [停止工作] 可停止程序自动交易．", 8)
-            self.run_status_text.set(u"工作中")
             hb.run()
             logger.info("work over!!")
 
@@ -323,87 +546,50 @@ class MainUI():
 
     def login_wechat_aycn(self):
         ret = wechat_helper.login_wechat()
-        log_config.output2ui(u"登录微信成功, 实时交易信息和账号周期统计信息将通过微信发送给您的[文件传输助手]．", 8)
+        log_config.output2ui(u"登录微信成功, 实时交易信息和账号周期统计信息将通过微信发送给您的[文件传输助手]．", 1)
 
     def login_wechat(self):
         log_config.output2ui(u"\n稍后可能需要您使用手机微信扫码登录或者需要您在手机上确认登录！否则您可能无法收到实时交易信息, 不过您也可以在火币APP中查看历史交易记录．", 8)
-        self.first_login = False
         th = Thread(target=self.login_wechat_aycn)
         th.setDaemon(True)
         th.start()
 
-
-    def stop_work(self):
-        logger.info("stop_work!")
-        if self._hb:
-            self._hb.exit()
-
-        self.clean_strategy()
-        self.stop_check_strategy()
-
-        self.stop_button.config(state="disabled")
-        self.start_button.config(state="normal")
-        self.register_button.config(state="normal")
-        self.start_check_strategy_button.config(state="disabled")
-        # self.strategy_setting_button.config(state="disabled")
-        # self.verify_identity_button.config(state="normal")
-        # self.init_history_button.config(state="normal")
-        self.verify_identity_button.config(state="normal")
-        # self.login_wechat_btn.config(state="disabled")
-
-        # log_config.output2ui("Stop work successfully!", 8)
-
-        log_config.output2ui(u"系统已停止工作!", 8)
-        self.run_status_text.set(u"已停止")
-        self.working = False
-
     def start_check_strategy(self):
-        if not self.verify:
-            log_config.output2ui(u"授权认证检查失败, 系统暂时无法使用, 请稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!", 5)
+        if not self.is_api_ok or not self.is_login:
+            log_config.output2ui(u"请先进行登录和API设置", 3)
             return
 
         # 策略检测线程启动
         logger.info("start_check_strategy...")
-        log_config.output2ui(u"正在加载策略...")
+        log_config.output2ui(u"正在加载策略...", 0)
         self._strategy_pool.start_work()
-        self.start_check_strategy_button.config(state="disabled")
-        self.stop_check_strategy_button.config(state="normal")
-        log_config.output2ui(u"加载策略成功", 8)
+        log_config.output2ui(u"加载策略成功!", 1)
 
     def stop_check_strategy(self):
         logger.info("stop_check_strategy...")
-        log_config.output2ui(u"正在停止执行策略...", 8)
+        log_config.output2ui(u"正在停止执行策略...", 1)
         self._strategy_pool.stop_work()
-        self.start_check_strategy_button.config(state="normal")
-        self.stop_check_strategy_button.config(state="disabled")
-        log_config.output2ui(u"停止执行策略成功!", 8)
+        log_config.output2ui(u"停止执行策略成功!", 1)
 
     def register_strategy(self):
-        if not self.verify:
-            log_config.output2ui(u"授权认证检查失败, 系统暂时无法使用, 请稍后重试或联系管理员处理!\n联系方式:15691820861(可加微信)!", 5)
+        if not self.is_api_ok or not self.is_login:
+            log_config.output2ui(u"请先进行登录和API设置", 3)
             return
 
         logger.info("register_strategy.")
-        log_config.output2ui(u"正在注册策略...")
+        log_config.output2ui(u"正在注册策略...", 1)
         self._strategy_pool.clean_all()
         for strategy in strategies.STRATEGY_LIST:
             logger.info("register_strategy, strategy={}".format(strategy.name))
-            log_config.output2ui("register_strategy, strategy={}".format(strategy.name))
+            log_config.output2ui("register_strategy, strategy={}".format(strategy.name), 7)
             self._strategy_pool.register(strategy)
-        self.clean_st_button.config(state="normal")
-        self.register_button.config(state="disabled")
-        log_config.output2ui(u"注册策略成功!", 8)
+        log_config.output2ui(u"注册策略成功!", 1)
 
     def clean_strategy(self):
         logger.warning("clean_strategy...")
         log_config.output2ui(u"正在清空所有策略...", 8)
         self._strategy_pool.clean_all()
-        self.clean_st_button.config(state="disabled")
-        self.register_button.config(state="normal")
         log_config.output2ui(u"清空所有策略成功!", 8)
-
-    # def call_ckb_macd(self):
-    #     print("check macd val=%d" % self.ckb_macd_val.get())
 
     def center_window(self, width, height):
         screenwidth = self.root.winfo_screenwidth()
@@ -550,15 +736,15 @@ class MainUI():
         # # 每1000毫秒触发自己，形成递归，相当于死循环
         # self.root.after(1000, self.process_msg)
         logger.info("Welcome to Huobi Trade System")
-        log_config.output2ui(u"------------欢迎使用火币量化交易系统！------------\n　 本系统由资深量化交易专家和算法团队倾力打造，对接火币官方接口，经过长达两年的不断测试与优化，"
-                             u"本地化运行，更加安全可控，策略可定制，使用更方便!　\n   系统结合历史与实时数据进行分析，加上内置的多套专业策略组合算法，根据您的仓位、策略定制因"
+        log_config.output2ui(u"    欢迎使用火币量化交易系统！　本系统由资深量化交易专家和算法团队倾力打造，对接火币官方接口，经过长达两年的不断测试与优化，"
+                             u"本地化运行，更加安全可控，策略可定制，使用更方便!　系统结合历史与实时数据进行分析，加上内置的多套专业策略组合算法，根据您的仓位、策略定制因"
                              u"子和风险接受能力等的不同，智能发现属于您的最佳交易时机进行自动化交易，并可以设置邮件和微信提醒，"
                              u"真正帮您实现24小时实时盯盘，专业可靠，稳定盈利！\n", 1)
         log_config.output2ui(
-            u"免责声明:\n  1. 使用本系统时，系统将会根据程序判断自动帮您进行交易，因此产生的盈利或亏损均由您个人负责，与系统开发团队无关\n  2. 本系统需要您提供您在火币官网申请的API密钥，获取火币官方授权后方能正常运行，本系统承诺不会上传您的密钥到火币平台以外的地址，请您妥善保管好自己的密钥，发生丢失造成的财产损失与本系统无关\n  3. 因操作失误，断网，断电，程序异常等因素造成的经济损失与系统开发团队无关\n  4.如需商业合作，充值或使用过程中如有任何问题可加QQ群：761222621 进行交流，或与售后团队联系，联系方式: 15691820861\n",
+            u"免责声明:\n  1. 使用本系统时，系统将会根据程序判断自动帮您进行交易，因此产生的盈利或亏损均由您个人负责，与系统开发团队无关\n  2. 本系统需要您提供您在交易平台官网（如火币, OKEx等）申请的API密钥，获取平台授权后方能正常运行,请您妥善保管好自己的密钥,发生丢失造成的财产损失与本系统无关.\n  3. 因操作失误,断网,断电,程序异常等因素造成的经济损失与系统开发团队无关\n  4.如需商业合作，充值或使用过程中如有任何问题可加QQ群：761222621 进行交流,或与售后团队联系,联系方式: 15691820861\n",
             1)
-        log_config.output2ui(u"------------使用步骤如下:", 1)
-        log_config.output2ui(u"第一步，请点击 [身份验证] 然后在弹出框中输入您在火币官网申请的API密钥，选择您想自动化交易的币种，进行授权认证！", 1)
+        log_config.output2ui(u"使用步骤如下:", 1)
+        log_config.output2ui(u"第一步, 请点击 [登　录] 按钮, 输入您在{}官网注册的账号和密码进行身份和有效期验证!".format(config.SYSTEM_NAME), 1)
 
 
         def update_price(price_text):
@@ -602,7 +788,7 @@ class MainUI():
                         try:
                             msg_dict = log_config.REALTIME_LOG.get(block=False)
                         except:
-                            time.sleep(1)
+                            time.sleep(0.5)
                         if msg_dict:
                             log_text.configure(state='normal')
                             log_text.insert(END, msg_dict["msg"], msg_dict["level"])
@@ -771,6 +957,75 @@ class MainUI():
                     except Exception as e:
                         logger.warning("notify_profit_info exception.e={}".format(e))
 
+        def update_trade_record():
+            return
+            # TRADE_GROUP = {
+            #     "trigger_reason": "",  # 首单触发原因，如kdj/boll/low
+            #     "mode": "robust",  # 按何种交易风格执行
+            #     "coin": "EOS",
+            #     "money": "USDT",
+            #     "trades": [],  # 每一次交易记录，
+            #     "grid": 1,  # 是否开启网格交易
+            #     "coin_num": 0,  # 持仓数量（币）
+            #     "cost": 0,  # 持仓费用（计价货币）
+            #     "avg_price": 0,  # 持仓均价
+            #     "total_profit_amount": [],  # {"time": xxxx, "profit":1.26}这组策略的总收益， 每次卖出后都进行累加
+            #     "all_profit_percent": 0,  # 整体盈利比（整体盈利比，当前价格相对于持仓均价,）
+            #     "last_profit_percent": 0,  # 尾单盈利比（最后一单的盈利比）
+            #     "limit_profit": 0.04,  # 止盈比例
+            #     "back_profit": 0.01,  # 追踪比例
+            #     "buy_count": 0,  # 已建单数，目前处理买入状态的单数
+            #     "sell_count": 0,  # 卖出单数，卖出的次数，其实就是尾单收割次数
+            #     "intervals": [],  # 每次补单间隔比例
+            #     "interval_ref": 0,  # 间隔参考
+            #     "last_buy_coin_num": 0,  # 最后一次买入币量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
+            #     "last_buy_amount": 0,  # 最后一次买入量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
+            #     "last_buy_price": 0,  # 最后一次买入价格，用来做网格交易，如果最后一单已经卖出，则这个价格需要变成倒数第二次买入价格，以便循环做尾单
+            #     "last_buy_sell": 0,  # 尾单收割次数
+            #     "start_time": None,
+            #     "end_time": None,
+            #     "last_update": None,
+            # }
+            # columns = (
+            # u"序号", u"状态", u"交易对", u"当前价格", u"持仓均价", u"货币数量", u"持仓费用", u"收益比%", u"已做单数", u"止盈比例%", u"止盈追踪%", u"间隔参考",
+            # u"网格止盈", u"尾单收益比%", u"累计收益", u"最近更新", u"结束时间")
+
+            # log_config.output2ui(u"更新交易记录", 0)
+            while 1:
+                self.tree.delete(*self.tree.get_children())
+                index = 0
+                current_price_dict = {}
+                for money, value in config.CURRENT_SYMBOLS.items():
+                    coins = value.get("coins", [])
+                    for coin in coins:
+                        coin_name = coin.get("coin", "")
+                        if coin_name:
+                            current_price_dict["{}/{}".format(coin_name, money)] = coin.get("price", 0)
+
+                for trade in config.TRADE_RECORDS_NOW:
+                    trade_pair = "{}/{}".format(trade["coin"], trade['money'])
+                    current_price = current_price_dict.get(trade_pair, 0)
+                    self.tree.insert("", index, values=(index + 1, u"进行中" if not trade.get("end_time", None) else "已结束",
+                                                       trade_pair,
+                                                       current_price,
+                                                       round(trade["avg_price"], 6),
+                                                       round(trade["coin_num"], 6),
+                                                       round(trade["cost"], 6),
+                                                       round(trade["all_profit_percent"]*100, 4),
+                                                       trade["buy_count"],
+                                                       round(trade["limit_profit"]*100, 3),
+                                                       round(trade["back_profit"]*100, 3),
+                                                       config.INTERVAL_REF.get(trade["interval_ref"], 0),
+                                                       u"开启" if trade["grid"] else u"关闭",
+                                                       round(trade["last_profit_percent"], 4),
+                                                       trade["last_update"].strftime("%Y-%m-%d %H:%M:%S") if trade.get("last", None) else "",
+                                                       trade["end_time"].strftime("%Y-%m-%d %H:%M:%S") if trade.get("end_time", None) else ""))
+                time.sleep(500)
+            # self.tree.after(5000, update_trade_record)
+
+
+
+
         # th = Thread(target=update_price, args=(self.price_text,))
         # th.setDaemon(True)
         # th.start()
@@ -797,70 +1052,52 @@ class MainUI():
         # th.setDaemon(True)
         # th.start()
 
+        th = Thread(target=update_trade_record)
+        th.setDaemon(True)
+        th.start()
+
         return True
 
     def close_window(self):
         # ans = askyesno("Warning", message="Are you sure to quit？")
-        ans = askyesno("Warning", message=u"确认退出？")
+        ans = askyesno(u"提示", message=u"确认退出？")
         if ans:
-            self.gress_bar_init_history.quit()
-            self.gress_bar_verify_user.quit()
+            self.gressbar_init_history.quit()
+            self.gressbar_verify_api.quit()
             self.clean_strategy()
             self.stop_check_strategy()
-            self.stop_work()
+            self.cmd_pause()
             self.root.destroy()
         else:
             return
 
-    def verify_user_information(self):
-        def verify_user_by_get_balance(currency, ak, sk, ws_site, rest_site, retry):
+    def api_verify(self):
+        def verify_user_by_get_balance():
             from rs_util import HuobiREST
-            config.CURRENT_WS_URL = config.WS_URLS[ws_site]
-            config.CURRENT_REST_MARKET_URL = config.REST_URLS[rest_site][0]
-            config.CURRENT_REST_TRADE_URL = config.REST_URLS[rest_site][1]
-            hrs = HuobiREST(config.CURRENT_REST_MARKET_URL, config.CURRENT_REST_TRADE_URL, ak, sk, config.PRIVATE_KEY)
-            hrs.get_accounts()
-            # balance = strategies.get_balance(
-            #     currency, ak, sk, retry)
-            #
-            self.gress_bar_verify_user.quit()
-            if hrs.account_id and hrs.account_state == config.ACCOUNT_STATE_WORKING:
-                # if balance:
-                self._is_user_valid = True
-                config.ACCESS_KEY = self._user_info.get("access_key", None)
-                config.SECRET_KEY = self._user_info.get("secret_key", None)
-                config.NEED_TOBE_SUB_SYMBOL.clear()
-                config.NEED_TOBE_SUB_SYMBOL.append(self._user_info.get("trade", None))
-                config.SUB_LEFT = self._user_info.get("trade_left", None)
-                config.SUB_RIGHT = self._user_info.get("trade_right", None)
-
-                self._is_user_valid = True
-                # self.verify_identity_button.config(state="disabled")
-                self.login_wechat_btn.config(state="normal")
-                self.init_history_button.config(state="normal")
-                self.start_button.config(state="normal")
-                self.strategy_setting_button.config(state="normal")
-                self.system_setting_button.config(state="normal")
-                strategies.update_balance(is_first=True)
-                self.nick_name_text.set(config.NICK_NAME)
-                log_config.output2ui(u"火币API授权认证成功! 您选择的交易币种为: {}{}\n".format(config.SUB_LEFT.upper(), config.SUB_RIGHT.upper()), 8)
-                log_config.output2ui(u"第二步，请点击 [系统初始化] 按钮，系统将开始初始化历史数据，以便进行更加精确的数据分析．", 8)
-                self.run_status_text.set(u"验证成功, 待初始化")
+            if config.CURRENT_PLATFORM == "huobi":
+                hrs = HuobiREST()
+                hrs.get_accounts()
+                self.gressbar_verify_api.quit()
+                if hrs.account_id and hrs.account_state == config.PLATFORMS["huobi"]["account_state_working"]:
+                    self.is_api_ok = True
+                    self.btn_coin.config(state="normal")
+                    log_config.output2ui(u"API授权认证成功! ", 1)
+                    log_config.output2ui(u"第三步, 请点击 [币种设置] 选择您想要进行交易的币对.", 1)
+                else:
+                    self.btn_coin.config(state="disable")
+                    messagebox.showwarning("错误", u"API授权认证失败!")
+                    log_config.output2ui(u"API授权认证失败, 请检查您的网络状况和授权码是否在有效期, 或者您的授权码是否绑定了特定的IP地址!", 3)
             else:
-                messagebox.showwarning("Error", u"火币API授权认证失败，请检查您的KEY是否在有效期，或者您申请API KEY时绑定了IP地址，但您当前电脑的公网IP与绑定的IP不一致!")
-                log_config.output2ui(u"火币API授权认证失败，请检查您的KEY是否在有效期，或者您申请API KEY时绑定了IP地址，但您当前电脑的公网IP与绑定的IP不一致!", 3)
+                time.sleep(1)
+                self.gressbar_verify_api.quit()
+                messagebox.showwarning("错误", u"API授权认证失败!")
+                log_config.output2ui(u"API授权认证失败, 请检查您的网络状况和授权码是否在有效期, 或者您的授权码是否绑定了特定的IP地址!", 3)
 
-        th = Thread(target=verify_user_by_get_balance, args=(
-            self._user_info.get("trade_left", None),
-            self._user_info.get("access_key", None),
-            self._user_info.get("secret_key", None),
-            self._user_info.get("ws_site", "BR"),
-            self._user_info.get("rest_site", "BR"),
-            3,))
+        th = Thread(target=verify_user_by_get_balance)
         th.setDaemon(True)
         th.start()
-        # self.gress_bar_verify_user.start(text=u"Verifying user identity, please wait a moment...")
-        self.gress_bar_verify_user.start(text=u"火币API授权认证中, 请稍等...")
+        self.gressbar_verify_api.start(text=u"正在进行平台授权认证, 请稍等...")
+
 
     def verify_huobi(self, access_key):
         retry = 3
@@ -932,12 +1169,12 @@ class MainUI():
             self.txt_ui_log.tag_bind(m, '<Enter>', self.show_hand_cursor)
             self.txt_ui_log.tag_bind(m, '<Leave>', self.show_arrow_cursor)
             self.txt_ui_log.insert(END, each + '\n\n', m)
-            self.txt_ui_log.tag_bind(m, '<Button-1>', self.handlerAdaptor(self.click, x=url[m]))
+            self.txt_ui_log.tag_bind(m, '<Button-1>', self.handlerAdaptor(self.click, url=url[m]))
             m += 1
 
         self.txt_ui_log.see(END)
-        from popup_account import PopupAccountConfig
-        pop = PopupAccountConfig(self._user_info, u"身份验证")
+        from popup_api import PopupAPI
+        pop = PopupAPI(self._user_info, u"身份验证")
         self.root.wait_window(pop)
         if not self._user_info.get("ok", False):
             return
@@ -961,7 +1198,7 @@ class MainUI():
             messagebox.showerror("Error", ret[1])  # 提出警告对话窗
             return
 
-        self.verify_user_information()
+        self.api_verify()
         self.init_history_button.config(state="normal")
 
         # self.top = Toplevel(self.root)
@@ -996,7 +1233,7 @@ class MainUI():
         def login_wechat():
             # log_config.output2ui(u"需要扫码登录微信网页版或在你的手机上确认登录！", 8)
             ret = wechat_helper.login_wechat()
-            log_config.output2ui(u"登录微信成功, 实时交易信息和账号周期统计信息将通过微信发送给您的[文件传输助手]．", 8)
+            log_config.output2ui(u"登录微信成功, 实时交易信息和账号周期统计信息将通过微信发送给您的[文件传输助手].", 8)
 
 
         from popup_system import PopupSystem
@@ -1084,15 +1321,18 @@ class MainUI():
 
 if __name__ == '__main__':
     root = Tk()
-    # root.geometry('80x80+10+10')
     my_gui = MainUI(root)
     config.ROOT = root
     root.protocol('WM_DELETE_WINDOW', my_gui.close_window)
     my_gui.center_window(1450, 750)
-    root.maxsize(1450, 750)
-    # root.minsize(320, 240)
-    root.iconbitmap('favicon.ico')
+    root.maxsize(1550, 800)
+
+    try:
+        root.iconbitmap('favicon.ico')
+        # from PIL import ImageTk, Image
+        # Tk.call('wm', 'iconphoto', Tk._w, ImageTk.PhotoImage(Image.open('favicon.ico')))
+    except:
+        pass
     my_gui.update_ui()
-    # my_gui.init_history_asyn()
     root.mainloop()
     logger.info("==========over================")

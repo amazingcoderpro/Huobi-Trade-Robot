@@ -3,16 +3,73 @@
 # Created by Charles on 2018/6/16
 # Function: basic configure
 
-# APIKEY
+RUN_MODE = "product"#product
+SYSTEM_NAME = "DDU智能量化交易系统"
+REGISTER_URL = "https://www.baidu.com/"
+TITLE = u"DDU量化交易系统v2.0.0 (官方交流QQ群:761222621, 管理员:15691820861)"
+
+KL_1MIN = "1min"
+KL_5MIN = "5min"
+KL_15MIN = "15min"
+KL_30MIN = "30min"
+KL_60MIN = "60min"
+KL_1DAY = "1day"
+KL_1WEEK = "1week"
+KL_1MON = "1mon"
+KL_1YEAR = "1year"
+
+
+CURRENT_ACCOUNT = ""            # 当前用户账号
+CURRENT_PLATFORM = "huobi"      # 当前平台
 ACCESS_KEY = ""
 SECRET_KEY = ""
+CURRENT_SYMBOLS = {}            # 用户选择的交易对[{"left": "EOS", "right": "USDT"}, {"left": "XRP", "right": "BTC"}]
+
+# 平台及期配置信息字典
+PLATFORMS = {
+    "huobi": {
+        "display": u"火币",
+        "private_key": b"-----BEGIN EC PRIVATE KEY-----\r\nMHQCAQEEIJxC7lk2nTcVUj+Dh3iIelrGIFwt/lPwJYcUsX10fkr9oAcGBSuBBAAK\r\noUQDQgAEJYDjtP9s7i1FU0Gp3xXq0KQptrtxy63bb3TwlTo49GyasdhZYPF1HILk\r\nTskvXRsWal24HAelzpJWnFzXwZnRpw==\r\n-----END EC PRIVATE KEY-----",
+        "account_id": 0,
+        "ws_url": {"pro": "wss://api.huobipro.com/ws", "hx": "wss://api.hadax.com/ws",
+                   "br": "wss://api.huobi.br.com/ws", "default": "wss://api.huobi.br.com/ws"},
+        "rest_market_url": {"pro": "https://api.huobi.pro/market", "hx": "https://api.hadax.com/market",
+                            "br": "https://api.huobi.br.com/market", "default": "https://api.huobi.br.com/market"},
+        "rest_trade_url": {"pro": "https://api.huobi.pro/v1", "hx": "https://api.hadax.com/v1",
+                           "br": "https://api.huobi.br.com/v1", "default": "https://api.huobi.br.com/v1"},
+        "kline_all": [KL_1MIN, KL_15MIN, KL_5MIN, KL_60MIN, KL_1DAY],
+        "kline_history": [KL_1MIN, KL_15MIN, KL_60MIN, KL_1DAY],
+        "kline_realtime": KL_1MIN,
+        "depth": ["step0", "step1", "step2", "step3", "step4", "step5"],
+        "symbol_partition": ["main", "innovation", "bifurcation"],  # main主区，innovation创新区，bifurcation分叉区
+        "trade_pairs": {
+                "USDT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
+                "BTC": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
+                "ETH": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
+                "HT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
+                "HUSD": ["USDT", "BTC", "ETH", "XRP", "EOS", "HT"]
+              },
+        "account_state_working": "working",  # 正常
+        "account_state_lock": "lock",
+    },
+    "binance": {
+        "display": u"币安",
+        "trade_pairs": {"USDT": [], "BTC": [], "ETH": [], "HUSD": []}
+    },
+    "okex": {
+        "display": "OKEx",
+        "trade_pairs": {"USDT": [], "BTC": [], "ETH": [], "HUSD": []}
+    }
+}
+
+
+
+
 # PRIVATE_KEY = open("secp256k1-key.pem", "rb").read()
-# PRIVATE_KEY = """-----BEGIN EC PRIVATE KEY-----
-# MHQCAQEEIJxC7lk2nTcVUj+Dh3iIelrGIFwt/lPwJYcUsX10fkr9oAcGBSuBBAAK
-# oUQDQgAEJYDjtP9s7i1FU0Gp3xXq0KQptrtxy63bb3TwlTo49GyasdhZYPF1HILk
-# TskvXRsWal24HAelzpJWnFzXwZnRpw==
-# -----END EC PRIVATE KEY-----
-# """
 PRIVATE_KEY = b"-----BEGIN EC PRIVATE KEY-----\r\nMHQCAQEEIJxC7lk2nTcVUj+Dh3iIelrGIFwt/lPwJYcUsX10fkr9oAcGBSuBBAAK\r\noUQDQgAEJYDjtP9s7i1FU0Gp3xXq0KQptrtxy63bb3TwlTo49GyasdhZYPF1HILk\r\nTskvXRsWal24HAelzpJWnFzXwZnRpw==\r\n-----END EC PRIVATE KEY-----"
 
 ACCOUNT_ID = 0
@@ -63,15 +120,7 @@ SUB_LEFT = ""
 SUB_RIGHT = ""
 
 # klines
-KL_1MIN = "1min"
-KL_5MIN = "5min"
-KL_15MIN = "15min"
-KL_30MIN = "30min"
-KL_60MIN = "60min"
-KL_1DAY = "1day"
-KL_1WEEK = "1week"
-KL_1MON = "1mon"
-KL_1YEAR = "1year"
+
 #KL_ALL = [KL_1MIN, KL_5MIN, KL_15MIN, KL_30MIN, KL_60MIN, KL_1DAY, KL_1WEEK, KL_1MON]
 KL_ALL = [KL_1MIN, KL_15MIN, KL_5MIN, KL_60MIN, KL_1DAY]#,KL_5MIN,KL_30MIN KL_1DAY
 KL_HISTORY = [KL_1MIN, KL_15MIN, KL_60MIN, KL_1DAY]#, KL_1DAY KL_5MIN,, KL_30MIN
@@ -86,8 +135,7 @@ DEPTH = ["step0", "step1", "step2", "step3", "step4", "step5"]
 SYMBOL_PARTITION = ["main", "innovation", "bifurcation"]
 
 # 账号状态
-ACCOUNT_STATE_WORKING = "working"  # 正常
-ACCOUNT_STATE_LOCK = "lock"  # 锁定
+
 
 # 订单类型
 BUY_MARKET = "buy-market"  # 市价买
@@ -215,7 +263,7 @@ STRATEGIES_CONFIG = {
 }
 
 # 平台及期配置信息字典
-PLATFORMS = {"huobi":
+SUPPORT_PLATFORMS = {"huobi":
                  {"display": u"火币",
                   "trade_pairs": {
                       "USDT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
@@ -233,11 +281,10 @@ PLATFORMS = {"huobi":
              "okex": {"display": "OKEx", "trade_pairs": {"USDT": [], "BTC": [], "ETH": [], "HUSD": []}}
              }
 
-PLATFORM = "huobi"      # 当前平台
-MONEY_NAME = "USDT"     # 当前计价货币
+
 PRINCIPAL = 0.0         # 本金
 TRADE_MODE = "robust"   # 当前选择的交易风格，稳健
-INTERVAL_REF = {0: "total_avg_price", 1: "last_buy_price"}      # 间隔补单参考，0-参考整体持仓均价，1-参考上一单买入价
+INTERVAL_REF = {0: "整体均价", 1: "上单价格"}      # 间隔补单参考，0-参考整体持仓均价，1-参考上一单买入价
 
 
 # 单次交易信息，这样的一次交易记录，将被包含在一组执行单元中, 除非是手动买入的
@@ -288,9 +335,7 @@ TRADE_GROUP = {
     "last_update": None,
 }
 TRADE_PAIRS = []            # {"coin": "", "money": "", "percent": 1} 当前需要监控的币种，支持一个计价货币下的多个币种同时交易
-TRADE_RECORDS_NOW = []      # 机器人当前所有需要监控的交易
+TRADE_RECORDS_NOW = [TRADE_GROUP]      # 机器人当前所有需要监控的交易
 TRADE_RECORDS_HISTORY = []  # 机器人所有历史交易记录
 MAN_BUY_RECORDS = []    # 人为买入记录
 
-REGISTER_URL = "https://www.baidu.com/"
-TITLE = u"DDU量化交易系统v2.0.0 (官方交流QQ群:761222621, 管理员:15691820861)"

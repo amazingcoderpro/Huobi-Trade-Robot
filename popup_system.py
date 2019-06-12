@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class PopupSystem(Toplevel):
-    def __init__(self, value_dict, title="System Configuration"):
+    def __init__(self, value_dict, title=u"系统设置"):
         Toplevel.__init__(self)
         self.is_ok = False
         self.value_dict = value_dict
@@ -360,7 +360,7 @@ class PopupSystem(Toplevel):
                 position_high = 1
 
         except Exception as e:
-            messagebox.showwarning("Warning", "All parameters must be numeric and cannot be null!")  # 提出警告对话窗
+            messagebox.showinfo(u"提示", u"所有输入必须有效!")  # 提出警告对话窗
             return
 
         self.value_dict["is_email"] = is_email
@@ -394,7 +394,7 @@ class PopupSystem(Toplevel):
         self.is_ok = True
         # messagebox.showinfo("Info", "System settings change have taken effect！")
         # log_config.output2ui("Setup System successfully!", 8)
-        log_config.output2ui(u"系统设置成功!", 8)
+        log_config.output2ui(u"系统设置成功!", 1)
         logger.info("system setup: {}".format(self.value_dict))
         # print(self.value_dict)
         self.destroy()

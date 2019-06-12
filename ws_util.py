@@ -47,18 +47,18 @@ class HuobiWS:
             else:
                 self._ws = ws
                 logger.info("connect web socket succeed.")
-                log_config.output2ui("connect web socket succeed.")
+                log_config.output2ui("connect web socket succeed.", 7)
                 return True
 
         logger.critical("create connection failed.")
-        log_config.output2ui("create connection failed.", 5)
+        log_config.output2ui(u"建立服务器连接失败.", 3)
         raise(Exception("connect web socket server failed."))
         return False
 
     #用于网络错误时重新连接，resub为true时则会重新订阅所有的channel
     def ws_reconnect(self, resub=True):
         logger.warning("--------------reconnect .... ")
-        log_config.output2ui("--------------reconnect .... ", 2)
+        log_config.output2ui("--------------reconnect .... ", 7)
         if self._ws:
             self._ws.shutdown()
             self._ws = None
@@ -114,23 +114,23 @@ class HuobiWS:
         if ret:
             self._sub_map[channel] = call_back
             logger.info("SUB: {} have subscribed successfully".format(channel))
-            log_config.output2ui("SUB: {} have subscribed successfully".format(channel))
+            log_config.output2ui("SUB: {} have subscribed successfully".format(channel), 7)
             return True
         else:
             logger.error("SUB: {} failed. ret={}, request body={}".format(channel, ret, str_sub_body))
-            log_config.output2ui("SUB:  {} failed. ret={}, request body={}".format(channel, ret, str_sub_body), 3)
+            # log_config.output2ui("SUB:  {} failed. ret={}, request body={}".format(channel, ret, str_sub_body), 3)
             return False
 
     #取消某个频道的订阅
     def ws_unsub(self, channel):
         if channel not in self._sub_map.keys():
             logger.warning("channel: {} had not be subscribed".format(channel))
-            log_config.output2ui("channel: {} had not be subscribed".format(channel), 2)
+            log_config.output2ui("channel: {} had not be subscribed".format(channel), 7)
             return False
 
         if not self._ws:
             logger.warning("please create web socket before unsub.")
-            log_config.output2ui("please create web socket before unsub.", 2)
+            log_config.output2ui("please create web socket before unsub.", 7)
             return False
 
 
@@ -142,21 +142,21 @@ class HuobiWS:
         if ret:
             self._sub_map.pop(channel)
             logger.info("{} have un-subscribed successfully".format(channel))
-            log_config.output2ui("{} have un-subscribed successfully".format(channel))
+            log_config.output2ui("{} have un-subscribed successfully".format(channel), 7)
             return True
         else:
             logger.error("UNSUB {} failed. ret={}, request body={}".format(channel, ret, str_unsub_body))
-            log_config.output2ui("UNSUB {} failed. ret={}, request body={}".format(channel, ret, str_unsub_body), 3)
+            log_config.output2ui("UNSUB {} failed. ret={}, request body={}".format(channel, ret, str_unsub_body), 7)
             return False
 
     #发起一次请求
     def ws_req(self, channel, call_back=None, t_from=None, t_to=None):
         if not self._ws:
             logger.warning("please create web socket before req.")
-            log_config.output2ui("please create web socket before req.", 2)
+            log_config.output2ui("please create web socket before req.", 7)
             return False
         logger.info("REQ: {}".format(channel))
-        log_config.output2ui("REQ: {}".format(channel))
+        log_config.output2ui("REQ: {}".format(channel), 7)
         index = len(self._req_map)
         req_body = {"req": channel,
                     "id": "id{}".format(index)}
@@ -169,11 +169,11 @@ class HuobiWS:
         if ret:
             self._req_map[channel] = call_back
             logger.info("REQ: {} have request successfully".format(channel))
-            log_config.output2ui("REQ: {} have request successfully".format(channel), 1)
+            log_config.output2ui("REQ: {} have request successfully".format(channel), 7)
             return True
         else:
             logger.error("REQ: request {} failed. ret={}, request body={}".format(channel, ret, str_req_body))
-            log_config.output2ui("REQ: request {} failed. ret={}, request body={}".format(channel, ret, str_req_body), 3)
+            log_config.output2ui("REQ: request {} failed. ret={}, request body={}".format(channel, ret, str_req_body), 7)
             return False
 
     #开始建立接收线程
@@ -195,18 +195,17 @@ class HuobiWS:
                 # 如果已经关闭了，则不需要重连
                 if self._run:
                     logger.warning("need reconnect..")
-                    log_config.output2ui("need reconnect..", 2)
+                    log_config.output2ui(u"服务器断开, 正在重连...", 2)
                     ret = self.ws_reconnect(resub=True)
                     #如查重连失败，则接收线程退出
                     if not ret:
                         logger.critical("-------reconnect failed. ws_thread_recv exit..")
-                        log_config.output2ui("-------reconnect failed. ws_thread_recv exit..", 4)
-                        log_config.output2ui("web socket 多次重连失败，请检查网络！", 8)
-                        raise(Exception("web socket 多次重连失败，请检查网络！"))
+                        log_config.output2ui(u"平台服务器多次重连失败, 系统无法正常运行, 请检查网络状况！", 3)
+                        raise(Exception("平台服务器多次重连失败，请检查网络！"))
                         break
                 else:
                     logger.info("don't need reconnect, ws_thread_recv exit..")
-                    log_config.output2ui("don't need reconnect, ws_thread_recv exit..")
+                    log_config.output2ui(u"断开平台服务器连接.")
                     return
                 time.sleep(1)
                 continue
@@ -227,8 +226,9 @@ class HuobiWS:
                 pong_body = result.replace("ping", "pong")
                 self._ws.send(pong_body)
             elif "subbed" in result:
-                logger.info("+++SUB SUCCESSFULLY: {}".format(result))
-                log_config.output2ui("+++SUB SUCCESSFULLY: {}".format(result))
+                pass
+                # logger.info("+++SUB SUCCESSFULLY: {}".format(result))
+                log_config.output2ui("+++SUB SUCCESSFULLY: {}".format(result), 7)
             else:
                 #处理订阅和请求响应
                 res = eval(result)
@@ -252,7 +252,7 @@ class HuobiWS:
                         process(res)
                     except Exception as e:
                         logger.exception("process {} catch exception.e={}".format(channel, e))
-                        log_config.output2ui("process {} catch exception.e={}".format(channel, e), 4)
+                        # log_config.output2ui("process {} catch exception.e={}".format(channel, e), 4)
 
 
 def btcusdt_k5_process(response):

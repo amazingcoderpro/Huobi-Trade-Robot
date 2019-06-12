@@ -53,7 +53,7 @@ LOG_CONSOLE_LEVEL = logging.DEBUG
 LOG_MAIL_LEVEL = logging.CRITICAL
 
 REALTIME_LOG = queue.Queue()
-UI_LOG_LEVEL_LIST = ["INFO", "SHOW", "WARNING", "ERROR", "BUY", "SELL", "LINK"]
+UI_LOG_LEVEL_LIST = ["INFO", "SHOW", "WARNING", "ERROR", "BUY", "SELL", "LINK", "DEBUG"]
 UI_LOG_LEVEL = 0
 
 # email notify sell/buy
@@ -96,6 +96,10 @@ def init_log_config(use_mail=False):
 
 
 def output2ui(msg, level=UI_LOG_LEVEL):
+    # 对于debug信息，非debug版本不展示
+    if level == 7 and config.RUN_MODE != "debug":
+        return
+
     level = 0 if level < 0 else level
     level = 0 if level > 6 else level
 

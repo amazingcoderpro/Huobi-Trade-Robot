@@ -1968,56 +1968,52 @@ def get_trade_vol_from_local(symbol, beg=0, size=3):
     return result
 
 
-def update_balance(is_first=False):
+def update_balance():
     try:
-        # for symbol in config.NEED_TOBE_SUB_SYMBOL:
-        s0 = config.SUB_LEFT    #symbol[0:3]
-        s1 = config.SUB_RIGHT   #symbol[3:]
-        bal0 = get_balance(s0, result_type=2)
-        bal1 = get_balance(s1, result_type=2)
-        str_balance = ""
-        if bal0 and bal1:
-            str_balance += "{}/{}".format(round(bal0.get("trade", 0), 4),
-                                             round(bal0.get("frozen", 0), 4))
+        for money, value in config.CURRENT_SYMBOLS.items():
+            coins = value.get("coins", [])
+            if coins:
+                bal0 = get_balance(money.lower(), result_type=2)
+                if bal0:
+                    config.CURRENT_SYMBOLS[money]["trade"] = float(bal0.get("trade", 0))
+                    config.CURRENT_SYMBOLS[money]["frozen"] = float(bal0.get("frozen", 0))
+                else:
+                    logger.error("get balance error, money={}".format(money))
 
-            str_balance += ", {}/{}".format(round(bal1.get("trade", 0), 2),
-                                               round(bal1.get("frozen", 0), 2))
-            logger.info("update_balance = {}".format(str_balance))
-            process.REALTIME_BALANCE = str_balance #.put(str_balance)
-            return bal0.get("trade", 0), bal0.get("frozen", 0), bal1.get("trade", 0), bal1.get("frozen", 0)
-        else:
-            logger.warning("update_balance failed.")
-            return 0,0,0,0
-
+                for coin_dict in coins:
+                    coin = coin_dict["coin"]
+                    bal1 = get_balance(coin.lower(), result_type=2)
+                    if bal1:
+                        coin_dict["trade"] = float(bal1.get("trade", 0))
+                        coin_dict["frozen"] = float(bal1.get("frozen", 0))
+                    else:
+                        logger.error("get balance error, coin={}".format(coin))
     except Exception as e:
-        logger.exception("update_balance e= {}".format(e))
-        return 0,0,0,0
+        logger.exception("update balance e= {}".format(e))
+        return False
+
+    logger.info("update balance: {}".format(config.CURRENT_SYMBOLS))
+    return True
 
 
 # result_type=0--trade, 1--frozen, 2--all
-def get_balance(currency, access_key=None, secret_key=None, retry=2, result_type=0):
-    if access_key and secret_key:
-        hrs = HuobiREST(config.CURRENT_REST_MARKET_URL, config.CURRENT_REST_TRADE_URL, access_key, secret_key, config.PRIVATE_KEY)
-    else:
-        hrs = HuobiREST(config.CURRENT_REST_MARKET_URL, config.CURRENT_REST_TRADE_URL, config.ACCESS_KEY,
-                        config.SECRET_KEY, config.PRIVATE_KEY)
-    while retry > 0:
-        balance = hrs.get_balance(currency=currency)
-        if balance[0] == 200 and balance[1]:
-            balance_data = balance[1]
-            logger.info("balance = {}".format(balance_data))
-            # log_config.output2ui("balance = {}".format(balance_data))
-            if result_type == 0:
-                return balance_data.get("trade", -1)
-            elif result_type == 1:
-                return balance_data.get("frozen", -1)
+def get_balance(currency, result_type=0, retry=2):
+    if config.CURRENT_PLATFORM == 'huobi':
+        hrs = HuobiREST()
+        while retry > 0:
+            balance = hrs.get_balance(currency=currency)
+            if balance[0] == 200 and balance[1]:
+                balance_data = balance[1]
+                if result_type == 0:
+                    return balance_data.get("trade", -1)
+                elif result_type == 1:
+                    return balance_data.get("frozen", -1)
+                else:
+                    return balance_data
             else:
-                return balance_data
-        else:
-            retry -= 1
-    return None
-    # def __init__(self, func, check_period, execute_times=-1, after_execute_sleep=0,
-    #              state=1, is_after_execute_pause=False, name=""):
+                retry -= 1
+        return None
+
 
 
 def is_still_down2(cp, mp, bp=0.0035):
@@ -2459,6 +2455,8 @@ def get_current_position():
     position = -1
     buy_factor = 1
     sell_factor = 1
+    return position, buy_factor, sell_factor
+
     try:
         bal0, bal0_f, bal1, bal1_f = update_balance()
         current_price = get_current_price(symbol=config.NEED_TOBE_SUB_SYMBOL[0])

@@ -31,12 +31,12 @@ logger = logging.getLogger(__name__)
 
 
 class HuobiREST:
-    def __init__(self, market_url, trade_url="", access_key="", secret_key="", private_key=None, timeout=config.NET_TIMEOUT):
-        self._market_url = market_url
-        self._trade_url = trade_url
-        self._access_key = access_key
-        self._secret_key = secret_key
-        self._private_key = private_key
+    def __init__(self, timeout=config.NET_TIMEOUT):
+        self._market_url = config.PLATFORMS["huobi"]["rest_market_url"]["default"]
+        self._trade_url = config.PLATFORMS["huobi"]["rest_trade_url"]["default"]
+        self._access_key = config.ACCESS_KEY
+        self._secret_key = config.SECRET_KEY
+        self._private_key = config.PLATFORMS["huobi"]["private_key"]
         self._account_id = None
         self._account_state = None
         self._timeout = timeout

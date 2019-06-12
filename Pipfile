@@ -17,6 +17,7 @@ pymongo = "*"
 ta-lib = "*"
 itchat = "*"
 pyinstaller = "*"
+pillow = "*"
 
 [requires]
 python_version = "3.6"

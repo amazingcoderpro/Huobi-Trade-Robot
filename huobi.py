@@ -22,12 +22,12 @@ class Huobi:
         
     def _init_ws(self):
         logger.info("-------start connect web socket server.")
-        log_config.output2ui("-------start connect web socket server.")
+        log_config.output2ui(u"开始连接服务器.", 0)
         self._hws = HuobiWS(config.CURRENT_WS_URL)
         ret = self._hws.ws_connect()
         if not ret:
             logger.error("init_ws failed.")
-            log_config.output2ui("init_ws failed.", 3)
+            log_config.output2ui(u"连接服务器失败.", 2)
             return False
         self._hws.start_recv()
         return True
@@ -35,12 +35,12 @@ class Huobi:
     #抓取历史数据
     def _req_history_kline(self):
         logger.info("---req_history_kline.")
-        log_config.output2ui("---req_history_kline.")
         for symbol in config.NEED_TOBE_SUB_SYMBOL:
+            log_config.output2ui("正在请求历史价格数据: {}.".format(symbol.upper()), 0)
             for kl in config.KL_HISTORY:
                 channel = "market.{}.kline.{}".format(symbol, kl)
                 logger.info("---req_history_kline: {}.".format(channel))
-                log_config.output2ui("---req_history_kline: {}.".format(channel))
+                log_config.output2ui("请求历史数据: {}.".format(channel), 7)
                 #只能拿到最近的300条数据 ，可用
                 if self._hws:
                     self._hws.ws_req(channel, process.kline_req_msg_process)
@@ -50,12 +50,13 @@ class Huobi:
     #开始订阅
     def _sub_market(self):
         logger.info("---start sub.")
-        log_config.output2ui("--start sub.")
+        log_config.output2ui(u"启动实时行情数据订阅.", 0)
         for symbol in config.NEED_TOBE_SUB_SYMBOL:
+            log_config.output2ui(u"订阅{}...".format(symbol.upper()), 0)
             for kl in config.KL_ALL:
                 channel = "market.{}.kline.{}".format(symbol, kl)
                 logger.info("-sub_market: {}.".format(channel))
-                log_config.output2ui("-sub_market: {}.".format(channel))
+                log_config.output2ui("-sub_market: {}.".format(channel), 7)
                 self._hws.ws_sub(channel, process.kline_sub_msg_process)
 
     def _init_db(self):
@@ -112,7 +113,7 @@ class Huobi:
     def history_trade_test(self, symbol, kline):
         channel = "market.{}.kline.{}".format(symbol, kline)
         logger.info("---req_history_kline: {}.".format(channel))
-        # log_config.output2ui("---req_history_kline: {}.".format(channel))
+        log_config.output2ui("---req_history_kline: {}.".format(channel), 7)
         # 只能拿到最近的300条数据 ，可用
         if self._hws:
             self._hws.ws_req(channel, process.kline_req_msg_process)
@@ -146,9 +147,7 @@ def save_history_trade_vol(symbols):
                     result = get_trade_vol_by_time(symbol, 0, before_time=before_time, big_limit=10)
                     logger.info("save_history_trade_vol, symbol={}, before time={}, \nresult={}".format(symbol, before_time, result))
                     if result:
-                        log_config.output2ui(
-                            "save_history_trade_vol, symbol={}, before time={}, \nresult={}".format(symbol, before_time,
-                                                                                                    result))
+                        log_config.output2ui(u"获取历史交易量信息：{}".format(symbol.upper()))
                         trade_vol_list.append(result)
                         process.TRADE_VOL_HISTORY[symbol] = trade_vol_list
                     # logger.debug("TRADE_VOL_HISTORY={}".format(process.TRADE_VOL_HISTORY))
@@ -163,7 +162,7 @@ def save_history_trade_vol(symbols):
 
 # before_time ---向前推多少秒
 def get_trade_vol_by_time(symbol, beg=0, before_time=900, big_limit=10, retry=1):
-    hrs = HuobiREST(config.CURRENT_REST_MARKET_URL, config.CURRENT_REST_TRADE_URL, config.ACCESS_KEY, config.SECRET_KEY, config.PRIVATE_KEY)
+    hrs = HuobiREST()
     should_get_size = int((before_time+beg)*1.5)
     logger.info("get_trade_vol_by_time should_get_size={}".format(should_get_size))
     if should_get_size > 2000:
@@ -227,7 +226,7 @@ def get_trade_vol_by_time(symbol, beg=0, before_time=900, big_limit=10, retry=1)
             result["end_time"] = list_time[-1]
     except Exception as e:
         logger.exception("get_trade_vol_by_time e={}, result={}".format(e, result))
-        log_config.output2ui("get_trade_vol_by_time e={}, result={}".format(e, result), 4)
+        log_config.output2ui("get_trade_vol_by_time e={}, result={}".format(e, result), 7)
         return None
 
     return result
@@ -281,7 +280,7 @@ def get_trade_vol(symbol, beg=0, size=900, big_limit=10):
         result["end_time"] = list_time[-1]
     except Exception as e:
         logger.exception("get_trade_vol e={}".format(e))
-        log_config.output2ui("get_trade_vol e={}".format(e), 4)
+        log_config.output2ui("get_trade_vol e={}".format(e), 7)
 
     return result
 

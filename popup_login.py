@@ -3,7 +3,8 @@
 # Created by Charles on 2019/6/11
 # Function:
 import os
-from tkinter import Toplevel, Label, Button, Entry, StringVar, LEFT, RIGHT, Checkbutton, Frame, messagebox, OptionMenu, IntVar,Text, END, filedialog, ACTIVE
+from tkinter import Toplevel, Label, Button, Entry, StringVar, LEFT, RIGHT, \
+    Checkbutton, Frame, messagebox, OptionMenu, IntVar,Text, END, filedialog, ACTIVE
 import config
 import webbrowser
 
@@ -18,19 +19,12 @@ class MyDialog(Toplevel):
         if title: 
             self.title(title)
         self.parent = parent
-        
         # 用于返回结果
         self.result = {"is_ok": False}
         
-        # 创建对话框的主体内容
-        frame = Frame(self)
         # 调用init_widgets方法来初始化对话框界面
-        self.initial_focus = self.init_widgets(frame)
-        frame.pack(padx=5, pady=5)
-        
-        # 调用init_buttons方法初始化对话框下方的按钮
-        self.init_buttons()
-        
+        self.initial_focus = self.setup_ui()
+
         # 根据modal选项设置是否为模式对话框
         if modal: 
             self.grab_set()
@@ -49,7 +43,9 @@ class MyDialog(Toplevel):
         self.wait_window(self)
         
     # 通过该方法来创建自定义对话框的内容，继承类重写
-    def init_widgets(self, frame):
+    def setup_ui(self):
+        # 创建对话框的主体内容
+        frame = Frame(self)
         # 创建并添加Label
         Label(frame, text='用户名', font=12, width=10).grid(row=1, column=0)
         # 创建并添加Entry,用于接受用户输入的用户名
@@ -60,9 +56,9 @@ class MyDialog(Toplevel):
         # 创建并添加Entry,用于接受用户输入的密码
         self.pass_entry = Entry(frame, font=16)
         self.pass_entry.grid(row=2, column=1)
-        
-    # 通过该方法来创建对话框下方的按钮框
-    def init_buttons(self):
+        frame.pack(padx=5, pady=5)
+
+
         f = Frame(self)
         # 创建"确定"按钮,位置绑定self.on_ok处理方法
         w = Button(f, text="确定", width=10, command=self.on_ok, default=ACTIVE)
@@ -74,6 +70,7 @@ class MyDialog(Toplevel):
         self.bind("<Escape>", self.on_ok)
         f.pack()
         
+
     # 该方法可对用户输入的数据进行校验
     def validate(self):
         # 可重写该方法
@@ -113,7 +110,8 @@ class PopupLogin(MyDialog):
     def __init__(self, parent,  title="登录", modal=True):
         MyDialog.__init__(self,  parent, title=title, modal=modal)
 
-    def init_widgets(self, frame):
+    def setup_ui(self):
+        frame = Frame(self)
         Label(frame, text=u'账号:', width=10).grid(row=1, column=0)
         # 创建并添加Entry,用于接受用户输入的用户名
         self.account = Entry(frame, width=20)
@@ -133,6 +131,18 @@ class PopupLogin(MyDialog):
         register = Label(frame, text=u'没有账号？点这里去注册', width=20, fg="brown", justify="left", wraplength=480)
         register.grid(row=3, column=1)
         register.bind("<ButtonPress-1>", self.on_register)
+        frame.pack(padx=5, pady=5)
+
+        f = Frame(self)
+        # 创建"确定"按钮,位置绑定self.on_ok处理方法
+        w = Button(f, text="确定", width=10, command=self.on_ok, default=ACTIVE)
+        w.pack(side=LEFT, padx=5, pady=5)
+        # 创建"确定"按钮,位置绑定self.on_ok处理方法
+        w = Button(f, text="取消", width=10, command=self.on_cancel)
+        w.pack(side=LEFT, padx=5, pady=5)
+        self.bind("<Return>", self.on_ok)
+        self.bind("<Escape>", self.on_ok)
+        f.pack()
 
     def on_register(self, event):
         webbrowser.open(config.REGISTER_URL)
@@ -141,11 +151,11 @@ class PopupLogin(MyDialog):
         account = self.account.get()
         password = self.password.get()
         if not account or not password:
-            messagebox.showwarning("Warning", "账号、密码不能为空!")  # 提出警告对话窗
+            messagebox.showwarning(u"提示", u"账号、密码不能为空!")  # 提出警告对话窗
             return False
 
         if len(account) < 11 or len(password) < 6:
-            messagebox.showwarning("Warning", "输入的账号或密码无效!")  # 提出警告对话窗
+            messagebox.showwarning(u"提示", u"输入的账号或密码无效!")  # 提出警告对话窗
             return False
         return True
 

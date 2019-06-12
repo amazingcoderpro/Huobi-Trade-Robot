@@ -937,8 +937,8 @@ class MainUI():
             m += 1
 
         self.log_text.see(END)
-        from popup_account import PopupAccountConfig
-        pop = PopupAccountConfig(self._user_info, u"身份验证")
+        from popup_api import PopupAPI
+        pop = PopupAPI(self._user_info, u"身份验证")
         self.root.wait_window(pop)
         if not self._user_info.get("ok", False):
             return
