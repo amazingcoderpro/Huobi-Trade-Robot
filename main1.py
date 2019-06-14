@@ -125,12 +125,12 @@ class MainUI:
         self.label_coin_num_ = Label(root, textvariable=self.coin_counts, width=2, font=("", 12, 'bold'))
 
         self.total_profit = DoubleVar()
-        self.total_profit.set(0)
+        self.total_profit.set(340.95)
         self.label_total_profit = Label(root, text=u"累计盈利:", width=8, font=("", 12, 'bold'))
         self.label_total_profit_ = Label(root, textvariable=self.total_profit, width=8, font=("", 12, 'bold'))
 
         self.run_time = StringVar()
-        self.run_time.set("")
+        self.run_time.set("56时32分")
         self.label_total_run = Label(root, text=u"运行时间:", width=8, font=("", 12, 'bold'))
         self.label_total_run_ = Label(root, textvariable=self.run_time, width=8, font=("", 12, 'bold'))
 
@@ -154,8 +154,14 @@ class MainUI:
 
 
         import random
-        for i in range(205):
-            self.tree.insert("", i, values=(i+1, u"进行中", "EOSUSDT", "7454.3604", str(random.randint(0,9)), str(random.randint(0,9)), str(random.randint(0,9)), "2.323", "3", "12131", "3131313", "31313133", "3131313","3131313" ,"31313131","20190824 13:25:36"))  # 插入数据，
+        # for i in range(10):
+        self.tree.insert("", 0, values=(1, u"进行中", "EOSUSDT", "6.5631", 6.13, 103.4, 621.22, 4.23, 4, 3.2, 0.5, "整体均价", "开启", 2.31 , 145.32, "20190613 08:25:36"))  # 插入数据，
+        self.tree.insert("", 1, values=(
+        2, u"进行中", "ONTUSDT", 1.4153, 1.236, 6345, 1.236*6345, 15.2, 5, 3.2, 0.5, "整体均价", "开启", 2.15, 89.31,
+        "20190613 05:35:16"))  # 插入数据，
+        self.tree.insert("", 2, values=(
+        3, u"进行中", "IOSTUSDT",  0.011454, 0.01005, 94534, 0.01005*94534, 8.12, 2, 3.2, 0.5, "整体均价", "开启", 2.61, 106.32,
+        "20190613 04:44:10"))  # 插入数据，
 
         self.tree.bind("<Double-1>", self.cmd_tree_double_click)
         vbar = ttk.Scrollbar(root, orient=VERTICAL, command=self.tree.yview)
@@ -206,7 +212,7 @@ class MainUI:
 
         self.tree.grid(row=1, column=1, rowspan=6, columnspan=13, padx=8, pady=8, sticky=N+S+W+E)
         # tv.grid(row=0, column=0, sticky=NSEW)
-        vbar.grid(row=1, column=14, sticky=N+S)
+        vbar.grid(row=1, column=14, rowspan=6, padx=0, ipadx=0, pady=8, sticky=N+S+W)
 
         self.txt_ui_log.grid(row=7, column=1, rowspan=2, columnspan=13, padx=8, pady=8, sticky=N+S+W)
 
@@ -234,8 +240,8 @@ class MainUI:
             principal = 0
         else:
             coins_count = len(value.get("coins", []))
-            balance = round(value.get("trade", 0), 6)
-            principal = round(value.get("principal", balance*2), 6)
+            balance = round(value.get("trade", 0), 4)
+            principal = round(value.get("principal", balance*2), 4)
             value["principal"] = principal
 
         log_config.output2ui("当前计价货币为: {}, 监控交易对: {} 个, 可用余额: {}, 本金预算: {}".format(money, coins_count, balance, principal))
@@ -258,7 +264,6 @@ class MainUI:
                     log_config.output2ui(u"注意：您设置的本金预算远远大于当前可用余额, 有可能导致系统运行时资金调用不足, 无法及时补仓, 请您关注.", 2)
         except:
             log_config.output2ui(u"请输入输入有效数字.", 2)
-            print()
             self.principal.set(config.CURRENT_SYMBOLS.get(self.money.get(), {}).get("principal", 0))
 
     def cmd_login(self):
