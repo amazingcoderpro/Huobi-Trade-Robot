@@ -136,7 +136,6 @@ def save_history_trade_vol(symbols):
                 num -= 1
 
         while 1:
-
             try:
                 for symbol in symbols:
                     trade_vol_list = process.TRADE_VOL_HISTORY.get(symbol, [])
@@ -147,7 +146,7 @@ def save_history_trade_vol(symbols):
                     result = get_trade_vol_by_time(symbol, 0, before_time=before_time, big_limit=10)
                     logger.info("save_history_trade_vol, symbol={}, before time={}, \nresult={}".format(symbol, before_time, result))
                     if result:
-                        log_config.output2ui(u"获取历史交易量信息：{}".format(symbol.upper()))
+                        log_config.output2ui(u"获取历史交易量信息：{}".format(symbol.upper()), 7)
                         trade_vol_list.append(result)
                         process.TRADE_VOL_HISTORY[symbol] = trade_vol_list
                     # logger.debug("TRADE_VOL_HISTORY={}".format(process.TRADE_VOL_HISTORY))
