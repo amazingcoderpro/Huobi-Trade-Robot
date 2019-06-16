@@ -68,7 +68,7 @@ class HuobiREST:
             return response.status_code, response.json()
         except Exception as e:
             logger.exception("RESTAPI _http_getException, url:{}\n post_data:{}\n e: {}".format(url, post_data, e))
-            log_config.output2ui("RESTAPI _http_get Exception, url:{}\n post_data:{}\n e: {}".format(url, post_data, e), 4)
+            log_config.output2ui("RESTAPI _http_get Exception, url:{}\n post_data:{}\n e: {}".format(url, post_data, e), 7)
             return -1, None
 
     def _http_post(self, url, params, add_to_headers=None):
@@ -90,7 +90,7 @@ class HuobiREST:
             return response.status_code, response.json()
         except Exception as e:
             logger.exception("RESTAPI _http_post Exception, url:{}\n post_data:{}\n e: {}".format(url, post_data, e))
-            log_config.output2ui("RESTAPI _http_post Exception, url:{}\n post_data:{}\n e: {}".format(url, post_data, e), 4)
+            log_config.output2ui("RESTAPI _http_post Exception, url:{}\n post_data:{}\n e: {}".format(url, post_data, e), 7)
             return -1, None
 
     def _http_get_with_key(self, params, request_path):
@@ -300,7 +300,8 @@ class HuobiREST:
                 return code, response
             except Exception as e:
                 logger.exception("get_accounts failed ,e =%s" % e)
-                log_config.output2ui("get_accounts failed ,e =%s" % e, 4)
+                log_config.output2ui("get_accounts failed ,e =%s" % e, 7)
+                log_config.output2ui(u"获取账户信息失败!", 3)
         self._account_id = None
         self._account_state = None
         config.ACCOUNT_ID = None

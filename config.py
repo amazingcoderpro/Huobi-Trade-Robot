@@ -4,6 +4,7 @@
 # Function: basic configure
 
 RUN_MODE = "product"#product
+STATUS = ""#after_login, after_api_verify, after_trade_setting, running, pausing,
 SYSTEM_NAME = "DDU智能量化交易系统"
 REGISTER_URL = "https://www.baidu.com/"
 TITLE = u"DDU量化交易系统v2.0.0 (官方交流QQ群:761222621, 管理员:15691820861)"
@@ -24,6 +25,7 @@ CURRENT_PLATFORM = "huobi"      # 当前平台
 ACCESS_KEY = ""
 SECRET_KEY = ""
 CURRENT_SYMBOLS = {}            # 用户选择的交易对[{"left": "EOS", "right": "USDT"}, {"left": "XRP", "right": "BTC"}]
+NEED_TOBE_SUB_SYMBOL = []
 
 # 平台及期配置信息字典
 PLATFORMS = {
@@ -115,9 +117,9 @@ SUPPORT_TRADE_LEFT = ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "AD
                       "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"]
 # 以下是需要订阅的数据
 SUPPORT_TRADE_RIGHT = ["USDT", "HUSD", "BTC", "ETH", "HT"]
-NEED_TOBE_SUB_SYMBOL = []
-SUB_LEFT = ""
-SUB_RIGHT = ""
+# NEED_TOBE_SUB_SYMBOL = []
+# SUB_LEFT = ""
+# SUB_RIGHT = ""
 
 # klines
 

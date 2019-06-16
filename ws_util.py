@@ -29,30 +29,34 @@ class HuobiWS:
     #建立websocket连接
     def ws_connect(self):
         ts = -1
-        while(ts <= self._retry):
+        retry = self._retry
+        if config.STATUS != "running":
+            retry = 5
+        while(ts <= retry):
             ws = None
             try:
                 ws = create_connection(self._ws_url, timeout=self._timeout)
                 # ws = WebSocket()
             except Exception as e:
                 logger.exception('connect {} websocket error, e={}, retry={}'.format(self._ws_url, e, ts))
+                log_config.output2ui(u"建立服务器连接, 重试中...[{}]".format(ts+2), 0)
                 # log_config.output2ui('connect {} websocket error, e={}, retry={}'.format(self._ws_url, e, ts), 4)
                 if ws:
                     ws.shutdown()
                 time.sleep(2)
-                if self._retry >= 0:
+                if retry >= 0:
                     ts += 1
                 else:
                     pass
             else:
                 self._ws = ws
                 logger.info("connect web socket succeed.")
-                log_config.output2ui("connect web socket succeed.", 7)
+                log_config.output2ui(u"建立服务器连接成功.", 0)
                 return True
 
         logger.critical("create connection failed.")
         log_config.output2ui(u"建立服务器连接失败.", 3)
-        raise(Exception("connect web socket server failed."))
+        # raise(Exception("connect web socket server failed."))
         return False
 
     #用于网络错误时重新连接，resub为true时则会重新订阅所有的channel

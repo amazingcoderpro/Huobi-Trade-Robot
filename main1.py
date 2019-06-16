@@ -360,20 +360,7 @@ class MainUI:
                         coins_count += 1
             log_config.output2ui(u"您总共选择了{}组交易对: {}.".format(coins_count, msg[0:-2]), 0)
 
-            strategies.update_balance()
-            bal_msg = ""
-            first_money_name = ""       # 第一个money名字
-            for money, value in config.CURRENT_SYMBOLS.items():
-                coins = value.get("coins", [])
-                if coins:
-                    if not first_money_name:
-                        first_money_name = money
-                    bal_msg += u"[{}: 可用{}, 冻结{}]    ".format(money, round(value["trade"], 6), round(value["frozen"], 6))
-                    for coin in coins:
-                        bal_msg += u"[{}: 可用{}, 冻结{}]    ".format(coin["coin"], round(coin["trade"], 6), round(coin["frozen"], 6))
-            log_config.output2ui(u"您所选择的各交易对的余额及冻结情况如下：{}".format(bal_msg), 0)
 
-            self.cmd_money_change(event=first_money_name)
             self.init_history()
 
     def cmd_start(self):
@@ -467,6 +454,10 @@ class MainUI:
     def init_history(self):
         def init_history_thread(hb):
             ret = self._hb.init()  # 这一步是必须的，先同步处理
+            if not ret:
+                self.btn_start.config(state="disable")
+                self.gressbar_init_history.quit()
+                return
             ret2 = hb.init_history()
             self.gressbar_init_history.quit()
             if not (ret and ret2):
@@ -485,19 +476,25 @@ class MainUI:
         def update_balance_thread():
             strategies.update_balance()
             bal_msg = ""
+            first_money_name = ""       # 第一个money名字
             for money, value in config.CURRENT_SYMBOLS.items():
-                bal_msg += u"[{}: 可用{}, 冻结{}]    ".format(money, round(value["trade"], 6), round(value["frozen"], 6))
-                for coin in value["coins"]:
-                    bal_msg += u"[{}: 可用{}, 冻结{}]    ".format(coin["coin"], round(coin["trade"], 6), round(coin["frozen"], 6))
-            log_config.output2ui(u"您所选择的币种余额及冻结情况如下：{}".format(bal_msg), 0)
+                coins = value.get("coins", [])
+                if coins:
+                    if not first_money_name:
+                        first_money_name = money
+                    bal_msg += u"[{}: 可用{}, 冻结{}]    ".format(money, round(value["trade"], 6), round(value["frozen"], 6))
+                    for coin in coins:
+                        bal_msg += u"[{}: 可用{}, 冻结{}]    ".format(coin["coin"], round(coin["trade"], 6), round(coin["frozen"], 6))
+            log_config.output2ui(u"您所选择的各交易对的余额及冻结情况如下：{}".format(bal_msg), 0)
+            self.cmd_money_change(event=first_money_name)
 
         huobi.save_history_trade_vol(config.NEED_TOBE_SUB_SYMBOL)
         if not self._hb:
             self._hb = Huobi()
 
-        # th = Thread(target=update_balance_thread)
-        # th.setDaemon(True)
-        # th.start()
+        th = Thread(target=update_balance_thread)
+        th.setDaemon(True)
+        th.start()
 
         th = Thread(target=init_history_thread, args=(self._hb,))
         th.setDaemon(True)

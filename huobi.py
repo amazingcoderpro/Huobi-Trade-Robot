@@ -22,12 +22,12 @@ class Huobi:
         
     def _init_ws(self):
         logger.info("-------start connect web socket server.")
-        log_config.output2ui(u"开始连接服务器.", 0)
-        self._hws = HuobiWS(config.CURRENT_WS_URL)
+        log_config.output2ui(u"开始建立服务器连接...", 0)
+        self._hws = HuobiWS(config.PLATFORMS["huobi"]["ws_url"]["default"])
         ret = self._hws.ws_connect()
         if not ret:
             logger.error("init_ws failed.")
-            log_config.output2ui(u"连接服务器失败.", 2)
+            log_config.output2ui(u"连接服务器失败,系统无法正常运行..", 3)
             return False
         self._hws.start_recv()
         return True
