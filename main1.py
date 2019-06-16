@@ -167,9 +167,7 @@ class MainUI:
         vbar = ttk.Scrollbar(root, orient=VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=vbar.set)
 
-
-
-        self.txt_ui_log = ScrolledText(root, height=15, width=175)
+        self.txt_ui_log = ScrolledText(root, width=205, height=15)
         # 创建一个TAG，其前景色为红色
         self.txt_ui_log.tag_config('INFO', foreground='black', background="white", font=("", 11, 'normal'))
         self.txt_ui_log.tag_config('WARNING', foreground='orange', background="white", font=("", 11, 'normal'))
@@ -1329,8 +1327,8 @@ if __name__ == '__main__':
     my_gui = MainUI(root)
     config.ROOT = root
     root.protocol('WM_DELETE_WINDOW', my_gui.close_window)
-    my_gui.center_window(1450, 750)
-    root.maxsize(1550, 800)
+    my_gui.center_window(1650, 750)
+    root.maxsize(1750, 850)
 
     try:
         root.iconbitmap('favicon.ico')
