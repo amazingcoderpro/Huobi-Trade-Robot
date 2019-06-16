@@ -221,7 +221,7 @@ TRADE_MODE_CONFIG = {
     "keep": {"display": u"保守", "rate": 2, "trades": 6, "limit_profit": 0.05, "back_profit": 0.02, "input_multiple": 3, "multiple_list": [10, 20, 40, 80, 160, 320], "first_trade": 0.09, "expect_profit_m": 0.10, "interval": 0.1},
     "keep_1": {"display": u"保守+", "rate": 2, "trades": 6, "limit_profit": 0.05, "back_profit": 0.02, "input_multiple": 4, "multiple_list": [10, 20, 40, 80, 160, 320], "first_trade": 0.12, "expect_profit_m": 0.12, "interval": 0.1},
     "robust_0": {"display": u"稳健-", "rate": 3, "trades": 8, "limit_profit": 0.04, "back_profit": 0.01, "input_multiple": 5, "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640], "first_trade": 0.041, "expect_profit_m": 0.16, "interval": 0.08},
-    "robust": {"display": u"稳健", "rate": 3, "trades": 8, "limit_profit": 0.04, "back_profit": 0.01, "input_multiple": 6, "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640], "first_trade": 0.049, "expect_profit_m": 0.18, "interval": 0.08},
+    "robust": {"display": u"稳健", "rate": 3, "trades": 8, "limit_profit": 0.015, "back_profit": 0.01, "input_multiple": 6, "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640], "first_trade": 0.049, "expect_profit_m": 0.18, "interval": 0.01},
     "robust_1": {"display": u"稳健+", "rate": 3, "trades": 8, "limit_profit": 0.04, "back_profit": 0.01, "input_multiple": 7, "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640], "first_trade": 0.057, "expect_profit_m": 0.20, "interval": 0.08},
     "aggressive_0": {"display": u"激进-", "rate": 4, "trades": 10, "limit_profit": 0.03, "back_profit": 0.01, "input_multiple": 8, "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024], "first_trade": 0.0175, "expect_profit_m": 0.24, "interval": 0.06},
     "aggressive": {"display": u"激进", "rate": 4, "trades": 10, "limit_profit": 0.03, "back_profit": 0.01, "input_multiple": 9, "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024], "first_trade": 0.0195, "expect_profit_m": 0.26, "interval": 0.06},
@@ -337,7 +337,7 @@ TRADE_GROUP = {
     "last_update": None,
 }
 TRADE_PAIRS = []            # {"coin": "", "money": "", "percent": 1} 当前需要监控的币种，支持一个计价货币下的多个币种同时交易
-TRADE_RECORDS_NOW = [TRADE_GROUP]      # 机器人当前所有需要监控的交易
+TRADE_RECORDS_NOW = []      # 机器人当前所有需要监控的交易
 TRADE_RECORDS_HISTORY = []  # 机器人所有历史交易记录
 MAN_BUY_RECORDS = []    # 人为买入记录
 

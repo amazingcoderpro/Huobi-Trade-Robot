@@ -360,7 +360,6 @@ class MainUI:
                         coins_count += 1
             log_config.output2ui(u"您总共选择了{}组交易对: {}.".format(coins_count, msg[0:-2]), 0)
 
-
             self.init_history()
 
     def cmd_start(self):
@@ -958,7 +957,7 @@ class MainUI:
                         logger.warning("notify_profit_info exception.e={}".format(e))
 
         def update_trade_record():
-            return
+            # return
             # TRADE_GROUP = {
             #     "trigger_reason": "",  # 首单触发原因，如kdj/boll/low
             #     "mode": "robust",  # 按何种交易风格执行
@@ -1020,7 +1019,7 @@ class MainUI:
                                                        round(trade["last_profit_percent"], 4),
                                                        trade["last_update"].strftime("%Y-%m-%d %H:%M:%S") if trade.get("last", None) else "",
                                                        trade["end_time"].strftime("%Y-%m-%d %H:%M:%S") if trade.get("end_time", None) else ""))
-                time.sleep(500)
+                time.sleep(10)
             # self.tree.after(5000, update_trade_record)
 
 

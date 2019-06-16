@@ -116,7 +116,7 @@ def kline_req_msg_process(response):
 #更新实时价格至queue供界面调用
 def update_realtime_price(data):
     symbol = data.get("ch", "ch_error").split(".")[1]
-    log_config.output2ui("update price, symbol={}".format(symbol))
+    # log_config.output2ui("update price, symbol={}".format(symbol))
     tick = data.get("tick", None)
     if tick:
         price = {symbol: tick["close"]}
@@ -135,8 +135,8 @@ def update_realtime_price(data):
 #对订阅响应数据进行保存，存入dataframe, 分实时和k线两部分
 def save_data_df(data):
     channel = data.get("ch", "ch_error")
-    log_config.output2ui("save data, channel={}".format(channel))
-    #判断KLINE_DATA中否已经存在该channel
+    # log_config.output2ui("save data, channel={}".format(channel))
+    # 判断KLINE_DATA中否已经存在该channel
     ts = data.get("ts", -1)
     tick = data.get("tick", None)
     if not (ts > 0 and tick):
