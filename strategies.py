@@ -510,7 +510,7 @@ def auto_trade():
             logger.info("auto trade should_stop_profit, grid={}, plan_sell_coin_num={}, ref_price={}, "
                         "ref_amount={} cp={}, \ntrade group={}".format(grid, plan_sell_coin_num, ref_price, ref_amount, current_price, trade_group))
 
-            ret = sell_market(symbol, amount=plan_sell_coin_num)
+            ret = sell_market(symbol, coin=coin_name.lower(), amount=plan_sell_coin_num)
             if ret[0] == 1:
                 time_now = datetime.now()
                 sell_coin_actual = ret[1]
@@ -564,7 +564,7 @@ def auto_trade():
         # 如果当前价格小于整体均价的一定比例，则补单
         if current_price < ref_price*(1-fill_interval):
             buy_amount_plan = trade_group.get("last_buy_amount", 0) * 2      # 先直接按倍投的方式来弄
-            ret = buy_market(symbol, buy_amount_plan)
+            ret = buy_market(symbol, currency=money_name.lower(), amount=buy_amount_plan)
             # 买入成功
             if ret[0] == 1:
                 buy_amount_actual = ret[1]
@@ -760,7 +760,7 @@ def kdj_strategy_buy():
                     return False
                 trade_mode = config.TRADE_MODE_CONFIG.get(config.TRADE_MODE, {})
                 plan_buy_amount = principal*trade_mode.get("first_trade", 0.05)
-                ret = buy_market(symbol, amount=plan_buy_amount, current_price=current_price)
+                ret = buy_market(symbol, currency=money.lower(), amount=plan_buy_amount, current_price=current_price)
                 if ret[0]:
                     msg = "[买入{}]KD 计划买入比例={}%, 实际买入金额={}$, 买入价格={}, 指标K={}, D={}, 阶段最低价格={}, 回暖幅度={}%, 买入策略={}.".format(
                         symbol, round(buy_percent * 100, 2), round(ret[1], 3), round(current_price, 6), round(cur_k, 2), round(cur_d, 2),
@@ -1473,10 +1473,10 @@ def trade_alarm(message, show_time=0):
             return False
 
 
-def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", current_price=0):
+def buy_market(symbol, currency="usdt", amount=0, percent=0.2, record=True, strategy_type="", current_price=0):
     # 按余额比例买
     # currency = symbol[3:]
-    currency = config.SUB_RIGHT
+    # currency = config.SUB_RIGHT
 
     balance = get_balance(currency)
     if amount <= 0:
@@ -1545,13 +1545,9 @@ def buy_market(symbol, amount=0, percent=0.2, record=True, strategy_type="", cur
     return 3, amount, "Trade failed. reason={}".format(ret)
 
 
-def sell_market(symbol, amount=0, percent=0.1, record=True, current_price=0):
-    # currency = symbol[0:3]
-    currency = config.SUB_LEFT
+def sell_market(symbol, coin, amount=0, percent=0.1, record=True, current_price=0):
+    currency = coin
     balance = get_balance(currency)
-    # total_coin_value = process.CURRENT_TOTAL_COIN_VALUE
-    # if total_coin_value:
-    #     total = total_coin_value
 
     if amount <= 0:
         if percent > 0:
@@ -2545,7 +2541,7 @@ STRATEGY_LIST = [
     Strategy(kdj_strategy_buy, 10, -1, after_execute_sleep=30, name="kdj_strategy_buy"),#1800
     # Strategy(kdj_strategy_sell, 10, -1, after_execute_sleep=900 * 2, name="kdj_strategy_sell"),
     # Strategy(stop_loss, 20, -1, after_execute_sleep=300, name="stop_loss"),
-    # Strategy(move_stop_profit, 12, -1, after_execute_sleep=300, name="move_stop_profit"),
+    Strategy(move_stop_profit, 12, -1, after_execute_sleep=300, name="move_stop_profit"),
     # Strategy(vol_price_fly, 20, -1, name="vol_price_fly", after_execute_sleep=900 * 2),
     # Strategy(boll_strategy, 20, -1, name="boll strategy", after_execute_sleep=900 * 2),
     # # Strategy(kdj_5min_update, 30, -1, name="kdj_5min_update", after_execute_sleep=1),
