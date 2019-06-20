@@ -4,7 +4,7 @@
 # Function:
 import time
 from datetime import datetime, timedelta
-from tkinter import Tk, Label, Button, IntVar, DoubleVar, StringVar, VERTICAL, Entry, END, messagebox, OptionMenu, Menubutton, Menu, ttk, Message, N, S, E, W   #上对齐/下对齐/左对齐/右对齐
+from tkinter import Tk, Label, Button, IntVar, DoubleVar, StringVar, VERTICAL, Entry, END,CURRENT, messagebox, OptionMenu, Menubutton, Menu, ttk, Message, N, S, E, W, _setit   #上对齐/下对齐/左对齐/右对齐
 from tkinter.scrolledtext import ScrolledText
 from queue import Queue
 import logging
@@ -43,7 +43,7 @@ class MainUI:
         self.account = ""
         self.working = False
         self.is_login = False
-
+        self.run_time_value = 0
         self.verify = True
         self.coin_trade = 0
         self.dollar_trade = 0
@@ -61,7 +61,7 @@ class MainUI:
         self._hb = None
         self._strategy_pool = StrategyPool()
 
-        self.btn_login = Button(root, text=u"登    录", command=self.cmd_login, width=12, font=("", 14, 'bold'))
+        self.btn_login = Button(root, text=u"登   录", command=self.cmd_login, width=8, font=("", 14, 'bold'))
 
         # self.label_arrow10 = Label(root, text=u"↓", width=8)
         # self.label_arrow11 = Label(root, text=u"↓", width=8)
@@ -72,8 +72,8 @@ class MainUI:
         # self.platform.set(lst_platform[0])
         # self.opt_platform = OptionMenu(root, self.platform, *lst_platform)
 
-        self.btn_api = Button(root, text=u"API设置", command=self.cmd_api, width=12, font=("", 14, 'bold'))
-        self.btn_coin = Button(root, text=u"币种设置", command=self.cmd_coin, width=12, font=("", 14, 'bold'))
+        self.btn_api = Button(root, text=u"API设置", command=self.cmd_api, width=8, font=("", 14, 'bold'))
+        self.btn_coin = Button(root, text=u"币种设置", command=self.cmd_coin, width=8, font=("", 14, 'bold'))
 
         # self.label_money = Label(root, text=u"计价货币: ", width=8, font=("", 11, 'bold'))
         # lst_money = ["USDT", "BTC"]
@@ -88,20 +88,41 @@ class MainUI:
         # self.opt_mode = OptionMenu(root, self.mode, *lst_mode)
 
         # self.btn_coin = Button(root, text=u"交易币种", command=self.cmd_coin, width=15, font=("", 14, 'bold'))
-        self.btn_mode_setting = Button(root, text=u"策略设置", command=self.cmd_mode_setting, width=12, font=("", 14, 'bold'))
-        self.btn_system_setting = Button(root, text=u"系统设置", command=self.cmd_system_setting, width=12, font=("", 14, 'bold'))
-        self.btn_pending_setting = Button(root, text=u"挂单买卖", command=self.cmd_pending_setting, width=12, font=("", 14, 'bold'))
-        self.btn_start = Button(root, text=u"立即启动", command=self.cmd_start, width=12, font=("", 14, 'bold'))
-        self.btn_pause = Button(root, text=u"全部停止", command=self.cmd_pause, width=12, font=("", 14, 'bold'))
-        self.btn_wechat = Button(root, text=u"微信通知", command=self.cmd_wechat, width=12, font=("", 14, 'bold'))
+        self.btn_mode_setting = Button(root, text=u"策略设置", command=self.cmd_mode_setting, width=8, font=("", 14, 'bold'))
+        self.btn_system_setting = Button(root, text=u"系统设置", command=self.cmd_system_setting, width=8, font=("", 14, 'bold'))
+        self.btn_pending_setting = Button(root, text=u"挂单买卖", command=self.cmd_pending_setting, width=8, font=("", 14, 'bold'))
+        self.btn_start_str = StringVar()
+        self.btn_start_str.set(u"立即启动")
+        self.btn_start = Button(root, textvariable=self.btn_start_str, command=self.cmd_start, width=8, font=("", 14, 'bold'))
+        self.btn_pause = Button(root, text=u"全部停止", command=self.cmd_stop, width=8, font=("", 14, 'bold'))
+        self.btn_wechat = Button(root, text=u"微信通知", command=self.cmd_wechat, width=8, font=("", 14, 'bold'))
 
         self.label_money = Label(root, text=u"计价货币:", width=8, font=("", 12, 'bold'))
         # self.label_money_ = Label(root, text="USDT", width=3, font=("", 12, 'bold'))
 
-        self.lst_money = [u"USDT", u"BTC", u"ETH"]
+        self.lst_money = ["USDT", "BTC", "ETH"]
+        for k,v in config.PLATFORMS.items():
+            for money in v["trade_pairs"].keys():
+                self.lst_money.append(money)
+
+        self.lst_money = list(set(self.lst_money))
         self.money = StringVar()
-        self.money.set(self.lst_money[0])
+        self.money.set("USDT")
         self.opt_money = OptionMenu(root, self.money, *self.lst_money, command=self.cmd_money_change)
+        # self.opt_money.config(width=4)
+
+        self.label_mode = Label(root, text=u"策略选择:", width=8, font=("", 12, 'bold'))
+        self.lst_mode = []
+        default_mode = u"稳健"
+        for k, v in config.TRADE_MODE_CONFIG.items():
+            self.lst_mode.append(v["display"])
+            if k == config.TRADE_MODE:
+                default_mode = v["display"]
+
+        self.mode = StringVar()
+        self.mode.set(default_mode)
+        self.opt_mode = OptionMenu(root, self.mode, *self.lst_mode, command=self.cmd_mode_change)
+        # self.opt_mode.config(width=4)
 
         self.balance = DoubleVar()
         self.balance.set(0)
@@ -111,7 +132,7 @@ class MainUI:
         self.principal = DoubleVar()
         self.principal.set(0)
         self.label_principal = Label(root, text=u"本金预算:", width=8, font=("", 12, 'bold'))
-        self.ety_principal = Entry(root, textvariable=self.principal, font=("", 11, 'bold'), width=11)
+        self.ety_principal = Entry(root, textvariable=self.principal, font=("", 11, 'bold'), width=14)
         self.btn_principal = Button(root, text="确认", command=self.cmd_principal, width=6)
 
         # self.position = DoubleVar()
@@ -122,32 +143,34 @@ class MainUI:
         self.coin_counts = IntVar()
         self.coin_counts.set(0)
         self.label_coin_num = Label(root, text=u"监控币种数:", width=10, font=("", 12, 'bold'))
-        self.label_coin_num_ = Label(root, textvariable=self.coin_counts, width=2, font=("", 12, 'bold'))
+        self.label_coin_num_ = Label(root, textvariable=self.coin_counts, width=8, font=("", 12, 'bold'))
 
         self.total_profit = DoubleVar()
-        self.total_profit.set(340.95)
+        self.total_profit.set(0)
         self.label_total_profit = Label(root, text=u"累计盈利:", width=8, font=("", 12, 'bold'))
         self.label_total_profit_ = Label(root, textvariable=self.total_profit, width=8, font=("", 12, 'bold'))
 
         self.run_time = StringVar()
-        self.run_time.set("56时32分")
+        self.run_time.set("0时0分")
         self.label_total_run = Label(root, text=u"运行时间:", width=8, font=("", 12, 'bold'))
-        self.label_total_run_ = Label(root, textvariable=self.run_time, width=8, font=("", 12, 'bold'))
+        self.label_total_run_ = Label(root, textvariable=self.run_time, width=10, font=("", 12, 'bold'))
 
-        columns = (u"序号", u"状态", u"交易对", u"当前价格", u"持仓均价", u"货币数量", u"持仓费用", u"收益比%", u"已做单数", u"止盈比例%", u"止盈追踪%", u"间隔参考", u"网格止盈", u"尾单收益比%", u"累计收益", u"最近更新", u"结束时间")
-        self.tree = ttk.Treeview(root, show="headings", columns=columns, height=20)  # 表格
+        # columns = (u"启动时间", u"状态", u"交易对", u"当前价格", u"持仓均价", u"货币数量", u"持仓费用", u"收益比%", u"已做单数", u"止盈比例%", u"止盈追踪%", u"间隔参考", u"网格止盈", u"尾单收益比%", u"累计收益", u"最近更新", u"结束时间")
+        columns = (
+        u"建仓时间", u"状态", u"交易对", u"当前价格", u"持仓均价", u"持币数量", u"持仓费用", u"收益比%", u"已做单数", u"尾单收益比%", u"累计收益", u"最近更新", u"结束时间")
+        self.tree = ttk.Treeview(root, show="headings", columns=columns, height=16)  # 表格
         for name in columns:
             if name in [u"序号", u"状态"]:
                 self.tree.column(name, width=60, anchor="center")
-            elif name in [u"收益比", u"已做单数", u"止盈比例", u"止盈追踪"]:
+            elif name in [u"收益比", u"已做单数"]:
                 self.tree.column(name, width=70, anchor="center")
-            elif name in [u"最近更新", u"结束时间"]:
-                self.tree.column(name, width=130, anchor="center")
+            elif name in [u"启动时间", u"最近更新", u"结束时间"]:
+                self.tree.column(name, width=110, anchor="center")
             else:
                 self.tree.column(name, width=80, anchor="center")
             # self.tree.heading(name, text=name)  # 显示表头
 
-            self.tree.heading(name, text=name, command=lambda _col=name: treeview_sort_column(self.tree, _col, False))
+            self.tree.heading(name, text=name, command=lambda _col=name:treeview_sort_column(self.tree, _col, False))
 
             # i = columns.index(name)
             # self.mat_list.heading(name, text=columns[i], command=lambda _col=name: treeview_sort_column(self.mat_list, _col, False))
@@ -155,19 +178,19 @@ class MainUI:
 
         import random
         # for i in range(10):
-        self.tree.insert("", 0, values=(1, u"进行中", "EOSUSDT", "6.5631", 6.13, 103.4, 621.22, 4.23, 4, 3.2, 0.5, "整体均价", "开启", 2.31 , 145.32, "20190613 08:25:36"))  # 插入数据，
-        self.tree.insert("", 1, values=(
-        2, u"进行中", "ONTUSDT", 1.4153, 1.236, 6345, 1.236*6345, 15.2, 5, 3.2, 0.5, "整体均价", "开启", 2.15, 89.31,
-        "20190613 05:35:16"))  # 插入数据，
-        self.tree.insert("", 2, values=(
-        3, u"进行中", "IOSTUSDT",  0.011454, 0.01005, 94534, 0.01005*94534, 8.12, 2, 3.2, 0.5, "整体均价", "开启", 2.61, 106.32,
-        "20190613 04:44:10"))  # 插入数据，
+        # self.tree.insert("", 0, values=("0618 15:23:33", u"进行中", "EOSETH", "6.5631", 6.13, 103.4, 621.22, 4.23, 4, 2.31 , 145.32, "0613 08:25:36"))  # 插入数据，
+        # self.tree.insert("", 1, values=(
+        # 2, u"进行中", "ONTUSDT", 1.4153, 1.236, 6345, 1.236*6345, 15.2, 5, 2.15, 89.31,
+        # "20190613 05:35:16"))  # 插入数据，
+        # self.tree.insert("", 2, values=(
+        # 3, u"进行中", "IOSTBTC",  0.011454, 0.01005, 94534, 0.01005*94534, 8.12, 2, 2.61, 106.32,
+        # "20190613 04:44:10"))  # 插入数据，
 
         self.tree.bind("<Double-1>", self.cmd_tree_double_click)
         vbar = ttk.Scrollbar(root, orient=VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=vbar.set)
 
-        self.txt_ui_log = ScrolledText(root, width=205, height=15)
+        self.txt_ui_log = ScrolledText(root, width=160, height=13)
         # 创建一个TAG，其前景色为红色
         self.txt_ui_log.tag_config('INFO', foreground='black', background="white", font=("", 11, 'normal'))
         self.txt_ui_log.tag_config('WARNING', foreground='orange', background="white", font=("", 11, 'normal'))
@@ -189,35 +212,65 @@ class MainUI:
         self.btn_start.grid(row=7, column=0, padx=8, pady=10)
         self.btn_pause.grid(row=8, column=0, padx=8, pady=10)
 
-        self.label_money.grid(row=0, column=1, padx=8, pady=10, sticky=S+N)
-        self.opt_money.grid(row=0, column=2, padx=1, pady=10, sticky=S + N)
+        # root.grid_rowconfigure(0, minsize=5)
+        root.grid_columnconfigure(1, pad=1)
+        root.grid_columnconfigure(2, pad=1)
 
-        self.label_balance.grid(row=0, column=3, padx=4, pady=10)
-        self.label_balance_.grid(row=0, column=4, padx=1, pady=10)
+        self.label_money.grid(row=0, column=1, padx=8, pady=10, ipadx=0, ipady=0, sticky=S+N+W)
+        self.opt_money.grid(row=0, column=2, padx=1, pady=10, ipadx=0, ipady=0, sticky=W)
 
-        self.label_principal.grid(row=0, column=5, padx=8, pady=10)
-        self.ety_principal.grid(row=0, column=6, padx=1, pady=10)
-        self.btn_principal.grid(row=0, column=7, padx=1, pady=10)
+        self.label_mode.grid(row=0, column=3, padx=1, pady=10, sticky=S+N+W)
+        self.opt_mode.grid(row=0, column=4, padx=1, pady=10, sticky=S+N+W)
 
-        self.label_coin_num.grid(row=0, column=8, padx=8, pady=10, sticky=S+N)
-        self.label_coin_num_.grid(row=0, column=9, padx=1, pady=10, sticky=N+S)
+        self.label_balance.grid(row=0, column=5, padx=1, pady=10, sticky=S+N+W)
+        self.label_balance_.grid(row=0, column=6, padx=1, pady=10, sticky=S+N+W)
 
-        self.label_total_profit.grid(row=0, column=10, padx=8, pady=10)
-        self.label_total_profit_.grid(row=0, column=11, padx=1, pady=10, sticky=N+S)
+        self.label_principal.grid(row=0, column=7, padx=1, pady=10, sticky=S+N+W)
+        self.ety_principal.grid(row=0, column=8, padx=1, pady=10, sticky=S+N+W)
+        self.btn_principal.grid(row=0, column=9, padx=1, pady=10, sticky=S+N+W)
 
-        self.label_total_run.grid(row=0, column=12, padx=8, pady=10)
-        self.label_total_run_.grid(row=0, column=13, padx=1, pady=10, sticky=N+S)
+        self.label_coin_num.grid(row=1, column=1, padx=1, pady=10, sticky=S+N+W)
+        self.label_coin_num_.grid(row=1, column=2, padx=1, pady=10, sticky=S+N+W)
 
-        self.tree.grid(row=1, column=1, rowspan=6, columnspan=13, padx=8, pady=8, sticky=N+S+W+E)
+        self.label_total_profit.grid(row=1, column=3, padx=1, pady=10, sticky=S+N+W)
+        self.label_total_profit_.grid(row=1, column=4, padx=1, pady=10, sticky=S+N+W)
+
+        self.label_total_run.grid(row=1, column=5, padx=1, pady=10, sticky=S+N+W)
+        self.label_total_run_.grid(row=1, column=6, padx=1, pady=10, sticky=S+N+W)
+
+        self.tree.grid(row=2, column=1, rowspan=4, columnspan=10, padx=8, pady=8, sticky=N+S+W+E)
         # tv.grid(row=0, column=0, sticky=NSEW)
-        vbar.grid(row=1, column=14, rowspan=6, padx=0, ipadx=0, pady=8, sticky=N+S+W)
+        vbar.grid(row=2, column=11, rowspan=4, padx=0, ipadx=0, pady=8, sticky=N+S+W)
 
-        self.txt_ui_log.grid(row=7, column=1, rowspan=2, columnspan=13, padx=8, pady=8, sticky=N+S+W)
+        self.txt_ui_log.grid(row=6, column=1, rowspan=3, columnspan=10, padx=8, pady=8, sticky=N+S+W)
 
     def cmd_tree_double_click(self, event):
         item = self.tree.selection()[0]
-        print(self.tree.item(item, "values"))
-        log_config.output2ui(str(self.tree.item(item, "values")), 1)
+        group_uri = self.tree.item(item, "values")[0]
+
+        select_record = None
+        for record in config.TRADE_RECORDS_NOW:
+            uri = record["uri"]
+            if group_uri == uri:
+                select_record = record
+                break
+
+        #输出每一次交易详情
+        if select_record:
+            log_config.output2ui(u"本组交易详细交易记录如下：", 0)
+            for trade in select_record["trades"]:
+                log_config.output2ui("{}".format(trade), 0)
+
+    def cmd_mode_change(self, event):
+        value = self.mode.get()
+        old_mode = config.TRADE_MODE
+        for k, v in config.TRADE_MODE_CONFIG.items():
+            if v["display"] == value:
+                config.TRADE_MODE = k
+                break
+        if old_mode != config.TRADE_MODE:
+            log_config.output2ui(u"交易策略修改为: [{}], 之后所有的交易都会遵循该策略参数运行, 包括已经建仓的交易对．".format(value), 3)
+        # print(config.TRADE_MODE)
 
     def cmd_money_change(self, event):
         if not config.CURRENT_SYMBOLS:
@@ -239,13 +292,19 @@ class MainUI:
         else:
             coins_count = len(value.get("coins", []))
             balance = round(value.get("trade", 0), 4)
-            principal = round(value.get("principal", balance*2), 4)
-            value["principal"] = principal
+            principal = value.get("principal", 0)
+            if principal == 0:
+                principal = round(2*balance, 4)
+                value["principal"] = principal
 
-        log_config.output2ui("当前计价货币为: {}, 监控交易对: {} 个, 可用余额: {}, 本金预算: {}".format(money, coins_count, balance, principal))
         self.coin_counts.set(coins_count)
         self.balance.set(balance)
         self.principal.set(principal)
+
+        #　将交易列表切换至当前币种下
+        self.update_ui_trade_info()
+        log_config.output2ui(
+            "当前计价货币为: {}, 监控交易对: {} 个, 可用余额: {}, 本金预算: {}".format(money, coins_count, balance, principal))
 
     def cmd_principal(self):
         try:
@@ -272,8 +331,7 @@ class MainUI:
             if account == "156918208611":
                 config.RUN_MODE = 'debug'
 
-            self.is_login = True
-            self.btn_api.config(state="normal")
+
             return {"code": 1, "msg": "", "data": ""}
 
         pop = PopupLogin(parent=root)
@@ -292,6 +350,8 @@ class MainUI:
                 messagebox.showwarning("Error", u"连接服务器失败，请稍后再试！")
             elif code == 1:
                 self.account = account
+                self.is_login = True
+                self.btn_api.config(state="normal")
                 root.title(config.TITLE+"--{}, 到期时间:{}".format(self.account, ret.get("data", "")))
                 log_config.output2ui(u"登录成功，余额到期时间：{}.".format(ret.get("data", "")), 0)
                 log_config.output2ui(u"第二步, 请点击 [API设置], 在弹出窗口中选择你要交易的平台, 并输入该平台的API授权码进行授权．", 1)
@@ -321,9 +381,9 @@ class MainUI:
 
             self.txt_ui_log.see(END)
 
-        if not self.is_login:
-            messagebox.showinfo(u"提示", u"请先进行 [登 录]！")
-            return
+        # if not self.is_login:
+        #     messagebox.showinfo(u"提示", u"请先进行 [登 录]！")
+        #     return
 
         show_information()
         pop = PopupAPI(parent=root)
@@ -359,6 +419,14 @@ class MainUI:
                         msg += "{}/{}, ".format(coin["coin"], money)
                         coins_count += 1
             log_config.output2ui(u"您总共选择了{}组交易对: {}.".format(coins_count, msg[0:-2]), 0)
+
+            # self.opt_money['menu'].delete(0, 'end')
+            # Insert list of new options (tk._setit hooks them up to var)
+            # new_choices = list(config.CURRENT_SYMBOLS.keys())
+            # # print(new_choices)
+            # for choice in new_choices:
+            #     # self.opt_money['menu'].add_command(label=choice, command=_setit(self.money, choice))
+            #     self.opt_money['menu'].add_command(label=choice, command=self.cmd_money_change)
 
             self.init_history()
 
@@ -405,11 +473,13 @@ class MainUI:
         th = Thread(target=start, args=(self._hb,))
         th.setDaemon(True)
         th.start()
+        self.btn_start_str.set(u"正在运行")
         self.btn_pause.config(state="normal")
         self.btn_start.config(state="disabled")
         self.working = True
 
-    def cmd_pause(self):
+
+    def cmd_stop(self):
         logger.info("stop_work!")
         if self._hb:
             self._hb.exit()
@@ -420,6 +490,7 @@ class MainUI:
         log_config.output2ui(u"系统已停止工作!", 3)
         self.working = False
 
+        self.btn_start_str.set(u"立即启动")
         self.btn_pause.config(state="disabled")
         self.btn_start.config(state="normal")
 
@@ -731,11 +802,79 @@ class MainUI:
         except Exception as e:
             logger.exception("update_coin e={}".format(e))
 
+    def update_ui_trade_info(self):
+        self.tree.delete(*self.tree.get_children())
+        index = 0
+        current_price_dict = {}
+        all_profit = 0  # 所有当前货币的总盈利
+        for money, value in config.CURRENT_SYMBOLS.items():
+            coins = value.get("coins", [])
+            for coin in coins:
+                coin_name = coin.get("coin", "")
+                if coin_name:
+                    current_price_dict["{}/{}".format(coin_name, money)] = coin.get("price", 0)
+
+        # config.TRADE_RECORDS_NOW.sort(cmp=None, key=lambda x: x["start_time"], reverse=False)
+
+        for trade in config.TRADE_RECORDS_NOW:
+            if trade["money"] != self.money.get():
+                continue
+
+            trade_pair = "{}/{}".format(trade["coin"], trade['money'])
+            current_price = current_price_dict.get(trade_pair, 0)
+            total_profit = 0        # 单组的累计营利
+            for tp in trade.get("profits", []):
+                total_profit += tp.get("profit", 0)
+
+            all_profit += total_profit  # 所有当前货币的总盈利
+
+            self.tree.insert("", index, values=(
+            trade.get("uri", ""),
+            u"进行中" if not trade.get("end_time", None) else u"已结束",
+            trade_pair,
+            current_price,
+            round(trade["avg_price"], 6),
+            round(trade["amount"], 6),
+            round(trade["cost"], 6),
+            round(trade["profit_percent"] * 100, 2),
+            trade["buy_counts"],
+            # round(trade["limit_profit"]*100, 3),
+            # round(trade["back_profit"]*100, 3),
+            # config.INTERVAL_REF.get(trade["interval_ref"], 0),
+            # u"开启" if trade["grid"] else u"关闭",
+            round(trade["last_profit_percent"], 4),
+            round(total_profit, 4),
+            trade["last_update"].strftime("%m%d %H:%M:%S") if trade.get("last_update", None) else "",
+            trade["end_time"].strftime("%m%d %H:%M:%S") if trade.get("end_time", None) else ""))
+            index += 1
+
+        self.total_profit.set(round(all_profit, 4))
+        self.coin_counts.set(index)
+
+    def update_ui_balance(self):
+        money = self.money.get()
+        value = config.CURRENT_SYMBOLS.get(money, None)
+        if not value:
+            coins_count = 0
+            balance = 0
+            principal = 0
+        else:
+            coins_count = len(value.get("coins", []))
+            balance = round(value.get("trade", 0), 4)
+            principal = value.get("principal", 0)
+            if principal == 0:
+                principal = round(2*balance, 4)
+                value["principal"] = principal
+
+        self.coin_counts.set(coins_count)
+        self.balance.set(balance)
+        self.principal.set(principal)
+
     def update_ui(self):
         # # 每1000毫秒触发自己，形成递归，相当于死循环
         # self.root.after(1000, self.process_msg)
         logger.info("Welcome to Huobi Trade System")
-        log_config.output2ui(u"    欢迎使用火币量化交易系统！　本系统由资深量化交易专家和算法团队倾力打造，对接火币官方接口，经过长达两年的不断测试与优化，"
+        log_config.output2ui(u"    欢迎使用DDU智能量化交易系统！　本系统由资深量化交易专家和算法团队倾力打造,支持多个主流交易平台.系统经过大量的模拟测试与实盘操作测试, 具有收益稳定, 风险可控的优点."
                              u"本地化运行，更加安全可控，策略可定制，使用更方便!　系统结合历史与实时数据进行分析，加上内置的多套专业策略组合算法，根据您的仓位、策略定制因"
                              u"子和风险接受能力等的不同，智能发现属于您的最佳交易时机进行自动化交易，并可以设置邮件和微信提醒，"
                              u"真正帮您实现24小时实时盯盘，专业可靠，稳定盈利！\n", 1)
@@ -744,7 +883,7 @@ class MainUI:
             1)
         log_config.output2ui(u"使用步骤如下:", 1)
         log_config.output2ui(u"第一步, 请点击 [登　录] 按钮, 输入您在{}官网注册的账号和密码进行身份和有效期验证!".format(config.SYSTEM_NAME), 1)
-
+        self.txt_ui_log.see(CURRENT)
 
         def update_price(price_text):
             while 1:
@@ -776,8 +915,8 @@ class MainUI:
                     msg = process.REALTIME_BALANCE #.get(block=True)
                     bal_text.set(str(msg))
                 except Exception as e:
-                    logger.exception("update_balance exception....")
-                    log_config.output2ui("update_balance exception....", 3)
+                    logger.exception("update_ui_balance exception....")
+                    log_config.output2ui("update_ui_balance exception....", 3)
                     continue
 
         def update_ui_log(log_text):
@@ -799,18 +938,15 @@ class MainUI:
                     log_config.output2ui("update_ui_log exception....", 3)
                     continue
 
-        def update_kdj(kdj_text):
+        def update_run_time():
             while 1:
                 try:
-                    time.sleep(5)
-                    if not self.verify:
-                        continue
-                    kdj_15min = process.REALTIME_KDJ_15MIN #.get(block=True)
-                    if not kdj_15min:
-                        kdj_text.set("")
-                    else:
-                        # kdj_5min = process.REALTIME_KDJ_5MIN.get(block=True)
-                        kdj_text.set("{}/{}/{}".format(round(kdj_15min[0], 2), round(kdj_15min[1], 2), round(kdj_15min[2], 2)))
+                    time.sleep(60)
+                    if self.working:
+                        self.run_time_value += 1
+                    hours = int(self.run_time_value/60)
+                    minutes = int(self.run_time_value%60)
+                    self.run_time.set(u"{}时{}分".format(hours, minutes))
                 except Exception as e:
                     logger.exception("update_kdj exception....")
                     log_config.output2ui("update_kdj exception....", 3)
@@ -956,70 +1092,11 @@ class MainUI:
                     except Exception as e:
                         logger.warning("notify_profit_info exception.e={}".format(e))
 
-        def update_trade_record():
-            # return
-            # TRADE_GROUP = {
-            #     "trigger_reason": "",  # 首单触发原因，如kdj/boll/low
-            #     "mode": "robust",  # 按何种交易风格执行
-            #     "coin": "EOS",
-            #     "money": "USDT",
-            #     "trades": [],  # 每一次交易记录，
-            #     "grid": 1,  # 是否开启网格交易
-            #     "coin_num": 0,  # 持仓数量（币）
-            #     "cost": 0,  # 持仓费用（计价货币）
-            #     "avg_price": 0,  # 持仓均价
-            #     "total_profit_amount": [],  # {"time": xxxx, "profit":1.26}这组策略的总收益， 每次卖出后都进行累加
-            #     "all_profit_percent": 0,  # 整体盈利比（整体盈利比，当前价格相对于持仓均价,）
-            #     "last_profit_percent": 0,  # 尾单盈利比（最后一单的盈利比）
-            #     "limit_profit": 0.04,  # 止盈比例
-            #     "back_profit": 0.01,  # 追踪比例
-            #     "buy_count": 0,  # 已建单数，目前处理买入状态的单数
-            #     "sell_count": 0,  # 卖出单数，卖出的次数，其实就是尾单收割次数
-            #     "intervals": [],  # 每次补单间隔比例
-            #     "interval_ref": 0,  # 间隔参考
-            #     "last_buy_coin_num": 0,  # 最后一次买入币量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
-            #     "last_buy_amount": 0,  # 最后一次买入量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
-            #     "last_buy_price": 0,  # 最后一次买入价格，用来做网格交易，如果最后一单已经卖出，则这个价格需要变成倒数第二次买入价格，以便循环做尾单
-            #     "last_buy_sell": 0,  # 尾单收割次数
-            #     "start_time": None,
-            #     "end_time": None,
-            #     "last_update": None,
-            # }
-            # columns = (
-            # u"序号", u"状态", u"交易对", u"当前价格", u"持仓均价", u"货币数量", u"持仓费用", u"收益比%", u"已做单数", u"止盈比例%", u"止盈追踪%", u"间隔参考",
-            # u"网格止盈", u"尾单收益比%", u"累计收益", u"最近更新", u"结束时间")
-
-            # log_config.output2ui(u"更新交易记录", 0)
+        def update_ui_trade_info_thread():
             while 1:
-                self.tree.delete(*self.tree.get_children())
-                index = 0
-                current_price_dict = {}
-                for money, value in config.CURRENT_SYMBOLS.items():
-                    coins = value.get("coins", [])
-                    for coin in coins:
-                        coin_name = coin.get("coin", "")
-                        if coin_name:
-                            current_price_dict["{}/{}".format(coin_name, money)] = coin.get("price", 0)
-
-                for trade in config.TRADE_RECORDS_NOW:
-                    trade_pair = "{}/{}".format(trade["coin"], trade['money'])
-                    current_price = current_price_dict.get(trade_pair, 0)
-                    self.tree.insert("", index, values=(index + 1, u"进行中" if not trade.get("end_time", None) else "已结束",
-                                                       trade_pair,
-                                                       current_price,
-                                                       round(trade["avg_price"], 6),
-                                                       round(trade["coin_num"], 6),
-                                                       round(trade["cost"], 6),
-                                                       round(trade["all_profit_percent"]*100, 4),
-                                                       trade["buy_count"],
-                                                       round(trade["limit_profit"]*100, 3),
-                                                       round(trade["back_profit"]*100, 3),
-                                                       config.INTERVAL_REF.get(trade["interval_ref"], 0),
-                                                       u"开启" if trade["grid"] else u"关闭",
-                                                       round(trade["last_profit_percent"], 4),
-                                                       trade["last_update"].strftime("%Y-%m-%d %H:%M:%S") if trade.get("last", None) else "",
-                                                       trade["end_time"].strftime("%Y-%m-%d %H:%M:%S") if trade.get("end_time", None) else ""))
-                time.sleep(10)
+                self.update_ui_trade_info()
+                self.update_ui_balance()
+                time.sleep(5)
             # self.tree.after(5000, update_trade_record)
 
 
@@ -1031,7 +1108,7 @@ class MainUI:
         th = Thread(target=update_ui_log, args=(self.txt_ui_log, ))
         th.setDaemon(True)
         th.start()
-        # th = Thread(target=update_balance, args=(self.bal_text,))
+        # th = Thread(target=update_ui_balance, args=(self.bal_text,))
         # th.setDaemon(True)
         # th.start()
         #
@@ -1039,9 +1116,9 @@ class MainUI:
         # th.setDaemon(True)
         # th.start()
         #
-        # th = Thread(target=update_kdj, args=(self.kdj_text,))
-        # th.setDaemon(True)
-        # th.start()
+        th = Thread(target=update_run_time)
+        th.setDaemon(True)
+        th.start()
         #
         # th = Thread(target=update_advise)
         # th.setDaemon(True)
@@ -1051,7 +1128,7 @@ class MainUI:
         # th.setDaemon(True)
         # th.start()
 
-        th = Thread(target=update_trade_record)
+        th = Thread(target=update_ui_trade_info_thread)
         th.setDaemon(True)
         th.start()
 
@@ -1065,7 +1142,7 @@ class MainUI:
             self.gressbar_verify_api.quit()
             self.clean_strategy()
             self.stop_check_strategy()
-            self.cmd_pause()
+            self.cmd_stop()
             self.root.destroy()
         else:
             return
@@ -1323,8 +1400,8 @@ if __name__ == '__main__':
     my_gui = MainUI(root)
     config.ROOT = root
     root.protocol('WM_DELETE_WINDOW', my_gui.close_window)
-    my_gui.center_window(1650, 750)
-    root.maxsize(1750, 850)
+    my_gui.center_window(1500, 750)
+    root.maxsize(1700, 950)
 
     try:
         root.iconbitmap('favicon.ico')
@@ -1332,6 +1409,7 @@ if __name__ == '__main__':
         # Tk.call('wm', 'iconphoto', Tk._w, ImageTk.PhotoImage(Image.open('favicon.ico')))
     except:
         pass
+    # time.sleep(1)
     my_gui.update_ui()
     root.mainloop()
     logger.info("==========over================")

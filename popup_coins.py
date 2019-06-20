@@ -57,6 +57,8 @@ class PopupCoins(MyDialog):
         self.bind("<Escape>", self.on_ok)
         self.frame_btn.pack()
 
+        self.cmd_money_change(None)
+
     def cmd_money_change(self, event):
         current_money = self.money.get()
         coins = config.PLATFORMS.get(config.CURRENT_PLATFORM, {}).get("trade_pairs", {}).get(current_money, [])
@@ -71,6 +73,13 @@ class PopupCoins(MyDialog):
         row = 0
         col = 0
         self.ckb_values[current_money].clear()
+
+        # 再次进入对话框，如果之前设置过，将其恢复
+        last_selected_coins = config.CURRENT_SYMBOLS.get(current_money, {}).get("coins", [])
+        last_selected_coin_names = []
+        for coin in last_selected_coins:
+            last_selected_coin_names.append(coin.get("coin", ""))
+
         for coin in coins:
             ckb_value = IntVar()
             ckb_value.set(0)
@@ -79,18 +88,13 @@ class PopupCoins(MyDialog):
             if coin in self.selected_symbols[current_money]:
                 ckb_value.set(1)
 
-            # 再次进入对话框，如果之前设置过，将其恢复
-            last_selected_coins = config.CURRENT_SYMBOLS.get(current_money, {}).get("coins", [])
-            last_selected_coin_names = []
-            for coin in last_selected_coins:
-                last_selected_coin_names.append(coin.get("coin", ""))
-
-            if coin in last_selected_coin_names:
+            coin_name = coin.get("coin", "") if isinstance(coin, dict) else coin
+            if coin_name in last_selected_coin_names:
                 ckb_value.set(1)
 
-            self.ckb_values[current_money].append({"coin": coin, "value": ckb_value})
+            self.ckb_values[current_money].append({"coin": coin_name, "value": ckb_value})
 
-            ckb = Checkbutton(self.coins_frame, text=coin, variable=ckb_value, onvalue=1, offvalue=0, command=self.cmd_ckb)
+            ckb = Checkbutton(self.coins_frame, text=coin_name, variable=ckb_value, onvalue=1, offvalue=0, command=self.cmd_ckb)
             ckb.grid(row=row, column=col)
             col += 1
             if col > 5:
@@ -116,6 +120,7 @@ class PopupCoins(MyDialog):
         for dt in self.ckb_values.get(current_money, []):
             if int(dt["value"].get()) == 1:
                 self.selected_symbols[current_money].append(dt["coin"])
+        # print(self.selected_symbols)
 
     # 该方法可对用户输入的数据进行校验
     def validate(self):

@@ -96,7 +96,7 @@ class Strategy:
             self._execute_times -= 1
         # self._last_check_time = current_time
         logger.info("strategy is called, name={}, _execute_times={}".format(self._name, self._execute_times))
-        log_config.output2ui("strategy is checking, name={}, _execute_times={}".format(self._name, self._execute_times))
+        # log_config.output2ui("strategy is checking, name={}, _execute_times={}".format(self._name, self._execute_times))
         ret = False
         try:
             ret = self._func()

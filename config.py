@@ -47,11 +47,11 @@ PLATFORMS = {
         "trade_pairs": {
                 "USDT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
                 "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
-                "BTC": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                "BTC": ["EOS", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
                 "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
-                "ETH": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                "ETH": ["EOS", "BTC", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
                 "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
-                "HT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                "HT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
                 "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
                 "HUSD": ["USDT", "BTC", "ETH", "XRP", "EOS", "HT"]
               },
@@ -124,7 +124,7 @@ SUPPORT_TRADE_RIGHT = ["USDT", "HUSD", "BTC", "ETH", "HT"]
 # klines
 
 #KL_ALL = [KL_1MIN, KL_5MIN, KL_15MIN, KL_30MIN, KL_60MIN, KL_1DAY, KL_1WEEK, KL_1MON]
-KL_ALL = [KL_1MIN, KL_15MIN, KL_5MIN, KL_60MIN, KL_1DAY]#,KL_5MIN,KL_30MIN KL_1DAY
+KL_ALL = [KL_1MIN, KL_15MIN, KL_5MIN ]#KL_60MIN, KL_1DAY#,KL_5MIN,KL_30MIN KL_1DAY
 KL_HISTORY = [KL_1MIN, KL_15MIN, KL_60MIN, KL_1DAY]#, KL_1DAY KL_5MIN,, KL_30MIN
 KL_REALTIME = KL_1MIN
 
@@ -221,7 +221,7 @@ TRADE_MODE_CONFIG = {
     "keep": {"display": u"保守", "rate": 2, "trades": 6, "limit_profit": 0.05, "back_profit": 0.02, "input_multiple": 3, "multiple_list": [10, 20, 40, 80, 160, 320], "first_trade": 0.09, "expect_profit_m": 0.10, "interval": 0.1},
     "keep_1": {"display": u"保守+", "rate": 2, "trades": 6, "limit_profit": 0.05, "back_profit": 0.02, "input_multiple": 4, "multiple_list": [10, 20, 40, 80, 160, 320], "first_trade": 0.12, "expect_profit_m": 0.12, "interval": 0.1},
     "robust_0": {"display": u"稳健-", "rate": 3, "trades": 8, "limit_profit": 0.04, "back_profit": 0.01, "input_multiple": 5, "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640], "first_trade": 0.041, "expect_profit_m": 0.16, "interval": 0.08},
-    "robust": {"display": u"稳健", "rate": 3, "trades": 8, "limit_profit": 0.015, "back_profit": 0.01, "input_multiple": 6, "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640], "first_trade": 0.049, "expect_profit_m": 0.18, "interval": 0.01},
+    "robust": {"display": u"稳健", "rate": 3, "trades": 8, "limit_profit": 0.012, "back_profit": 0.01, "input_multiple": 6, "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640], "first_trade": 0.049, "expect_profit_m": 0.18, "interval": 0.005},
     "robust_1": {"display": u"稳健+", "rate": 3, "trades": 8, "limit_profit": 0.04, "back_profit": 0.01, "input_multiple": 7, "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640], "first_trade": 0.057, "expect_profit_m": 0.20, "interval": 0.08},
     "aggressive_0": {"display": u"激进-", "rate": 4, "trades": 10, "limit_profit": 0.03, "back_profit": 0.01, "input_multiple": 8, "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024], "first_trade": 0.0175, "expect_profit_m": 0.24, "interval": 0.06},
     "aggressive": {"display": u"激进", "rate": 4, "trades": 10, "limit_profit": 0.03, "back_profit": 0.01, "input_multiple": 9, "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024], "first_trade": 0.0195, "expect_profit_m": 0.26, "interval": 0.06},
@@ -292,14 +292,14 @@ INTERVAL_REF = {0: "整体均价", 1: "上单价格"}      # 间隔补单参考�
 # 单次交易信息，这样的一次交易记录，将被包含在一组执行单元中, 除非是手动买入的
 TRADE = {
     "buy_type": "buy_auto",         # 买入模式：buy_auto 自动买入(机器策略买入)，buy_man手动买入,
-    "sell_type": "sell_profit",      # 要求的卖出模式，机器买入的一般都为止盈卖出。可选：sell_profit 止盈卖出（默认）， sell_no-不要卖出，针对手动买入的单，sell_smart-使用高抛，kdj等策略卖出
+    "sell_type": "profit",      # 要求的卖出模式，机器买入的一般都为止盈卖出。可选：profit 止盈卖出（默认）， no-不要卖出，针对手动买入的单，smart-使用高抛，kdj等策略卖出
     "limit_profit": 0,              # 大于零代表要求必须盈利,否则由系统智能卖出
     "back_profit": 0,               # 追踪回撤系数
     "buy_time": None,
     "sell_time": None,
     "coin": "EOS",
     "money": "USDT",
-    "coin_num": 0,              # 买入或卖出的币量
+    "amount": 0,              # 买入或卖出的币量
     "buy_price": 0,            # 实际买入成交的价格
     "cost": 0,               # 实际花费的计价货币量
     "is_sell": 0,           # 是否已经卖出
@@ -316,26 +316,30 @@ TRADE_GROUP = {
     "money": "USDT",
     "trades": [],            # 每一次交易记录，
     "grid": 1,              # 是否开启网格交易
-    "coin_num": 0,         # 持仓数量（币）
-    "cost": 0,           # 持仓费用（计价货币）
+    "amount": 0,         # 持仓数量（币）
+    "cost": 0,           # 当前持仓费用（计价货币）
     "avg_price": 0,      # 持仓均价
-    "total_profit_amount": [],  # {"time": xxxx, "profit":1.26}这组策略的总收益， 每次卖出后都进行累加
-    "all_profit_percent": 0,    # 整体盈利比（整体盈利比，当前价格相对于持仓均价,）
+    "max_cost": 0,      # 这组交易中最多时持仓花费，用于计算收益比
+    "profits": [],  # {"time": xxxx, "profit":1.26}这组策略的总收益， 每次卖出后都进行累加
+    "profit_percent": 0,    # 整体盈利比（整体盈利比，当前总盈利数除以最大花费,　total_profit_amount/max_cost）
     "last_profit_percent": 0,   # 尾单盈利比（最后一单的盈利比）
-    "limit_profit": 0.04,   # 止盈比例
-    "back_profit": 0.01,    # 追踪比例
-    "buy_count": 0,           # 已建单数，目前处理买入状态的单数
-    "sell_count": 0,          # 卖出单数，卖出的次数，其实就是尾单收割次数
-    "intervals": [],   # 每次补单间隔比例
-    "interval_ref": 0,   # 间隔参考
-    "last_buy_coin_num": 0,     # 最后一次买入币量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
-    "last_buy_amount": 0,   # 最后一次买入量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
+    "limit_profit": 0,      # 止盈比例，　可单独设置，如果未设置（0），则使用当前所选择的交易策略的止盈比例
+    "back_profit": 0,       # 追踪比例
+    "buy_counts": 0,             # 已建单数，目前处理买入状态的单数
+    "sell_counts": 0,            # 卖出单数，卖出的次数，其实就是尾单收割次数
+    "patch_intervals": [],       # 每次补单实际间隔比例
+    "patch_ref": 0,          # 补仓参考
+    "last_buy_amount": 0,     # 最后一次买入币量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
+    "last_buy_cost": 0,     # 最后一次买入金额量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
     "last_buy_price": 0,    # 最后一次买入价格，用来做网格交易，如果最后一单已经卖出，则这个价格需要变成倒数第二次买入价格，以便循环做尾单
     "last_buy_sell": 0,     # 尾单收割次数
-    "start_time": None,
-    "end_time": None,
+    "start_time": None,     # 建仓时间
+    "end_time": None,       # 如果为none代表还未结束
     "last_update": None,
+    "uri": "20190608123012336"  # 唯一标识，建仓时间加随机数
 }
+
+
 TRADE_PAIRS = []            # {"coin": "", "money": "", "percent": 1} 当前需要监控的币种，支持一个计价货币下的多个币种同时交易
 TRADE_RECORDS_NOW = []      # 机器人当前所有需要监控的交易
 TRADE_RECORDS_HISTORY = []  # 机器人所有历史交易记录

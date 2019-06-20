@@ -18,7 +18,7 @@ import log_config
 import logging
 import huobi
 from popup_trade import PopupTrade
-
+import random
 # result = {"trade_vol": 0, "buy_vol": 0, "sell_vol": 0, "big_buy": 0, "big_sell": 0, "total_buy_cost": 0,
 #           "total_sell_cost": 0, "avg_buy_cost": 0, "avg_sell_cost": 0, "start_time": 0, "end_time": 0}
 logger = logging.getLogger(__name__)
@@ -458,8 +458,15 @@ def trade_advise_update():
     return False
 
 
+def global_limit_profit():
+    return config.TRADE_MODE_CONFIG.get(config.TRADE_MODE, {}).get("limit_profit", 0.25)
+
+def global_back_profit():
+    return config.TRADE_MODE_CONFIG.get(config.TRADE_MODE, {}).get("back_profit", 0.05)
+
 def auto_trade():
     logger.info("auto trade trigger...group num={}".format(len(config.TRADE_RECORDS_NOW)))
+
     def should_stop_profit(buy_price, current_price, limit_profit=0.02, back_profit=0.04, monitor_start=None):
         if current_price >= buy_price*(1+limit_profit):
             return True
@@ -475,51 +482,70 @@ def auto_trade():
         trades = trade_group.get("trades", [])
         grid = trade_group.get("grid", 1)   # 是否开启网格
         avg_price = trade_group.get("avg_price", 0)
-        coin_num = trade_group.get("coin_num", 0)
-        cost = trade_group.get("cost", 0)
-
+        amount = trade_group.get("amount", 0)     # 持币量
+        cost = trade_group.get("cost", 0)           # 当前持仓成本
+        max_cost = trade_group.get("max_cost", 0)   # 最大持他
         last_buy_price = trade_group.get("last_buy_price", 0)
-        last_buy_coin = trade_group.get("last_buy_coin", 0)
         last_buy_amount = trade_group.get("last_buy_amount", 0)
-        limit_profit = trade_group.get("limit_profit", 0.04)
-        back_profit = trade_group.get("back_profit", 0.01)
-        last_update = trade_group.get("last_update", None)
+        last_buy_cost = trade_group.get("last_buy_cost", 0)
 
+        # 如果没有单独设置，则使用全局的止盈参数
+        limit_profit = trade_group.get("limit_profit", 0)
+        limit_profit = global_limit_profit() if limit_profit == 0 else limit_profit
+        back_profit = trade_group.get("back_profit", 0)
+        back_profit = global_back_profit() if back_profit == 0 else back_profit
+
+        last_update = trade_group.get("last_update", None)
         coin_name = trade_group.get("coin", "")
         money_name = trade_group.get("money", "")
         symbol = "{}{}".format(coin_name, money_name).lower()
         current_price = get_current_price(symbol)
 
-        trade_mode_name = trade_group.get("mode", "robust")
+        trade_mode_name = trade_group.get("mode", "")
+        trade_mode_name = config.TRADE_MODE if not trade_mode_name else trade_mode_name
         trade_mode = config.TRADE_MODE_CONFIG.get(trade_mode_name, {})
 
         # 判断是否要开始收割了
         if grid == 1:
             # 以尾单价格判断是否该收割尾单
             ref_price = last_buy_price
-            ref_amount = last_buy_amount
-            plan_sell_coin_num = last_buy_coin
+            ref_cost = last_buy_cost
+            plan_sell_amount = last_buy_amount
+            profit_name = u"尾单止盈"
         else:
             # 以整体均价判断是否该卖出所有
             ref_price = avg_price
-            ref_amount = cost
-            plan_sell_coin_num = coin_num
+            ref_cost = cost
+            plan_sell_amount = amount
+            profit_name = u"整体止盈"
 
         # 判断是否该卖出了
         if should_stop_profit(ref_price, current_price, limit_profit, back_profit, last_update):
             logger.info("auto trade should_stop_profit, grid={}, plan_sell_coin_num={}, ref_price={}, "
-                        "ref_amount={} cp={}, \ntrade group={}".format(grid, plan_sell_coin_num, ref_price, ref_amount, current_price, trade_group))
+                        "ref_amount={} cp={}, \ntrade group={}".format(grid, plan_sell_amount, ref_price, ref_cost, current_price, trade_group))
 
-            ret = sell_market(symbol, coin=coin_name.lower(), amount=plan_sell_coin_num)
-            if ret[0] == 1:
+            ret = sell_market(symbol, amount=plan_sell_amount, currency=coin_name.lower())
+            if ret.get("code", 0) == 1:
                 time_now = datetime.now()
-                sell_coin_actual = ret[1]
+                detail = ret.get("data", {})
+                field_amount = detail.get("field_amount", 0)  # 币
+                field_cash_amount = detail.get("field_cash_amount", 0)  # 金
+                fees = detail.get("fees", 0)
 
                 #卖出盈利
-                sell_profit = (current_price - ref_price) * sell_coin_actual
-                sell_profit_percent = sell_profit / ref_amount
+                sell_profit = (current_price - ref_price) * field_amount
+                # sell_profit = field_cash_amount - ref_amount
+                sell_profit_percent = sell_profit / ref_cost
 
-                logger.info("sell succeed! symbol={}, sell_coin_actual={}， sell profit={}, percent={}".format(sell_coin_actual, sell_profit, sell_profit_percent))
+                logger.info("sell succeed! symbol={}, sell_coin_actual={}， sell profit={}, percent={}".format(field_amount, sell_profit, sell_profit_percent))
+
+                msg = "[{}{}] 实际卖出币量： {},  卖出金额: {},  卖出价格: {},  上次买入价格： {},  盈利金额： {},  盈利比： {}%,  手续费: {}".\
+                    format(profit_name, symbol.upper(), round(field_amount, 6), round(field_cash_amount, 6), round(current_price, 6),
+                           round(ref_price, 6), round(sell_profit, 6),  round(sell_profit_percent*100, 4), round(fees, 6))
+                log_config.output2ui(msg, 1)
+                logger.warning(msg)
+                log_config.notify_user(msg, own=True)
+
                 # 找到最后一单没有卖出的
                 last_index = len(trades)-1
                 for trade in reversed(trades):
@@ -533,15 +559,17 @@ def auto_trade():
                         break
                     last_index -= 1
 
+                trade_group["profits"].append({"time": time_now, "profit": sell_profit})
                 trade_group["last_profit_percent"] = sell_profit_percent
-                trade_group["all_profit_percent"] = sell_profit/trade_group["cost"]
-                trade_group["coin_num"] = trade_group["coin_num"]-sell_coin_actual
-                trade_group["cost"] = trade_group["cost"] - last_buy_amount
-                trade_group["total_profit_amount"].append({"time": time_now, "profit": sell_profit})
+                trade_group["profit_percent"] = sell_profit/trade_group["max_cost"]
+
+                trade_group["amount"] = trade_group["amount"]-field_amount
+                trade_group["cost"] = trade_group["cost"] - field_cash_amount
+
                 trade_group["last_update"] = time_now
-                trade_group["avg_price"] = trade_group["cost"]/trade_group["coin_num"]
-                trade_group["sell_count"] += 1
-                trade_group["buy_count"] -= 1
+                trade_group["avg_price"] = trade_group["cost"]/trade_group["amount"]
+                trade_group["sell_counts"] += 1
+                # trade_group["buy_counts"] -= 1
                 trade_group["last_buy_sell"] += 1
 
                 # 全部卖完了, ,或者是整体卖出了，这组策略结束
@@ -550,56 +578,74 @@ def auto_trade():
                 else:
                     # 将倒数第二单的买入价、买入量置为尾单信息
                     new_last_trade = trade_group["trades"][last_index-1]
-                    trade_group["last_buy_coin_num"] = new_last_trade["coin_num"]
+                    trade_group["last_buy_amount"] = new_last_trade["amount"]
                     trade_group["last_buy_price"] = new_last_trade["buy_price"]
-                    trade_group["last_buy_amount"] = new_last_trade["cost"]
+                    trade_group["last_buy_cost"] = new_last_trade["cost"]
 
         # 是否需要补仓
         if interval_ref == 0:   #参考是整体均价
             ref_price = avg_price
+            patch_name = u"整体补仓"
         else:   # 参考上一次买入价
             ref_price = last_buy_price
+            patch_name = u"尾单补仓"
 
         fill_interval = trade_mode.get("interval", 0.01)    # 补仓间隔
         # 如果当前价格小于整体均价的一定比例，则补单
         if current_price < ref_price*(1-fill_interval):
-            buy_amount_plan = trade_group.get("last_buy_amount", 0) * 2      # 先直接按倍投的方式来弄
-            ret = buy_market(symbol, currency=money_name.lower(), amount=buy_amount_plan)
+            plan_buy_cost = trade_group.get("last_buy_cost", 0) * 2      # 先直接按倍投的方式来弄
+            ret = buy_market(symbol, currency=money_name.lower(), amount=plan_buy_cost)
             # 买入成功
-            if ret[0] == 1:
-                buy_amount_actual = ret[1]
-                buy_coin_actual = ret[2]
+            if ret.get("code", 0) == 1:
+                time_now = datetime.now()
+                detail = ret.get("data", {})
+                field_amount = detail.get("field_amount", 0)  # 币
+                field_cash_amount = detail.get("field_cash_amount", 0)  # 金
+                fees = detail.get("fees", 0)
+
+                msg = "[{}{}] 实际买入币量： {},  买入金额: {},  参考价格: {},  当前价格: {},  补仓间隔: {}%, 手续费: {}". \
+                    format(patch_name, symbol.upper(), round(field_amount, 6), round(field_cash_amount, 6),
+                           round(ref_price, 6), round(current_price, 6), round(fill_interval*100, 2), round(fees, 6))
+                log_config.output2ui(msg, 1)
+                logger.warning(msg)
+                log_config.notify_user(msg, own=True)
+
                 buy_price_actual = current_price
                 time_now = datetime.now()
                 trade = {
                     "buy_type": "buy_auto",  # 买入模式：buy_auto 自动买入(机器策略买入)，buy_man手动买入,
-                    "sell_type": "sell_profit",# 要求的卖出模式，机器买入的一般都为动止盈卖出。可选：sell_profit 止盈卖出， sell_no-不要卖出，针对手动买入的单，sell_auto-使用高抛，kdj等策略卖出
+                    "sell_type": "profit",# 要求的卖出模式，机器买入的一般都为动止盈卖出。可选：profit 止盈卖出， no-不要卖出，针对手动买入的单，smart-使用高抛，kdj等策略卖出
                     "buy_time": time_now,
                     "sell_time": None,
                     "coin": coin_name,
-                    "coin_num": buy_coin_actual,  # 买入或卖出的币量
+                    "amount": field_amount,  # 买入或卖出的币量
                     "buy_price": buy_price_actual,  # 实际挂单成交的价格
                     "money": money_name,
-                    "cost": buy_amount_actual,  # 实际花费的计价货币量
+                    "cost": field_cash_amount,  # 实际花费的计价货币量
                     "is_sell": 0,  # 是否已经卖出
                     "profit_percent": 0,  # 盈利比，卖出价格相对于买入价格
                     "profit": 0,  # 盈利额，只有卖出后才有
                 }
                 logger.info("auto trade buy succeed, trade={}".format(trade))
                 trade_group["trades"].append(trade)
-                trade_group["coin_num"] += buy_coin_actual
-                trade_group["cost"] += buy_amount_actual
+                trade_group["amount"] += field_amount
+                trade_group["cost"] += field_cash_amount
+                trade_group["max_cost"] = trade_group["cost"] if trade_group["max_cost"]<trade_group["cost"] else trade_group["max_cost"]   #整体过程中最大持仓成本
                 trade_group["avg_price"] = trade_group["cost"]/trade_group["coin_num"]
                 trade_group["all_profit_percent"] = (current_price-trade_group["avg_price"])/trade_group["avg_price"]
-                trade_group["buy_count"] += 1
-                trade_group["intervals"].append(fill_interval)
-                trade_group["last_buy_amount"] = buy_amount_actual
-                trade_group["last_buy_coin_num"] = buy_coin_actual
+                trade_group["buy_counts"] += 1
+                trade_group["patch_intervals"].append(fill_interval)
+                trade_group["last_buy_cost"] = field_cash_amount
+                trade_group["last_buy_amount"] = field_amount
                 trade_group["last_buy_price"] = buy_price_actual
                 if not trade_group["start_time"]:
                     trade_group["start_time"] = time_now
                 trade_group["last_update"] = time_now
                 logger.info("auto trade buy succeed, trade group={}".format(trade_group))
+
+        avg_price = trade_group.get("avg_price", 0)
+        trade_group["all_profit_percent"] = (current_price-avg_price)/avg_price
+
 
 
 def kdj_strategy_buy():
@@ -611,13 +657,16 @@ def kdj_strategy_buy():
     peroid = kdj_buy_params.get("peroid", "15min")
     for money, value in config.CURRENT_SYMBOLS.items():
         coins = value.get("coins", [])
-        principal = value["principal"]
+        principal = value.get("principal", 0)
+        if principal <= 0:
+            continue
+
         if coins:
             for coin_info in coins:
                 # 保存交易对, 用于加载历史数据
                 coin = coin_info["coin"]
                 symbol = "{}{}".format(coin, money).lower()
-                if is_already_buy_first(symbol.upper()):
+                if is_already_buy_first(symbol):
                     continue
 
                 market = "market.{}.kline.{}".format(symbol, peroid)
@@ -752,81 +801,77 @@ def kdj_strategy_buy():
 
                 buy_percent *= config.RISK
 
-                msg = "[买入{}]KD 计划买入比例={}%, 买入价格={}, 指标K={}, D={}, k1={}, D1={}, 阶段最低价格={}, 回暖幅度={}%".format(
-                    symbol, round(buy_percent * 100, 2), round(current_price, 6), round(cur_k, 2), round(cur_d, 2), round(last_k, 2), round(last_d, 2), round(min_price, 6),
-                     round(actual_up_percent * 100, 2))
+                msg = "[买入{}]KD 计划买入比例={}%, 买入价格={}, 指标K={}, D={}".format(
+                    symbol, round(buy_percent * 100, 2), round(current_price, 6), round(cur_k, 2), round(cur_d, 2))
 
                 if not trade_alarm(msg):
                     return False
                 trade_mode = config.TRADE_MODE_CONFIG.get(config.TRADE_MODE, {})
                 plan_buy_amount = principal*trade_mode.get("first_trade", 0.05)
-                ret = buy_market(symbol, currency=money.lower(), amount=plan_buy_amount, current_price=current_price)
-                if ret[0]:
-                    msg = "[买入{}]KD 计划买入比例={}%, 实际买入金额={}$, 买入价格={}, 指标K={}, D={}, 阶段最低价格={}, 回暖幅度={}%, 买入策略={}.".format(
-                        symbol, round(buy_percent * 100, 2), round(ret[1], 3), round(current_price, 6), round(cur_k, 2), round(cur_d, 2),
-                        round(min_price, 6), round(actual_up_percent * 100, 2), strategy_flag)
 
-                    if ret[0] == 1:
-                        msg += "-交易成功！"
-                    elif ret[0] == 2:
-                        msg += "-交易被取消, 取消原因: {}!".format(ret[2])
-                    elif ret[0] == 3:
-                        msg += "-交易失败, 失败原因: {}！".format(ret[2])
-
-                    log_config.output2ui(msg, 4)
+                ret = buy_market(symbol, amount=plan_buy_amount, currency=money.lower())
+                if ret.get("code", 0) == 1:
+                    detail = ret.get("data", {})
+                    field_amount = detail.get("field_amount", 0)                # 币
+                    field_cash_amount = detail.get("field_cash_amount", 0)      # 金
+                    fees = detail.get("fees", 0)
+                    msg = "[建仓{}] 实际买入币量： {},  买入金额: {},  买入价格: {},  手续费: {}".format(symbol.upper(), round(field_amount, 6), round(field_cash_amount, 6), round(current_price, 6), round(fees, 6))
+                    log_config.output2ui(msg, 1)
                     logger.warning(msg)
                     log_config.notify_user(msg, own=True)
-                    log_config.notify_user(log_config.make_msg(0, symbol, current_price=current_price, percent=buy_percent))
-                    logger.info("-----BUY_RECORD = {}".format(BUY_RECORD))
 
                     time_now = datetime.now()
                     trade = {
                         "buy_type": "buy_auto",  # 买入模式：buy_auto 自动买入(机器策略买入)，buy_man手动买入,
                         "sell_type": "sell_profit",
-                    # 要求的卖出模式，机器买入的一般都为止盈卖出。可选：sell_profit 止盈卖出（默认）， sell_no-不要卖出，针对手动买入的单，sell_smart-使用高抛，kdj等策略卖出
-                        "limit_profit": 0.015,  # 大于零代表要求必须盈利,否则由系统智能卖出
-                        "back_profit": 0.005,  # 追踪回撤系数
+                        # 要求的卖出模式，机器买入的一般都为止盈卖出。可选：sell_profit 止盈卖出（默认）， sell_no-不要卖出，针对手动买入的单，sell_smart-使用高抛，kdj等策略卖出
+                        "limit_profit": trade_mode.get("limit_profit", 0.012),  # 大于零代表要求必须盈利,否则由系统智能卖出
+                        "back_profit": trade_mode.get("back_profit", 0.01),  # 追踪回撤系数
                         "buy_time": time_now,
                         "sell_time": None,
                         "coin": coin,
                         "money": money,
-                        "coin_num": ret[2],  # 买入或卖出的币量
+                        "amount": field_amount,  # 买入或卖出的币量
                         "buy_price": current_price,  # 实际买入成交的价格
-                        "cost": ret[1],  # 实际花费的计价货币量
+                        "cost": field_cash_amount,  # 实际花费的计价货币量
                         "is_sell": 0,  # 是否已经卖出
                         "sell_price": 0,  # 实际卖出的价格
                         "profit_percent": 0,  # 盈利比，卖出价格相对于买入价格
                         "profit": 0,  # 盈利额，只有卖出后才有
+                        "fees": fees
                     }
 
                     trade_group = {
                         "trigger_reason": "KDJ",    # 首单触发原因，如kdj/boll/low
-                        "mode": "robust",           # 按何种交易风格执行
+                        "mode": "",           # 按何种交易风格执行
                         "coin": coin,
                         "money": money,
                         "trades": [trade],            # 每一次交易记录，
                         "grid": 1,              # 是否开启网格交易
-                        "coin_num": ret[2],         # 持仓数量（币）
-                        "cost": ret[1],           # 持仓费用（计价货币）
+                        "amount": field_amount,         # 持仓数量（币）
+                        "cost": field_cash_amount,           # 持仓费用（计价货币）
+                        "max_cost": field_cash_amount,
                         "avg_price": current_price,      # 持仓均价
-                        "total_profit_amount": [],  # {"time": xxxx, "profit":1.26}这组策略的总收益， 每次卖出后都进行累加
-                        "all_profit_percent": 0,    # 整体盈利比（整体盈利比，当前价格相对于持仓均价,）
+                        "profits": [],  # {"time": xxxx, "profit":1.26}这组策略的总收益， 每次卖出后都进行累加
+                        "profit_percent": 0,        # 整体盈利比（整体盈利比，当前价格相对于持仓均价,）
                         "last_profit_percent": 0,   # 尾单盈利比（最后一单的盈利比）
-                        "limit_profit": 0.015,   # 止盈比例
-                        "back_profit": 0.005,    # 追踪比例
-                        "buy_count": 1,           # 已建单数，目前处理买入状态的单数
-                        "sell_count": 0,          # 卖出单数，卖出的次数，其实就是尾单收割次数
-                        "intervals": [],   # 每次补单间隔比例
-                        "interval_ref": 0,   # 间隔参考
-                        "last_buy_coin_num": ret[2],     # 最后一次买入币量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
-                        "last_buy_amount":  ret[1],   # 最后一次买入量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
+                        "limit_profit": 0,   # 止盈比例
+                        "back_profit": 0,    # 追踪比例
+                        "buy_counts": 1,           # 已建单数，目前处理买入状态的单数
+                        "sell_counts": 0,          # 卖出单数，卖出的次数，其实就是尾单收割次数
+                        "patch_intervals": [],   # 每次补单间隔比例
+                        "patch_ref": 0,         # 间隔参考
+                        "last_buy_amount": field_amount,     # 最后一次买入币量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
+                        "last_buy_cost":  field_cash_amount,         # 最后一次买入量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
                         "last_buy_price": current_price,    # 最后一次买入价格，用来做网格交易，如果最后一单已经卖出，则这个价格需要变成倒数第二次买入价格，以便循环做尾单
                         "last_buy_sell": 0,     # 尾单收割次数
                         "start_time": time_now,
                         "end_time": None,
                         "last_update": time_now,
+                        "uri": "{}{}".format(time_now.strftime("%Y%m%d%H%M%S"), random.randint(100, 999))
                         }
-                    config.TRADE_RECORDS_NOW.append(trade_group)
+                    #把最新插在最前面
+                    config.TRADE_RECORDS_NOW.insert(0, trade_group)
 
     return buy_in
 
@@ -838,6 +883,7 @@ def is_already_buy_first(symbol):
             if already_symbol == symbol:
                 return True
     return False
+
 
 def kdj_strategy_sell(currency=[], max_trade=1):
     if kdj_sell_params.get("check", 1) != 1:
@@ -1456,7 +1502,7 @@ def trade_alarm(message, show_time=0):
         return True
 
     logger.warning("Trade Alarm: {}".format(message))
-    if show_time>0:
+    if show_time > 0:
         pop = PopupTrade(message, show_time)
     else:
         pop = PopupTrade(message, config.ALARM_TIME)
@@ -1473,164 +1519,150 @@ def trade_alarm(message, show_time=0):
             return False
 
 
-def buy_market(symbol, currency="usdt", amount=0, percent=0.2, record=True, strategy_type="", current_price=0):
+def buy_market(symbol, amount, percent=0.1, currency=""):
     # 按余额比例买
-    # currency = symbol[3:]
-    # currency = config.SUB_RIGHT
-
-    balance = get_balance(currency)
-    if amount <= 0:
-        if percent > 0:
-            if balance and balance > 0:
-                amount = round(balance * percent, 2)
+    result = {"code": 0, "data": {}, "msg": ""}
+    balance = 0
+    # 如果提供了计价货币，则根据余额来检验amount
+    if currency:
+        balance = get_balance(currency)
+        if amount <= 0:
+            if percent > 0:
+                if balance and balance > 0:
+                    amount = round(balance * percent, 6)
+                else:
+                    result["msg"] = "Have no balance for buying."
+                    return result
             else:
-                return 0, amount, "Have no balance for buying."
+                result["msg"] = "buy amount and percent less than zero."
+                return result
         else:
-            return 0, 0, "buy percent less than zero."
-
-    # 余额不足
-    if amount > balance:
-        amount = balance*0.95
+            # 余额不足
+            amount = balance if amount > balance else amount
 
     # 市价amount代表买多少钱的
-    if amount < config.TRADE_MIN_LIMIT_VALUE:
-        # 如果余钱够的话，按最小交易额买
-        if balance > config.TRADE_MIN_LIMIT_VALUE:
-            amount = config.TRADE_MIN_LIMIT_VALUE
-        else:
-            msg = "买入时余额不足, 当前可交易金额：{}.".format(round(balance, 2))
-            logger.warning(msg)
-            return 2, amount, msg
+    amount = round(amount, 6)
+    logger.warning("buy {} amount={}, balance={}".format(symbol, amount, balance))
 
-    # 超限时按最大钱或当前所有余钱数买
-    if amount > config.TRADE_MAX_LIMIT_VALUE:
-        if balance >= config.TRADE_MAX_LIMIT_VALUE:
-            amount = config.TRADE_MAX_LIMIT_VALUE
-        else:
-            amount = balance
-
-    amount = round(amount, 2)
-    logger.warning(
-        "buy {} amount {}$, current price={}, balance={}$, min trade={} max trade={}".format(
-            symbol, amount, current_price, balance, config.TRADE_MIN_LIMIT_VALUE, config.TRADE_MAX_LIMIT_VALUE))
-
-    hrs = HuobiREST(config.CURRENT_REST_MARKET_URL, config.CURRENT_REST_TRADE_URL, config.ACCESS_KEY, config.SECRET_KEY, config.PRIVATE_KEY)
+    hrs = HuobiREST()
     ret = hrs.send_order(amount=amount, source="api", symbol=symbol, _type="buy-market")
-    # (True, '6766866273')
     if ret[0] == 200 and ret[1]:
-        logger.info("buy market success, symbol={}, amount={}, record={}".format(symbol, amount, record))
-        log_config.output2ui("buy market success, symbol={}, amount={}, record={}".format(symbol, amount, record))
-        coin_num = 0
-        if record:
-            order_id = ret[1]
-            order_response = hrs.order_info(order_id)
-            # (200, {'status': 'ok',
-            #        'data': {'id': 6766866273, 'symbol': 'ethusdt', 'account-id': 4091798, 'amount': '1.000000000000000000',
-            #                 'price': '0.0', 'created-at': 1530233353821, 'type': 'buy-market',
-            #                 'field-amount': '0.002364960741651688', 'field-cash-amount': '0.999999999999999753',
-            #                 'field-fees': '0.000004729921483303', 'finished-at': 1530233354117, 'source': 'api',
-            #                 'state': 'filled', 'canceled-at': 0}})
-            if order_response[0] == 200:
-                if order_response[1].get("status", "") == config.STATUS_OK:
-                    order_detail = order_response[1].get("data", {})
-                    amount = float(order_detail.get("amount", amount))
-                    coin_num = float(order_detail.get("field-amount", 0))
-                    order_detail["strategy_type"] = strategy_type
-                    logger.info("buy market order detail={}".format(order_detail))
-                    BUY_RECORD.append(order_detail)
-        update_balance()
-        return 1, amount, coin_num, "Trade buy succeed."
-    logger.error("buy market failed, symbol={}, amount={}, record={}".format(symbol, amount, record))
-    log_config.output2ui("buy market error, symbol={}, amount={}, record={}".format(symbol, amount, record), 3)
-    return 3, amount, "Trade failed. reason={}".format(ret)
+        logger.info("buy market success, symbol={}, amount={}".format(symbol, amount))
+        order_id = ret[1]
+        order_response = hrs.order_info(order_id)
+        # (200, {'status': 'ok',
+        #        'data': {'id': 6766866273, 'symbol': 'ethusdt', 'account-id': 4091798, 'amount': '1.000000000000000000',
+        #                 'price': '0.0', 'created-at': 1530233353821, 'type': 'buy-market',
+        #                 'field-amount': '0.002364960741651688', 'field-cash-amount': '0.999999999999999753',
+        #                 'field-fees': '0.000004729921483303', 'finished-at': 1530233354117, 'source': 'api',
+        #                 'state': 'filled', 'canceled-at': 0}})
+        if order_response[0] == 200 and order_response[1].get("status", "") == config.STATUS_OK:
+            order_detail = order_response[1].get("data", {})
+            amount = float(order_detail.get("amount", amount))
+            field_cash_amount = float(order_detail.get("field-cash-amount", 0))   # 成交金额
+            field_amount = float(order_detail.get("field-amount", 0))   #买入币量
+            fees = float(order_detail.get("field-fees", 0))
+            price = float(order_detail.get("price", 0))
+
+            logger.warning("买入{}成功, 计划买入额: {}, 实际成交额: {}, 实际买入币量: {}, 手续费: {}, 买入价格: {}".format(symbol, round(amount, 6), round(field_cash_amount, 6), round(field_amount, 6), round(fees, 6), round(price, 6)))
+
+            result["code"] = 1
+            result["data"] = {
+                "symbol": symbol,
+                "amount": amount,
+                "field_cash_amount": field_cash_amount,
+                "field_amount": field_amount,
+                "finished_at": order_detail.get("finished-at", ""),
+                "price": price,
+                "fees": fees
+
+            }
+            result["msg"] = "Buy succeed!"
+            update_balance(money_only=True)
+            return result
+
+    logger.error("buy market failed, symbol={}, amount={},".format(symbol, amount))
+    log_config.output2ui("买入{}失败, 计划买入额: {}．".format(symbol, amount), 2)
+    result["code"] = 0
+    result["msg"] = "Trade buy failed!"
+    return result
 
 
-def sell_market(symbol, coin, amount=0, percent=0.1, record=True, current_price=0):
-    currency = coin
-    balance = get_balance(currency)
-
-    if amount <= 0:
-        if percent > 0:
-            if balance and balance > 0:
-                amount = round(balance * percent, 4)
+def sell_market(symbol, amount, percent=0.1, currency=""):
+    result = {"code": 0, "data": {}, "msg": ""}
+    balance = 0
+    #如果提供了计价货币，则根据余额来检验amount
+    if currency:
+        balance = get_balance(currency)
+        if amount <= 0:
+            if percent > 0:
+                if balance and balance > 0:
+                    amount = round(balance * percent, 6)
+                else:
+                    result['msg'] = "Have no balance for selling."
+                    return result
             else:
-                return 0, amount, "Have no balance for selling."
+                result["msg"] = "sell percent less than zero."
+                return result
         else:
-            return 0, 0, "sell percent less than zero."
+            # 余额不足
+            amount = balance if amount > balance else amount
 
-    if amount > balance:
-        amount = balance*0.99
+    amount = round(amount, 6)
+    logger.warning("sell {} amount={}, balance={}".format(symbol, amount, balance))
 
-    # 市价卖时表示卖多少币
-    if current_price:
-        #　判断卖出时和卖出后的持仓比例是否满足用户设置的最低持仓比例，如果不满足则需要取消卖出，或者减少卖出量
-        if config.LIMIT_MIN_POSITION > 0.0001 and config.FORCE_POSITION_MIN:
-            bal0, bal0_f, bal1, bal1_f = update_balance()
-            total = (bal0 + bal0_f) * current_price + bal1 + bal1_f
-            current_chicang = ((bal0 + bal0_f) * current_price) / total     #当前持仓比
-            limit_chicang_coin = config.LIMIT_MIN_POSITION * total / current_price  #要求的最低持仓币数
-            if current_chicang <= config.LIMIT_MIN_POSITION:
-                msg = "当前持仓比为{}%, 已经小于用户指定的强制最低持仓比{}%".format(round(current_chicang*100, 2), round(config.LIMIT_MIN_POSITION*100, 2))
-                logger.warning(msg)
-                return 2, amount, msg
-            elif balance-amount < limit_chicang_coin:
-                logger.warning("卖出后仓位将低于最小持仓比，需要减少卖出量，原计划卖出{}, 调整后卖出{}".format(round(amount, 4), round(balance-limit_chicang_coin,4)))
-                amount = balance-limit_chicang_coin
-
-        total_value = amount*current_price
-        if total_value < config.TRADE_MIN_LIMIT_VALUE:
-            # 如果余币够的话，按最小交易额卖
-            if balance*current_price > config.TRADE_MIN_LIMIT_VALUE:
-                amount = config.TRADE_MIN_LIMIT_VALUE/current_price
-            else:
-                msg = "卖出时余币不足, 当前可交易币量{}个, 价值：{}$.".format(round(balance, 4), round(balance*current_price, 2))
-                logger.warning(msg)
-                return 2, amount, msg
-        elif total_value > config.TRADE_MAX_LIMIT_VALUE:
-            amount = round(config.TRADE_MAX_LIMIT_VALUE/current_price, 4)
-            if amount > balance:
-                amount = balance*0.99
-
-    if current_price > 1:
-        amount = round(amount, 4)
-    else:
-        amount = round(amount, 2)
-    logger.warning(
-        "sell {} amount {}(个), current price={}, balance={}(个), total value={}$, min trade={}$, max trade={}$!record={}".format(symbol,
-                                                                                                             amount,
-                                                                                                             current_price,
-                                                                                                             balance,
-                                                                                                             total_value,
-                                                                                                             config.TRADE_MIN_LIMIT_VALUE, config.TRADE_MAX_LIMIT_VALUE, record))
-    hrs = HuobiREST(config.CURRENT_REST_MARKET_URL, config.CURRENT_REST_TRADE_URL, config.ACCESS_KEY, config.SECRET_KEY, config.PRIVATE_KEY)
+    # 卖出时amount代表币量
+    hrs = HuobiREST()
     ret = hrs.send_order(amount=amount, source="api", symbol=symbol, _type="sell-market")
     # (True, '6766866273')
     if ret[0] == 200 and ret[1]:
-        logger.warning("sell market success, symbol={}, amount={}, record={}".format(symbol, amount, record))
-        log_config.output2ui("sell market success, symbol={}, amount={}, record={}".format(symbol, amount, record))
-        if record:
-            order_id = ret[1]
-            order_response = hrs.order_info(order_id)
-            # order_info = (200, {'status': 'ok', 'data': {'id': 6767239276, 'symbol': 'ethusdt', 'account-id': 4091798,
-            #                                              'amount': '0.001000000000000000', 'price': '0.0',
-            #                                              'created-at': 1530233815111, 'type': 'sell-market',
-            #                                              'field-amount': '0.001000000000000000',
-            #                                              'field-cash-amount': '0.422820000000000000',
-            #                                              'field-fees': '0.000845640000000000',
-            #                                              'finished-at': 1530233815527, 'source': 'api',
-            #                                              'state': 'filled', 'canceled-at': 0}})
-            if order_response[0] == 200:
-                if order_response[1].get("status", "") == config.STATUS_OK:
-                    order_detail = order_response[1].get("data", {})
-                    logger.info("sell market order detail={}".format(order_detail))
-                    amount = float(order_detail.get("amount", amount))
-                    SELL_RECORD.append(order_detail)
-        update_balance()
-        return 1, amount, "Trade buy succeed."
+        order_id = ret[1]
+        order_response = hrs.order_info(order_id)
+        # order_info = (200, {'status': 'ok', 'data': {'id': 6767239276, 'symbol': 'ethusdt', 'account-id': 4091798,
+        #                                              'amount': '0.001000000000000000', 'price': '0.0',
+        #                                              'created-at': 1530233815111, 'type': 'sell-market',
+        #                                              'field-amount': '0.001000000000000000',
+        #                                              'field-cash-amount': '0.422820000000000000',
+        #                                              'field-fees': '0.000845640000000000',
+        #                                              'finished-at': 1530233815527, 'source': 'api',
+        #                                              'state': 'filled', 'canceled-at': 0}})
+        if order_response[0] == 200 and order_response[1].get("status", "") == config.STATUS_OK:
+            order_detail = order_response[1].get("data", {})
 
-    logger.error("sell market failed, symbol={}, amount={}, record={}, ret={}".format(symbol, amount, record, ret))
-    log_config.output2ui("sell market error, symbol={}, amount={}, record={}, ret={}".format(symbol, amount, record, ret), 3)
-    return 3, amount, "Trade failed. reason={}".format(ret)
+            amount = float(order_detail.get("amount", amount))
+            field_cash_amount = float(order_detail.get("field-cash-amount", 0))   # 成交金额
+            field_amount = float(order_detail.get("field-amount", 0))   #卖出币量
+            fees = float(order_detail.get("field-fees", 0))
+            price = float(order_detail.get("price", 0))
+            # price = current_price if price == 0 else price
+
+            logger.warning(
+                "卖出{}成功, 计划卖出币量: {}, 实际成交币量: {}, 实际成交金额: {}, 手续费: {}, 卖出价格: {}".format(symbol,
+                                                                                       round(amount, 6),
+                                                                                       round(field_amount, 6),
+                                                                                       round(field_cash_amount, 6),
+                                                                                       round(fees, 6),
+                                                                                       round(price, 6)))
+
+            result["code"] = 1
+            result["data"] = {
+                "symbol": symbol,
+                "amount": amount,
+                "field_cash_amount": field_cash_amount,
+                "field_amount": field_amount,
+                "finished_at": order_detail.get("finished-at", ""),
+                "price": price
+
+            }
+            result["msg"] = "Sell succeed!"
+            update_balance(money_only=True)
+            return result
+
+    logger.error("sell market failed, symbol={}, amount={}, ".format(symbol, amount))
+    log_config.output2ui("卖出{}失败, 计划卖出币量: {}．".format(symbol, amount), 2)
+    result["code"] = 0
+    result["msg"] = "Trade sell failed!"
+    return result
 
 
 # pos--0 代表实时价，1--代表上一次收盘价
@@ -1957,7 +1989,6 @@ def kdj_1day_update():
     return k, d, j
 
 
-
 # 本地存储的是以5分钟为周期的，beg=0代表从后往前推
 def get_trade_vol_from_local(symbol, beg=0, size=3):
     trade_vol_history = process.TRADE_VOL_HISTORY.get(symbol, [])
@@ -1986,7 +2017,7 @@ def get_trade_vol_from_local(symbol, beg=0, size=3):
     return result
 
 
-def update_balance():
+def update_balance(money_only=False):
     try:
         for money, value in config.CURRENT_SYMBOLS.items():
             coins = value.get("coins", [])
@@ -1995,18 +2026,20 @@ def update_balance():
                 if bal0:
                     config.CURRENT_SYMBOLS[money]["trade"] = float(bal0.get("trade", 0))
                     config.CURRENT_SYMBOLS[money]["frozen"] = float(bal0.get("frozen", 0))
-                    config.CURRENT_SYMBOLS[money]["principal"] = 2*float(bal0.get("trade", 0))
+                    if config.CURRENT_SYMBOLS[money].get("principal", 0) == 0:
+                        config.CURRENT_SYMBOLS[money]["principal"] = round(2*float(bal0.get("trade", 0)), 4)
                 else:
                     logger.error("get balance error, money={}".format(money))
 
-                for coin_dict in coins:
-                    coin = coin_dict["coin"]
-                    bal1 = get_balance(coin.lower(), result_type=2)
-                    if bal1:
-                        coin_dict["trade"] = float(bal1.get("trade", 0))
-                        coin_dict["frozen"] = float(bal1.get("frozen", 0))
-                    else:
-                        logger.error("get balance error, coin={}".format(coin))
+                if not money_only:
+                    for coin_dict in coins:
+                        coin = coin_dict["coin"]
+                        bal1 = get_balance(coin.lower(), result_type=2)
+                        if bal1:
+                            coin_dict["trade"] = float(bal1.get("trade", 0))
+                            coin_dict["frozen"] = float(bal1.get("frozen", 0))
+                        else:
+                            logger.error("get balance error, coin={}".format(coin))
     except Exception as e:
         logger.exception("update balance e= {}".format(e))
         return False
@@ -2541,7 +2574,7 @@ STRATEGY_LIST = [
     Strategy(kdj_strategy_buy, 10, -1, after_execute_sleep=30, name="kdj_strategy_buy"),#1800
     # Strategy(kdj_strategy_sell, 10, -1, after_execute_sleep=900 * 2, name="kdj_strategy_sell"),
     # Strategy(stop_loss, 20, -1, after_execute_sleep=300, name="stop_loss"),
-    Strategy(move_stop_profit, 12, -1, after_execute_sleep=300, name="move_stop_profit"),
+    # Strategy(move_stop_profit, 12, -1, after_execute_sleep=300, name="move_stop_profit"),
     # Strategy(vol_price_fly, 20, -1, name="vol_price_fly", after_execute_sleep=900 * 2),
     # Strategy(boll_strategy, 20, -1, name="boll strategy", after_execute_sleep=900 * 2),
     # # Strategy(kdj_5min_update, 30, -1, name="kdj_5min_update", after_execute_sleep=1),

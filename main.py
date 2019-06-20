@@ -585,8 +585,8 @@ class MainUI():
                     msg = process.REALTIME_BALANCE #.get(block=True)
                     bal_text.set(str(msg))
                 except Exception as e:
-                    logger.exception("update_balance exception....")
-                    log_config.output2ui("update_balance exception....", 3)
+                    logger.exception("update_ui_balance exception....")
+                    log_config.output2ui("update_ui_balance exception....", 3)
                     continue
 
         def update_ui_log(log_text, trade_text):
