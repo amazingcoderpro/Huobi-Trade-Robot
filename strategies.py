@@ -665,6 +665,7 @@ def stg_smart_profit():
                         # 从整体持仓量和成本减去实际卖掉量和钱，止盈，成本会被渐渐拉低，甚至为负
                         trade_group["amount"] -= field_amount
                         trade_group["cost"] -= field_cash_amount
+                        trade_group["cost"] = 0 if trade_group["cost"] < 0 else trade_group["cost"]
 
                         trade_group["last_update"] = time_now
                         if trade_group["amount"] >= 0.0001 and trade_group["cost"] >= 0.0001:
@@ -740,6 +741,7 @@ def stg_smart_profit():
                     trade_group["last_profit_percent"] = sell_profit_percent
                     trade_group["amount"] -= field_amount
                     trade_group["cost"] -= field_cash_amount
+                    trade_group["cost"] = 0 if trade_group["cost"] < 0 else trade_group["cost"]
                     trade_group["last_update"] = time_now
                     trade_group["sell_counts"] += 1
                     trade_group["end_time"] = time_now
