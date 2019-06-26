@@ -335,7 +335,7 @@ class HuobiREST:
             state = data.get("state")
             if state != "working":
                 logger.warning("balance is not working!!")
-                log_config.output2ui("balance is not working!!", 2)
+                log_config.output2ui("balance is not working!!", 7)
             bal_list = data.get("list", [])
             balance = {"trade": 0, "frozen": 0}
             for bal in bal_list:
@@ -669,7 +669,7 @@ class HuobiREST:
                     result[direction] += amount
         except Exception as e:
             logger.exception("count_sell_buy e={}".format(e))
-            log_config.output2ui("count_sell_buy e={}".format(e), 4)
+            log_config.output2ui("count_sell_buy e={}".format(e), 7)
         return result
 
     def count_depth(self, response):
@@ -704,7 +704,7 @@ class HuobiREST:
             result["asks"]["avg_price"] = sum_asks/sum_ask_amount
         except Exception as e:
             logger.exception("count_depth e={}".format(e))
-            log_config.output2ui("count_depth e={}".format(e), 4)
+            log_config.output2ui("count_depth e={}".format(e), 7)
         return result
 
 

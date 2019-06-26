@@ -20,7 +20,7 @@ def treeview_sort_column(tv, col, reverse):
 
 
 class PopupTradeResults(MyDialog):
-    def __init__(self, parent, trade_records, title=u"交易历史"):
+    def __init__(self, parent, trade_records, title=u"收益统计"):
         self.trade_records = trade_records
         self.end = datetime.datetime.now()
         self.beg = self.end - datetime.timedelta(days=1)

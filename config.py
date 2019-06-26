@@ -3,10 +3,10 @@
 # Created by Charles on 2018/6/16
 # Function: basic configure
 
-RUN_MODE = "product"    #product/test
+RUN_MODE = "product"    #product/debug
 STATUS = ""#after_login, after_api_verify, after_trade_setting, running, pausing,
 SYSTEM_NAME = "DDU智能量化交易系统"
-REGISTER_URL = "https://www.baidu.com/"
+REGISTER_URL = "https://www.huobi.de.com/topic/invited/?invite_code=8jbg4&from=groupmessage"
 TITLE = u"DDU量化交易系统v2.0.0 (官方交流QQ群:761222621, 管理员:15691820861)"
 
 KL_1MIN = "1min"
@@ -18,13 +18,14 @@ KL_1DAY = "1day"
 KL_1WEEK = "1week"
 KL_1MON = "1mon"
 KL_1YEAR = "1year"
-
+HOST = "47.75.10.215"
+# HOST = "127.0.0.1"
 
 CURRENT_ACCOUNT = ""            # 当前用户账号
 CURRENT_PASSWORD = ""
 CURRENT_PLATFORM = "huobi"      # 当前平台
-ACCESS_KEY = "ht4tgq1e4t-e22212d5-632b2d77-b3694"
-SECRET_KEY = "e01a1a28-7b67bc6d-4e6ec1cb-e613a"
+ACCESS_KEY = ""
+SECRET_KEY = ""
 CURRENT_SYMBOLS = {}            # 用户选择的交易对{'USDT': {'trade': 0, 'frozen': 0, 'coins': [{'coin': 'HT', 'trade': 0, 'frozen': 0}], 'principal': 0}, 'BTC': {'trade': 0, 'frozen': 0, 'coins': []}, 'ETH': {'trade': 0, 'frozen': 0, 'coins': []}, 'HT': {'trade': 0, 'frozen': 0, 'coins': []}, 'HUSD': {'trade': 0, 'frozen': 0, 'coins': [{'coin': 'XRP', 'trade': 0, 'frozen': 0}]}}
 
 NEED_TOBE_SUB_SYMBOL = []
@@ -404,7 +405,7 @@ TRADE_MODE_CONFIG = {
                "first_trade": 0.06,     # 首单买比占比（占本金预算的比例)
                "patch_interval": 0.08,        # 补仓间隔
                "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
-               "expect_profit_m": 0.08,     # 月预估收益
+               "expect_profit_m": 0.085,     # 月预估收益
                "risk": 0.84             # 风险系数，主要用于智能买入和卖出时参考
                },
     "keep": {"display": u"保守",
@@ -432,7 +433,7 @@ TRADE_MODE_CONFIG = {
                "patch_mode": "multiple",    # 补仓的模式，默认为倍投
                # "multiple_list": [10, 20, 40, 80, 160, 320],
                "first_trade": 0.12,
-               "patch_interval": 0.08,
+               "patch_interval": 0.075,
                "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
                "expect_profit_m": 0.12,
                "risk": 0.92
@@ -447,14 +448,14 @@ TRADE_MODE_CONFIG = {
                  "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                  # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
                  "first_trade": 0.041,
-                 "patch_interval": 0.06,
+                 "patch_interval": 0.065,
                  "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
                  "expect_profit_m": 0.16,
                  "risk": 0.96
                  },
     "robust": {"display": u"稳健",
                "limit_trades": 8,
-               "limit_profit": 0.03,
+               "limit_profit": 0.028,
                "back_profit": 0.01,
                "track": 1,  # 是否启动追踪止盈
                "grid": 1,  # 是否启用网格止盈方案
@@ -469,15 +470,15 @@ TRADE_MODE_CONFIG = {
                },
     "robust_1": {"display": u"稳健+",
                  "limit_trades": 8,
-                 "limit_profit": 0.03,
-                 "back_profit": 0.01,
+                 "limit_profit": 0.027,
+                 "back_profit": 0.09,
                  "track": 1,  # 是否启动追踪止盈
                  "grid": 1,  # 是否启用网格止盈方案
                  "smart_first": 1,  # 是否启用智能建仓
                  "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                  # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
                  "first_trade": 0.057,
-                 "patch_interval": 0.06,
+                 "patch_interval": 0.055,
                  "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
                  "expect_profit_m": 0.20,
                  "risk": 1.04
@@ -485,14 +486,14 @@ TRADE_MODE_CONFIG = {
     "aggressive_0": {"display": u"激进-",
                      "limit_trades": 10,
                      "limit_profit": 0.026,
-                     "back_profit": 0.008,
+                     "back_profit": 0.007,
                      "track": 1,  # 是否启动追踪止盈
                      "grid": 1,  # 是否启用网格止盈方案
                      "smart_first": 1,  # 是否启用智能建仓
                      "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                      # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
                      "first_trade": 0.0175,
-                     "patch_interval": 0.04,
+                     "patch_interval": 0.045,
                      "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
                      "expect_profit_m": 0.24,
                      "risk": 1.08
@@ -500,7 +501,7 @@ TRADE_MODE_CONFIG = {
     "aggressive": {"display": u"激进",
                    "limit_trades": 10,
                    "limit_profit": 0.026,
-                   "back_profit": 0.007,
+                   "back_profit": 0.006,
                    "track": 1,  # 是否启动追踪止盈
                    "grid": 1,  # 是否启用网格止盈方案
                    "smart_first": 1,  # 是否启用智能建仓
@@ -515,14 +516,14 @@ TRADE_MODE_CONFIG = {
     "aggressive_1": {"display": u"激进+",
                      "limit_trades": 10,
                      "limit_profit": 0.026,
-                     "back_profit": 0.006,
+                     "back_profit": 0.005,
                      "track": 1,  # 是否启动追踪止盈
                      "grid": 1,  # 是否启用网格止盈方案
                      "smart_first": 1,  # 是否启用智能建仓
                      "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                      # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
                      "first_trade": 0.0215,
-                     "patch_interval": 0.04,
+                     "patch_interval": 0.035,
                      "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
                      "expect_profit_m": 0.28,
                      "risk": 1.16
@@ -572,58 +573,6 @@ STRATEGIES_CONFIG = {
             "move_stop_profit": {"display": u"移动止盈", "check": 1, "profit": 0, "back_profit": 0}
         }
 }
-
-# 平台及期配置信息字典
-SUPPORT_PLATFORMS = {"huobi":
-                 {"display": u"火币",
-                  "trade_pairs": {
-                      "USDT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
-                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW", "ALGO",
-                               "BSV", "ITC", "BTT", "BTM", "ATP", "ZIL", "HC", "QTUM", "PAI", "LINK", "NAS", "GXC", "NKN", "IRIS",
-                               "ELF", "CMT", "DOGE", "AE", "WICC", "XLM", "LBA", "ELA", "WTC", "CTXC", "DTA", "HIT", "ACT", "THETA",
-                               "SOC", "RUFF", "VET", "NULS", "OCN", "KAN", "BTS", "SNT", "BIX", "SMT", "LET", "XEM", "DCR", "STORJ",
-                               "CVC", "ZRX", "NANO", "STEEM", "GNT", "WAVES"],
-                      "BTC": ["EOS", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
-                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW", "XMX",
-                              "UUU", "ALGO", "BOX", "SHE", "ATP", "IIC", "PORTAL", "CNN", "BSV", "LAMB", "GET", "KCASH", "EKT",
-                              "ITC", "COVA", "NKN", "TOS", "NEO", "BUT", "YCC", "HPT", "BTT", "MEX", "BKBT", "ZIL", "LINK", "PNT",
-                              "FTI", "BTM", "TNT", "PC", "HC", "ABT", "PAI", "CMT", "TNB", "AST", "DOGE", "EGCC", "SSP", "MT",
-                              "LXT", "IRIS", "GXC", "ETN", "HOT", "XLM", "QTUM", "BAT", "GTC", "NAS", "MAN", "ELA", "CTXC", "EDU",
-                              "UTK", "HIT", "XTZ", "IDT", "ZJLT", "DAC", "LBA", "AE", "SWFTC", "UC", "XZC", "TOPC", "NPXS",
-                              "WAX", "MUSK", "EKO", "PAY", "TRIO", "REQ", "VET", "WICC", "UGAS", "STK", "ELF", "GAS", "CHAT",
-                              "DGD", "YEE", "WTC", "REN", "SEELE", "LUN", "AAC", "OCN", "DATX", "BCV", "ARDR", "ACT", "ZLA",
-                              "DTA", "KAN", "NEXO", "NULS", "DAT", "WAN", "THETA", "DBC", "CVCOIN", "XVG", "MTN", "RCCC", "18C",
-                              "AIDOC", "MANA", "GSC", "BLZ", "QASH", "SMT", "RDN", "LOOM", "DGB", "UIP", "DOCK", "SOC", "ZEN",
-                              "MXC", "BTS", "SRN", "PROPY", "QUN", "MEET", "SNC", "ICX", "PHX", "WPR", "RUFF", "NCC", "BIX",
-                              "ZRX", "KNC", "GNX", "SNT", "APPC", "LYM", "XEM", "DCR", "SC", "WAVES", "POLY", "RCN", "FAIR",
-                              "NANO", "STEEM", "NCASH", "LET", "RTE", "KMD", "CVNT", "BFT", "LSK", "EVX", "SALT", "MTX", "OST",
-                              "STORJ", "GNT", "CVC", "QSP", "MTL", "ENG", "GRS", "MCO", "POWER", "ADX", "RBTC", "SBTC", "BCD",
-                              "BCX", "BIFI", "BTG"],
-                      "ETH": ["EOS", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
-                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW", "XMX",
-                              "UUU", "ALGO", "BOX", "SHE", "ATP", "IIC", "PORTAL", "CNN", "BSV", "LAMB", "GET", "KCASH", "EKT",
-                              "ITC", "COVA", "NKN", "TOS", "NEO", "BUT", "YCC", "HPT", "BTT", "MEX", "BKBT", "ZIL", "LINK", "PNT",
-                              "FTI", "BTM", "TNT", "PC", "HC", "ABT", "PAI", "CMT", "TNB", "AST", "DOGE", "EGCC", "SSP", "MT",
-                              "LXT", "IRIS", "GXC", "ETN", "HOT", "XLM", "QTUM", "BAT", "GTC", "NAS", "MAN", "ELA", "CTXC", "EDU",
-                              "UTK", "HIT", "XTZ", "IDT", "ZJLT", "DAC", "LBA", "AE", "SWFTC", "UC", "XZC", "TOPC", "NPXS",
-                              "WAX", "MUSK", "EKO", "PAY", "TRIO", "REQ", "VET", "WICC", "UGAS", "STK", "ELF", "GAS", "CHAT",
-                              "DGD", "YEE", "WTC", "REN", "SEELE", "LUN", "AAC", "OCN", "DATX", "BCV", "ARDR", "ACT", "ZLA",
-                              "DTA", "KAN", "NEXO", "NULS", "DAT", "WAN", "THETA", "DBC", "CVCOIN", "XVG", "MTN", "RCCC", "18C",
-                              "AIDOC", "MANA", "GSC", "BLZ", "QASH", "SMT", "RDN", "LOOM", "DGB", "UIP", "DOCK", "SOC", "ZEN",
-                              "MXC", "BTS", "SRN", "PROPY", "QUN", "MEET", "SNC", "ICX", "PHX", "WPR", "RUFF", "NCC", "BIX",
-                              "ZRX", "KNC", "GNX", "SNT", "APPC", "LYM", "XEM", "DCR", "SC", "WAVES", "POLY", "RCN", "FAIR",
-                              "NANO", "STEEM", "NCASH", "LET", "RTE", "KMD", "CVNT", "BFT", "LSK", "EVX", "SALT", "MTX", "OST",
-                              "STORJ", "GNT", "CVC", "QSP", "MTL", "ENG", "GRS", "MCO", "POWER", "ADX", "RBTC", "SBTC", "BCD",
-                              "BCX", "BIFI", "BTG"],
-                      "HT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
-                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW", "KCASH",
-                             "MT", "NKN", "ATP", ""],
-                      "HUSD": ["USDT", "BTC", "ETH", "XRP", "EOS", "HT"]
-                  }
-                },
-             "binance": {"display": u"币安", "trade_pairs": {"USDT": [], "BTC": [], "ETH": [], "HUSD": []}},
-             "okex": {"display": "OKEx", "trade_pairs": {"USDT": [], "BTC": [], "ETH": [], "HUSD": []}}
-             }
 
 
 PRINCIPAL = 0.0         # 本金

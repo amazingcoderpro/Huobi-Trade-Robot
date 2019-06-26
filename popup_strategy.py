@@ -276,7 +276,7 @@ class PopupStrategy(Toplevel):
         # self.value_dict["secret_key"] = secret_key.strip().replace("\n", "")
         # messagebox.showinfo("Info", "Strategy change have taken effect！")
         # log_config.output2ui("Setup strategy successfully!", 8)
-        log_config.output2ui("策略设置成功!", 8)
+        log_config.output2ui("策略设置成功!", 7)
         self.destroy()
 
     def on_cancel(self):

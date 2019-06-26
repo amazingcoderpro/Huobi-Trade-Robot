@@ -35,7 +35,7 @@ TRADE_RECORD = []
 
 move_stop_profit_params = {"check": 1, "msf_min": 0.018, "msf_back": 0.21}
 stop_loss_params = {"check": 0, "percent": 0.03}
-kdj_buy_params = {"check": 1, "k": 23, "d": 21, "buy_percent": 0.22, "up_percent": 0.004, "period": "15min"}
+kdj_buy_params = {"check": 1, "k": 30, "d": 28, "buy_percent": 0.25, "up_percent": 0.002, "period": "15min"}
 kdj_sell_params = {"check": 1, "k": 82, "d": 80, "sell_percent": 0.3, "down_percent": 0.005, "period": "15min"}
 vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 2, "price_up_limit": 0.01, "buy_percent": 0.3,
                         "period": "5min"}
@@ -123,7 +123,7 @@ def is_kdj_5min_buy(market, times=3):
     df = process.KLINE_DATA.get(market, None)
     if df is None:
         logger.warning("is_kdj_5min_buy can't be run.dw is empty.")
-        log_config.output2ui("is_kdj_5min_buy can't be run.dw is empty", 2)
+        log_config.output2ui("is_kdj_5min_buy can't be run.dw is empty", 7)
         return False
 
     temp_df = df.head(len(df))
@@ -142,7 +142,7 @@ def is_kdj_5min_buy(market, times=3):
         cur_k = k_df.loc[len(k_df) - i, "slowk"]
         if cur_d > 20 or cur_k > 20:
             logger.info("is_kdj_5min_buy return False.")
-            log_config.output2ui("is_kdj_5min_buy return False.")
+            log_config.output2ui("is_kdj_5min_buy return False.", 7)
             return False
 
     return True
@@ -178,7 +178,7 @@ def is_history_open_close(market, history, open_percent, close_percent):
 G_BOLL_BUY = 0
 def boll_strategy():
     if boll_strategy_params.get("check", 1) != 1:
-        log_config.output2ui("boll_strategy is not check", 2)
+        log_config.output2ui("boll_strategy is not check", 7)
         return False
 
     period = boll_strategy_params.get("period", "15min")
@@ -238,7 +238,7 @@ def boll_strategy():
                     # 历史开口幅度大于open_diff1_percent
                     if history_open_close == "open":
                         logger.info("开口超跌")
-                        log_config.output2ui("开口超跌")
+                        log_config.output2ui("开口超跌", 7)
                         buy_percent = boll_strategy_params.get("open_buy_percent", 0.2)
 
     # 缩口状态
@@ -262,7 +262,7 @@ def boll_strategy():
                             # 历史开口幅度大于open_diff1_percent
                             if history_open_close == "close":
                                 logger.info("缩口向上")
-                                log_config.output2ui("缩口向上")
+                                log_config.output2ui("缩口向上", 7)
                                 buy_percent = boll_strategy_params.get("close_buy_percent", 0.2)
 
     sell_percent = 0
@@ -1153,14 +1153,21 @@ def should_boll_buy(symbol, period="15min", risk=1.04):
     market = "market.{}.kline.{}".format(symbol, period)
     upper, middle, lower = get_boll(market, 0)
     price = get_current_price(symbol)
+
+    buy_percent = 0
+
+    if price <= lower:
+        buy_percent += 0.2
+        buy_percent += (lower-price)/lower  #低得越多加的越多
+
     diff1 = upper - middle
     diff2 = middle - lower
     state = 0
     # 先初步判断是否开或缩，参数松
     open_diff1_percent = boll_strategy_params.get("open_diff1_percent", 0.025)
     open_diff2_percent = boll_strategy_params.get("open_diff2_percent", 0.025)
-    open_diff1_percent *= config.RISK
-    open_diff2_percent *= config.RISK
+    open_diff1_percent *= risk
+    open_diff2_percent *= risk
 
     pdiff1 = diff1 / price
     pdiff2 = diff2 / price
@@ -1171,7 +1178,6 @@ def should_boll_buy(symbol, period="15min", risk=1.04):
     if pdiff1 < close_diff1_percent * 1.25 and pdiff2 < close_diff2_percent * 1.25:
         state = -1  # 缩口
 
-    buy_percent = 0
     # 判断是否开口超跌
     # up_down = get_up_down(market)
 
@@ -1195,8 +1201,7 @@ def should_boll_buy(symbol, period="15min", risk=1.04):
                     # 历史开口幅度大于open_diff1_percent
                     if history_open_close == "open":
                         logger.info("开口超跌")
-                        log_config.output2ui("开口超跌")
-                        buy_percent = boll_strategy_params.get("open_buy_percent", 0.2)
+                        buy_percent += boll_strategy_params.get("open_buy_percent", 0.2)
 
     # 缩口状态
     elif state == -1:
@@ -1209,7 +1214,7 @@ def should_boll_buy(symbol, period="15min", risk=1.04):
                         t1_vol = get_trade_vol_from_local(symbol, 0, 3).get("trade_vol", 0)
                         t2_vol = get_trade_vol_from_local(symbol, 3, 6).get("trade_vol", 0)
                     except:
-                        return 0
+                        return buy_percent
                     trade_percent = boll_strategy_params.get("trade_percent", 1.5)
                     # 交易量0-3 大于 1.5 倍的 3-6
                     if t1_vol > trade_percent * t2_vol:
@@ -1219,8 +1224,7 @@ def should_boll_buy(symbol, period="15min", risk=1.04):
                             # 历史开口幅度大于open_diff1_percent
                             if history_open_close == "close":
                                 logger.info("缩口向上")
-                                log_config.output2ui("缩口向上")
-                                buy_percent = boll_strategy_params.get("close_buy_percent", 0.2)
+                                buy_percent += boll_strategy_params.get("close_buy_percent", 0.2)
 
     if buy_percent > 0:
         buy_percent *= risk
@@ -2907,7 +2911,7 @@ def should_low_buy(symbol, period="15min", risk=1.04):
         return 0
 
     k, d, j = get_kdj(market)
-    if k - d < -7:
+    if k - d < -10:
         logging.info(u"BL k远小于d, 暂时不买, k={}, d={}, cp={}".format(k, d, current_price))
         return 0
 
@@ -2920,22 +2924,23 @@ def should_low_buy(symbol, period="15min", risk=1.04):
 
     # 比最低价还低1％以上，且最近三个周期都在跌
     # percent_factor = 0  # 价格越代，这个值越大，　买的越多
-    low_percent = 1.005 + (risk - 1) / 100
+    low_percent = 1 + (risk - 1) / 100
 
     # 　如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
-    low_percent = 1.001 if low_percent < 1.001 else low_percent
+    low_percent = 0.99 if low_percent < 0.99 else low_percent
     low_percent = 1.01 if low_percent > 1.01 else low_percent
 
-    low_percent_5 = low_percent * 1.15
+    low_percent_5 = low_percent * 1.05
     low_percent_20 = low_percent
-    low_percent_60 = low_percent * 0.998
+    low_percent_60 = low_percent * 0.995
 
     buy_percent = 0
-    if current_price * low_percent_5 < min_price_5 and get_open(market, 1) > get_close(market, 1):
+    # if current_price * low_percent_5 < min_price_5 and get_open(market, 1) > get_close(market, 1):
+    if current_price * low_percent_5 < min_price_5:
         # 跌的越多，percent_factor 越大
         logger.info("buy low 5")
         factor = min_price_5 / current_price - low_percent_5
-        buy_percent += 0.1 + factor
+        buy_percent += 0.15 + factor
     if current_price * low_percent_60 <= min_price_60:
         logger.info("buy low 60")
         factor = min_price_60 / current_price - low_percent_60
@@ -2959,7 +2964,7 @@ def should_fly_buy(symbol, period="5min", risk=1.04):
 
     market = "market.{}.kline.{}".format(symbol, period)
     multiple = vol_price_fly_params.get("vol_percent", 1.2) * (1 / risk)
-    mul_21 = 1.1
+    mul_21 = 1.05
 
     peroid_5min = 1
     if period == "5min":

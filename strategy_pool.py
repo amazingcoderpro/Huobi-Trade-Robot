@@ -39,7 +39,7 @@ class StrategyPool:
                 except Exception as e:
                     #捕获异常，防止策略检测线程崩溃
                     logger.exception("run strategy [{}] failed. e = {}".format(st.name, e))
-                    log_config.output2ui("run strategy [{}] failed. e = {}".format(st.name, e), 4)
+                    log_config.output2ui("run strategy [{}] failed. e = {}".format(st.name, e), 7)
 
         self._run = True
         check_thread = Thread(target=check_strategy)

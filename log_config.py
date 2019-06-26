@@ -145,7 +145,7 @@ def notify_user(msg, own=False):
                 logging.getLogger().info("send wechat have been disabled.")
 
             time_str = datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-            msg = "[{}]\n{}\n{}".format(time_str, config.CURRENT_ACCOUNT, msg)
+            msg = u"[{}]\n用户: {}\n{}".format(time_str, config.CURRENT_ACCOUNT, msg)
             logging.getLogger().info("start to send wechat. own={}, msg={}".format(own,msg))
             if own:
                 ret = wechat_helper.send_to_wechat(msg, config.WECHATS_VIP, own=True)

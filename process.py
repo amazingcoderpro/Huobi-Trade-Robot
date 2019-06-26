@@ -69,12 +69,12 @@ def is_valid(response, type="sub"):
     if type == "sub":
         if response.get("ch", config.STATUS_ERROR) == config.STATUS_ERROR:
             logger.error("check [sub msg] valid failed: response={}".format(response))
-            log_config.output2ui("check [sub msg] valid failed: response={}".format(response), 3)
+            log_config.output2ui("check [sub msg] valid failed: response={}".format(response), 7)
             return False
     elif type == "req":
         if response.get("status", "") != config.STATUS_OK or response.get("rep", config.STATUS_ERROR) == config.STATUS_ERROR:
             logger.error("check [req msg] valid failed: response={}".format(response))
-            log_config.output2ui("check [req msg] valid failed: response={}".format(response), 3)
+            log_config.output2ui("check [req msg] valid failed: response={}".format(response), 7)
             return False
     return True
 
@@ -141,7 +141,7 @@ def save_data_df(data):
     tick = data.get("tick", None)
     if not (ts > 0 and tick):
         logger.error("save_data_df failed, data invalid. data = {}".format(data))
-        log_config.output2ui("save_data_df failed, data invalid. data = {}".format(data), 3)
+        log_config.output2ui("save_data_df failed, data invalid. data = {}".format(data), 7)
         return False
 
     try:
@@ -228,7 +228,7 @@ def save_data_db(data):
     try:
         if not (db_util.DB_INSTANCE and db_util.DB_INSTANCE.is_valid()):
             logger.warning("save data failed. DB_INSTANCE is not valid.")
-            log_config.output2ui("save data failed. DB_INSTANCE is not valid.", 2)
+            log_config.output2ui("save data failed. DB_INSTANCE is not valid.", 7)
             return False
 
         if not isinstance(data, dict):
@@ -237,11 +237,11 @@ def save_data_db(data):
         collection_name = data.get("ch").split(".")[1]
         db = db_util.DB_INSTANCE.db
         logger.info("save data, collection_name: {}, data: {}".format(collection_name, data))
-        log_config.output2ui("save data, collection_name: {}, data: {}".format(collection_name, data))
+        log_config.output2ui("save data, collection_name: {}, data: {}".format(collection_name, data), 7)
         db.get_collection(collection_name).insert_one(data)
     except Exception as e:
         logger.exception("save data catch exception: {}".format(e))
-        log_config.output2ui("save data catch exception: {}".format(e), 4)
+        log_config.output2ui("save data catch exception: {}".format(e), 7)
 
 
 # from mpl_finance import candlestick2_ohlc

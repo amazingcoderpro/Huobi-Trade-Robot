@@ -138,6 +138,8 @@ class PopupMode(MyDialog):
             self.result["grid"] = grid
             self.result["smart_first"] = smart_first
             self.result["patch_interval"] = round(patch_interval/100, 6)
+            #补仓间隔不能小于千分之五
+            self.result["patch_interval"] = 0.005 if self.result["patch_interval"] < 0.005 else self.result["patch_interval"]
             self.result["patch_ref"] = 1 if patch_ref_name == u"上单买价" else 0
 
             #下面这两个用记界面打印提示

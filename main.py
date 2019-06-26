@@ -9,8 +9,9 @@ from tkinter import Tk, Label, Button, IntVar, DoubleVar, StringVar, VERTICAL, E
 from tkinter.scrolledtext import ScrolledText
 from queue import Queue
 import logging
+import json
 from threading import Thread
-from requests import get
+import requests
 from greesbar import GressBar
 from huobi import Huobi
 import process
@@ -271,6 +272,16 @@ class MainUI:
         self.btn_wechat.config(state="disabled")
         self.btn_results.config(state="disabled")
 
+    def logout(self):
+        if self.is_login:
+            data = {"account": self.account}
+            json_data = json.dumps(data)
+            headers = {'Content-Type': 'application/json'}
+            url = "http://{}:5000/huobi/logout/".format(config.HOST)
+            ret = requests.post(url=url, headers=headers, data=json_data)
+            self.is_login = False
+            # print(ret.text)
+
     def cmd_tree_double_click(self, event):
         if not self.tree.selection():
             return
@@ -362,31 +373,46 @@ class MainUI:
         pass
 
     def cmd_login(self):
-        def login(account, password, remember):
+        def login(account, password):
             sha = hashlib.sha256()
             sha.update(str(password).encode("utf-8"))
             encode_password = sha.hexdigest()
             if account == "15691820861007":
                 config.RUN_MODE = 'debug'
 
-            config.CURRENT_ACCOUNT = account
-            config.CURRENT_PASSWORD = password
-            if remember:
-                yaml_dict = {"account": base64.b64encode(bytes(account, encoding="utf-8")), "password": base64.b64encode(bytes(password, encoding="utf-8"))}
-                f = open(r'ddu.yml', 'w')
-                yaml.dump(yaml_dict, f)
+            result = {"code": -1, "data": "", "msg": u"网络连接超时！"}
+            try:
+                retry = 3
+                while retry >= 0:
+                    host = "127.0.0.1"
+                    data = {"account": account, "password": encode_password}
+                    json_data = json.dumps(data)
+                    headers = {'Content-Type': 'application/json'}
+                    url = "http://{}:5000/huobi/login/".format(config.HOST)
+                    ret = requests.post(url=url, headers=headers, data=json_data)
+                    if ret.status_code == 200:
+                        result = json.loads(ret.text)
+                        break
+                    else:
+                        retry -= 1
+                        time.sleep(1)
+            except Exception as e:
+                pass
 
-            return {"code": 1, "msg": "", "data": ""}
-
+            return result
 
         # 读出账号信息
-        f = open(r'ddu.yml', 'r')
-        yaml_dict = yaml.load(f, Loader=yaml.FullLoader)
-        config.CURRENT_ACCOUNT = str(base64.b64decode(yaml_dict.get("account", b"")), encoding="utf-8")
-        config.CURRENT_PASSWORD = str(base64.b64decode(yaml_dict.get("password", b"")), encoding="utf-8")
-        config.ACCESS_KEY = str(base64.b64decode(yaml_dict.get("access_key", b"")), encoding="utf-8")
-        config.SECRET_KEY = str(base64.b64decode(yaml_dict.get("secret_key", b"")), encoding="utf-8")
-        config.CURRENT_PLATFORM = str(base64.b64decode(yaml_dict.get("platform", b"")), encoding="utf-8")
+        try:
+            with open(r'ddu.yml', 'r') as f:
+                yaml_dict = yaml.load(f, Loader=yaml.FullLoader)
+
+            config.CURRENT_ACCOUNT = str(base64.b64decode(yaml_dict.get("account", b"")), encoding="utf-8")
+            config.CURRENT_PASSWORD = str(base64.b64decode(yaml_dict.get("password", b"")), encoding="utf-8")
+            config.ACCESS_KEY = str(base64.b64decode(yaml_dict.get("access_key", b"")), encoding="utf-8")
+            config.SECRET_KEY = str(base64.b64decode(yaml_dict.get("secret_key", b"")), encoding="utf-8")
+            config.CURRENT_PLATFORM = str(base64.b64decode(yaml_dict.get("platform", b"")), encoding="utf-8")
+        except:
+            pass
 
         pop = PopupLogin(parent=root)
         if pop.result["is_ok"]:
@@ -394,22 +420,28 @@ class MainUI:
             password = pop.result["password"]
             remember = pop.result["remember"]
 
-            ret = login(account, password, remember)
+            ret = login(account, password)
             code = ret.get("code", 0)
-            if code == 0:
+            if code != 1:
                 self.is_login = False
-                messagebox.showwarning("Error", u"账号或密码错误！")
-            elif code == 2:
-                self.is_login = False
-                messagebox.showwarning("Error", u"账号余额不足，请联系管理员充值！")
-            elif code == 3:
-                messagebox.showwarning("Error", u"连接服务器失败，请稍后再试！")
-                self.is_login = False
-            elif code == 1:
+                messagebox.showwarning(u"错误", ret.get("msg", u"登录失败!"))
+                return
+            else:
+                config.CURRENT_ACCOUNT = account
+                config.CURRENT_PASSWORD = password
+                if remember:
+                    yaml_dict = {"account": base64.b64encode(bytes(account, encoding="utf-8")),
+                                 "password": base64.b64encode(bytes(password, encoding="utf-8"))}
+                    try:
+                        with open("ddu.yml", 'w') as f:
+                            yaml.dump(yaml_dict, f)
+                    except:
+                        pass
+
                 self.account = account
                 self.is_login = True
                 self.btn_api.config(state="normal")
-                # self.btn_login.config(state="disabled")
+                self.btn_login.config(state="disabled")
                 self.btn_results.config(state="normal")
                 self.btn_login_str.set(u"登录成功")
                 root.title(config.TITLE+"--{}, 到期时间:{}".format(self.account, ret.get("data", "")))
@@ -418,8 +450,7 @@ class MainUI:
 
     def cmd_api(self):
         def show_information():
-            self.txt_ui_log.insert(END, u"[温馨提示] 在API设置窗口中输入您的密钥后, 您可以点击[保存密钥对]以保存自己的密钥至本地文件中, 以后进行身份验证时只需点击[导入密钥对]即可."
-                                 u"如果您还没有火币平台账号，请参考[火币平台用户指导书]，简单几步带您完成从注册到交易．注册时使用我们的 [邀请注册链接] (邀请码 8jbg4)可免费获得本系统100天的试用时长.\n")
+            self.txt_ui_log.insert(END, u"[温馨提示] 目前本系统仅对接火币平台, 其他主流平台正在紧急接入中. 如果您还没有火币平台账号，请参考[火币平台用户指导书]，简单几步带您完成从注册到交易．注册时使用我们的 [邀请注册链接] (邀请码 8jbg4)可免费获得本系统100天的试用时长.\n")
 
             urls = ['https://www.huobi.de.com/topic/invited/?invite_code=8jbg4&from=groupmessage',
                    'https://www.huobi.co/zh-cn/',
@@ -471,7 +502,6 @@ class MainUI:
                 self.load_trades()
 
             self.api_verify()
-
 
     def cmd_coin(self):
         if not self.is_api_ok:
@@ -558,7 +588,7 @@ class MainUI:
         self.btn_start.config(state="normal")
         self.btn_coin.config(state="normal")
         self.btn_api.config(state="normal")
-        self.btn_login.config(state="normal")
+        # self.btn_login.config(state="normal")
 
     def cmd_mode_setting(self):
         pop = PopupMode(parent=self.root)
@@ -630,7 +660,7 @@ class MainUI:
                 return False
 
             log_config.output2ui(u"加载历史交易数据成功!", 1)
-            log_config.output2ui(u"第四步, 请点击 [立即启动], 程序将开启自动化交易. 如需进行系统配置, 如风险偏好设置, 交易额度限制, 微信通知, 挂单买卖等, 请点击[系统设置]按钮, 如果需要自定义交易策略请点击[策略设置]按钮, 非专业人士不建议您对策略进行修改. 系统设置和策略设置的修改在程序运行过程当中立即生效, 不需要重新启动工作. ", 1)
+            log_config.output2ui(u"第四步, 请点击 [立即启动], 程序将开启自动化交易. 如需进行自定义交易策略请点击[策略设置]按钮, 非专业人士不建议您对策略进行修改. 策略修改在程序运行过程当中立即生效, 不需要重新启动. ", 1)
             self.btn_start.config(state="normal")
             self.btn_mode_setting.config(state="normal")
             self.btn_pending_setting.config(state="normal")
@@ -974,11 +1004,11 @@ class MainUI:
         # self.root.after(1000, self.process_msg)
         logger.info("Welcome to Huobi Trade System")
         log_config.output2ui(u"    欢迎使用DDU智能量化交易系统！　本系统由资深量化交易专家和算法团队倾力打造,支持多个主流交易平台.系统经过大量的模拟测试与实盘操作测试, 具有收益稳定, 风险可控的优点."
-                             u"本地化运行，更加安全可控，策略可定制，使用更方便!　系统结合历史与实时数据进行分析，加上内置的多套专业策略组合算法，根据您的仓位、策略定制因"
-                             u"子和风险接受能力等的不同，智能发现属于您的最佳交易时机进行自动化交易，并可以设置邮件和微信提醒，"
-                             u"真正帮您实现24小时实时盯盘，专业可靠，稳定盈利！\n", 1)
+                             u"本地化运行，更加安全可控，策略可定制，使用更方便!　系统结合历史与实时数据进行分析，加上内置的多套专业策略组合算法，包括智能建仓, 智能补仓, 止盈追踪, 网格量化止盈追踪等．"
+                             u"系统将根据您选择的交易策略，智能发现属于您的最佳交易时机进行自动化交易，系统还提供交易实时微信通知, 收益情况按天统计等贴心功能, "
+                             u"真正帮您实现24小时实时盯盘，专业可靠，稳定盈利看得见！\n", 1)
         log_config.output2ui(
-            u"免责声明:\n  1. 使用本系统时，系统将会根据程序判断自动帮您进行交易，因此产生的盈利或亏损均由您个人负责，与系统开发团队无关\n  2. 本系统需要您提供您在交易平台官网（如火币, OKEx等）申请的API密钥，获取平台授权后方能正常运行,请您妥善保管好自己的密钥,发生丢失造成的财产损失与本系统无关.\n  3. 因操作失误,断网,断电,程序异常等因素造成的经济损失与系统开发团队无关\n  4.如需商业合作，充值或使用过程中如有任何问题可加QQ群：761222621 进行交流,或与售后团队联系,联系方式: 15691820861\n",
+            u"免责声明:\n  1. 使用本系统时，系统将会根据程序判断自动帮您进行交易，因此产生的盈利或亏损均由您个人负责，与系统开发团队无关\n  2. 本系统需要您提供您在交易平台官网（如火币, OKEx等）申请的API密钥，获取平台授权后方能正常运行,请您妥善保管好自己的密钥,发生丢失造成的财产损失与本系统无关.\n  3. 因操作失误,断网,断电,程序异常等因素造成的经济损失与系统开发团队无关\n  4. 如需商业合作，充值或使用过程中如有任何问题可加QQ群：761222621 进行交流,或与售后团队联系,联系方式: 15691820861\n",
             1)
         log_config.output2ui(u"使用步骤如下:", 1)
         log_config.output2ui(u"第一步, 请点击 [登　录] 按钮, 输入您在{}官网注册的账号和密码进行身份和有效期验证!".format(config.SYSTEM_NAME), 1)
@@ -1075,40 +1105,16 @@ class MainUI:
                 except Exception as e:
                     logger.exception("update_advise exception....")
 
-        def update_uml(uml_text):
+        def update_heart():
             while 1:
-                try:
-                    time.sleep(5)
-                    if not self.verify:
-                        continue
-                    global CURRENT_PRICE
-                    uml = process.REALTIME_UML#.get(block=True)
-                    if not uml:
-                        uml_text.set("")
-                        continue
-                    diff1 = uml[0] - uml[1]
-                    diff2 = uml[1] - uml[2]
-                    # uml_text.set("{}/{}/{}-{}/{}-{}/{}".format(round(uml[0], 6), round(uml[1], 6), round(uml[2], 6), round(diff1, 6), round(diff2, 6), round(diff1 / CURRENT_PRICE, 5), round(diff2 / CURRENT_PRICE, 5)))
-                    uml_text.set("{}/{}/{}".format(round(uml[0], 6), round(uml[1], 6), round(uml[2], 6)))
+                time.sleep(300)
+                data = {"account": self.account}
+                json_data = json.dumps(data)
+                headers = {'Content-Type': 'application/json'}
+                url = "http://{}:5000/huobi/heart/".format(config.HOST)
+                ret = requests.post(url=url, headers=headers, data=json_data)
+                # print(ret.text)
 
-                    if process.LAST_VERIFY_TIME:
-                        if (datetime.now() - process.LAST_VERIFY_TIME).total_seconds() > 3600*24:
-                            ret = self.verify_huobi(config.ACCESS_KEY)
-                            if not ret[0]:
-                                self.clean_strategy()
-                                self.stop_check_strategy()
-                                self.stop_work()
-                                time.sleep(2)
-                                log_config.output2ui(ret[1], 5)
-                                messagebox.showwarning("Error", ret[1])
-                            else:
-                                process.LAST_VERIFY_TIME = datetime.now()
-
-                    else:
-                        process.LAST_VERIFY_TIME = datetime.now()
-                except Exception as e:
-                    logger.exception("update_uml exception....")
-                    log_config.output2ui("update_uml exception....", 3)
 
         def notify_profit_info():
             hour_report_start_time = None
@@ -1211,9 +1217,9 @@ class MainUI:
         # th.setDaemon(True)
         # th.start()
         #
-        # th = Thread(target=update_uml, args=(self.uml_text,))
-        # th.setDaemon(True)
-        # th.start()
+        th = Thread(target=update_heart)
+        th.setDaemon(True)
+        th.start()
         #
         th = Thread(target=update_run_time)
         th.setDaemon(True)
@@ -1299,6 +1305,7 @@ class MainUI:
         # ans = askyesno("Warning", message="Are you sure to quit？")
         ans = askyesno(u"提示", message=u"确认退出？")
         if ans:
+            self.logout()
             self.gressbar_init_history.quit()
             self.gressbar_verify_api.quit()
             self.clean_strategy()
@@ -1306,7 +1313,6 @@ class MainUI:
             self.cmd_stop()
             # 把当次运行运程中的所有交易记录保存到文件中
             self.save_trades()
-
             self.root.destroy()
         else:
             return
@@ -1360,8 +1366,7 @@ class MainUI:
         error_info = ""
         try:
             while retry >= 0:
-                host = "47.75.10.215"
-                ret = get("http://{}:5000/huobi/{}".format(host, access_key), timeout=3)
+                ret = get("http://{}:5000/huobi/{}".format(config.HOST, access_key), timeout=3)
                 if ret.status_code == 200:
                     self.verify = True
                     logger.info(u"系统授权认证成功！ 过期时间: {}".format(ret.text))
@@ -1466,11 +1471,6 @@ class MainUI:
         # btn.pack()
 
     def set_up_strategy(self):
-        # from popup_trade import TradeStrategy
-        # ret_data = {}
-        # pop = TradeStrategy("wqrwqrqwrqwr", ret_data, 10)
-        # self.root.wait_window(pop)
-        # print(ret_data)
         from popup_strategy import PopupStrategy
         import strategies
         pop = PopupStrategy(strategies.move_stop_profit_params,
@@ -1481,7 +1481,7 @@ class MainUI:
                             strategies.boll_strategy_params,
                             u"策略配置")
         self.root.wait_window(pop)
-        print(strategies.kdj_buy_params)
+        # print(strategies.kdj_buy_params)
 
     def set_up_system(self):
         def login_wechat():
