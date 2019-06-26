@@ -206,7 +206,7 @@ class MainUI:
         vbar = ttk.Scrollbar(root, orient=VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=vbar.set)
 
-        self.txt_ui_log = ScrolledText(root, width=160, height=13)
+        self.txt_ui_log = ScrolledText(root, width=180, height=13)
         # 创建一个TAG，其前景色为红色
         self.txt_ui_log.tag_config('INFO', foreground='black', background="white", font=("", 11, 'normal'))
         self.txt_ui_log.tag_config('WARNING', foreground='orange', background="white", font=("", 11, 'normal'))
@@ -1268,7 +1268,7 @@ class MainUI:
                     except:
                         break
         except:
-            log_config.output2ui(u"加载历史数据失败！", 2)
+            log_config.output2ui(u"未发现历史数据！", 2)
             return
 
         log_config.output2ui(u"加载历史未完成的交易对成功, 共{}对!".format(num), 0)
