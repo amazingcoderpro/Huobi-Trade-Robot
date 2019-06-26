@@ -20,3 +20,26 @@
 # aq.put(2, block=False)
 # print(22)
 # print(aq.get(block=False))
+import json
+import requests
+
+
+def encode_str(source="123456"):
+    import hashlib
+    sha = hashlib.sha256()
+    sha.update(str(source).encode("utf-8"))
+    encode_source = sha.hexdigest()
+    print(encode_source)
+    return encode_source
+
+data = {"account": "17502964994", "password": encode_str("123456")}
+json_data = json.dumps(data)
+headers = {'Content-Type': 'application/json'}
+url = "http://127.0.0.1:5000/huobi/login/"
+ret = requests.post(url=url, headers=headers, data=json_data)
+print(ret.status_code)
+
+print(json.loads(ret.text))
+
+# if __name__ == '__main__':
+#     encode_str()
