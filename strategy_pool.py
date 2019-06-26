@@ -102,11 +102,11 @@ class Strategy:
             ret = self._func()
         except Exception as e:
             logger.exception("check strategy:{} catch exception".format(self._name))
-            log_config.output2ui("check strategy:{} catch exception: {}".format(self._name, e), 4)
+            log_config.output2ui("check strategy:{} catch exception: {}".format(self._name, e), 7)
         else:
             if ret:
                 if self._name != "kdj_15min_update":
-                    log_config.output2ui("----strategy be triggered, name={}".format(self._name), 2)
+                    log_config.output2ui("----strategy be triggered, name={}".format(self._name), 7)
                     logger.warning("----strategy be triggered, name={}".format(self._name))
 
                 self._last_execute_time = int(time.time())  #策略被执行了

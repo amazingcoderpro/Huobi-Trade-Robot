@@ -14,7 +14,6 @@ from threading import Thread
 from datetime import datetime
 from logging import handlers
 import queue
-import time
 import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
@@ -75,6 +74,9 @@ def init_log_config(use_mail=False):
                         datefmt=DATE_FORMAT)
 
     # add rotating file handler
+    if config.RUN_MODE == "product":
+        return
+
     rf_handler = handlers.RotatingFileHandler(LOG_FILE_PATH, maxBytes=LOG_FILE_SIZE, backupCount=LOG_BACKUP_COUNT)
     rf_handler.setLevel(LOG_FILE_LEVEL)
     formatter = logging.Formatter(FORMATTER)
@@ -143,7 +145,7 @@ def notify_user(msg, own=False):
                 logging.getLogger().info("send wechat have been disabled.")
 
             time_str = datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-            msg = "[{}]\n{}".format(time_str, msg)
+            msg = "[{}]\n{}\n{}".format(time_str, config.CURRENT_ACCOUNT, msg)
             logging.getLogger().info("start to send wechat. own={}, msg={}".format(own,msg))
             if own:
                 ret = wechat_helper.send_to_wechat(msg, config.WECHATS_VIP, own=True)

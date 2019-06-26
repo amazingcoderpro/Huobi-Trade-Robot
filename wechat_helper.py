@@ -5,7 +5,7 @@
 
 import logging
 # import itchat
-from itchat import get_contact, get_chatrooms, get_friends, send, auto_login
+from itchat import get_contact, get_chatrooms, get_friends, send, auto_login, logout
 logger = logging.getLogger()
 
 
@@ -13,6 +13,12 @@ def login_wechat():
     # 登录微信 登录比较费时，大概10s
     return auto_login(hotReload=True)
 
+
+def logout_wechat():
+    try:
+        return logout()
+    except:
+        pass
 
 def send_to_wechat(msg, nick_names=None, own=False):
     msg = str(msg)

@@ -3,7 +3,7 @@
 # Created by Charles on 2018/6/16
 # Function: basic configure
 
-RUN_MODE = "product"#product
+RUN_MODE = "product"    #product/test
 STATUS = ""#after_login, after_api_verify, after_trade_setting, running, pausing,
 SYSTEM_NAME = "DDU智能量化交易系统"
 REGISTER_URL = "https://www.baidu.com/"
@@ -21,10 +21,12 @@ KL_1YEAR = "1year"
 
 
 CURRENT_ACCOUNT = ""            # 当前用户账号
+CURRENT_PASSWORD = ""
 CURRENT_PLATFORM = "huobi"      # 当前平台
-ACCESS_KEY = ""
-SECRET_KEY = ""
-CURRENT_SYMBOLS = {}            # 用户选择的交易对[{"left": "EOS", "right": "USDT"}, {"left": "XRP", "right": "BTC"}]
+ACCESS_KEY = "ht4tgq1e4t-e22212d5-632b2d77-b3694"
+SECRET_KEY = "e01a1a28-7b67bc6d-4e6ec1cb-e613a"
+CURRENT_SYMBOLS = {}            # 用户选择的交易对{'USDT': {'trade': 0, 'frozen': 0, 'coins': [{'coin': 'HT', 'trade': 0, 'frozen': 0}], 'principal': 0}, 'BTC': {'trade': 0, 'frozen': 0, 'coins': []}, 'ETH': {'trade': 0, 'frozen': 0, 'coins': []}, 'HT': {'trade': 0, 'frozen': 0, 'coins': []}, 'HUSD': {'trade': 0, 'frozen': 0, 'coins': [{'coin': 'XRP', 'trade': 0, 'frozen': 0}]}}
+
 NEED_TOBE_SUB_SYMBOL = []
 
 # 平台及期配置信息字典
@@ -46,14 +48,47 @@ PLATFORMS = {
         "symbol_partition": ["main", "innovation", "bifurcation"],  # main主区，innovation创新区，bifurcation分叉区
         "trade_pairs": {
                 "USDT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
-                "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
-                "BTC": ["EOS", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
-                "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
-                "ETH": ["EOS", "BTC", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
-                "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
-                "HT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
-                "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
-                "HUSD": ["USDT", "BTC", "ETH", "XRP", "EOS", "HT"]
+                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW", "ALGO",
+                               "BSV", "ITC", "BTT", "BTM", "ATP", "ZIL", "HC", "QTUM", "PAI", "LINK", "NAS", "GXC", "NKN", "IRIS",
+                               "ELF", "CMT", "DOGE", "AE", "WICC", "XLM", "LBA", "ELA", "WTC", "CTXC", "DTA", "HIT", "ACT", "THETA",
+                               "SOC", "RUFF", "VET", "NULS", "OCN", "KAN", "BTS", "SNT", "BIX", "SMT", "LET", "XEM", "DCR", "STORJ",
+                               "CVC", "ZRX", "NANO", "STEEM", "GNT", "WAVES"],
+                      "BTC": ["EOS", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW", "XMX",
+                              "UUU", "ALGO", "BOX", "SHE", "ATP", "IIC", "PORTAL", "CNN", "BSV", "LAMB", "GET", "KCASH", "EKT",
+                              "ITC", "COVA", "NKN", "TOS", "NEO", "BUT", "YCC", "HPT", "BTT", "MEX", "BKBT", "ZIL", "LINK", "PNT",
+                              "FTI", "BTM", "TNT", "PC", "HC", "ABT", "PAI", "CMT", "TNB", "AST", "DOGE", "EGCC", "SSP", "MT",
+                              "LXT", "IRIS", "GXC", "ETN", "HOT", "XLM", "QTUM", "BAT", "GTC", "NAS", "MAN", "ELA", "CTXC", "EDU",
+                              "UTK", "HIT", "XTZ", "IDT", "ZJLT", "DAC", "LBA", "AE", "SWFTC", "UC", "XZC", "TOPC", "NPXS",
+                              "WAX", "MUSK", "EKO", "PAY", "TRIO", "REQ", "VET", "WICC", "UGAS", "STK", "ELF", "GAS", "CHAT",
+                              "DGD", "YEE", "WTC", "REN", "SEELE", "LUN", "AAC", "OCN", "DATX", "BCV", "ARDR", "ACT", "ZLA",
+                              "DTA", "KAN", "NEXO", "NULS", "DAT", "WAN", "THETA", "DBC", "CVCOIN", "XVG", "MTN", "RCCC", "18C",
+                              "AIDOC", "MANA", "GSC", "BLZ", "QASH", "SMT", "RDN", "LOOM", "DGB", "UIP", "DOCK", "SOC", "ZEN",
+                              "MXC", "BTS", "SRN", "PROPY", "QUN", "MEET", "SNC", "ICX", "PHX", "WPR", "RUFF", "NCC", "BIX",
+                              "ZRX", "KNC", "GNX", "SNT", "APPC", "LYM", "XEM", "DCR", "SC", "WAVES", "POLY", "RCN", "FAIR",
+                              "NANO", "STEEM", "NCASH", "LET", "RTE", "KMD", "CVNT", "BFT", "LSK", "EVX", "SALT", "MTX", "OST",
+                              "STORJ", "GNT", "CVC", "QSP", "MTL", "ENG", "GRS", "MCO", "POWER", "ADX", "RBTC", "SBTC", "BCD",
+                              "BCX", "BIFI", "BTG"],
+                      "ETH": ["EOS", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW", "XMX",
+                              "UUU", "ALGO", "BOX", "SHE", "ATP", "IIC", "PORTAL", "CNN", "BSV", "LAMB", "GET", "KCASH", "EKT",
+                              "ITC", "COVA", "NKN", "TOS", "NEO", "BUT", "YCC", "HPT", "BTT", "MEX", "BKBT", "ZIL", "LINK", "PNT",
+                              "FTI", "BTM", "TNT", "PC", "HC", "ABT", "PAI", "CMT", "TNB", "AST", "DOGE", "EGCC", "SSP", "MT",
+                              "LXT", "IRIS", "GXC", "ETN", "HOT", "XLM", "QTUM", "BAT", "GTC", "NAS", "MAN", "ELA", "CTXC", "EDU",
+                              "UTK", "HIT", "XTZ", "IDT", "ZJLT", "DAC", "LBA", "AE", "SWFTC", "UC", "XZC", "TOPC", "NPXS",
+                              "WAX", "MUSK", "EKO", "PAY", "TRIO", "REQ", "VET", "WICC", "UGAS", "STK", "ELF", "GAS", "CHAT",
+                              "DGD", "YEE", "WTC", "REN", "SEELE", "LUN", "AAC", "OCN", "DATX", "BCV", "ARDR", "ACT", "ZLA",
+                              "DTA", "KAN", "NEXO", "NULS", "DAT", "WAN", "THETA", "DBC", "CVCOIN", "XVG", "MTN", "RCCC", "18C",
+                              "AIDOC", "MANA", "GSC", "BLZ", "QASH", "SMT", "RDN", "LOOM", "DGB", "UIP", "DOCK", "SOC", "ZEN",
+                              "MXC", "BTS", "SRN", "PROPY", "QUN", "MEET", "SNC", "ICX", "PHX", "WPR", "RUFF", "NCC", "BIX",
+                              "ZRX", "KNC", "GNX", "SNT", "APPC", "LYM", "XEM", "DCR", "SC", "WAVES", "POLY", "RCN", "FAIR",
+                              "NANO", "STEEM", "NCASH", "LET", "RTE", "KMD", "CVNT", "BFT", "LSK", "EVX", "SALT", "MTX", "OST",
+                              "STORJ", "GNT", "CVC", "QSP", "MTL", "ENG", "GRS", "MCO", "POWER", "ADX", "RBTC", "SBTC", "BCD",
+                              "BCX", "BIFI", "BTG"],
+                      "HT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW", "KCASH",
+                             "MT", "NKN", "ATP", ""],
+                      "HUSD": ["USDT", "BTC", "ETH", "XRP", "EOS", "HT"]
               },
         "account_state_working": "working",  # 正常
         "account_state_lock": "lock",
@@ -124,8 +159,8 @@ SUPPORT_TRADE_RIGHT = ["USDT", "HUSD", "BTC", "ETH", "HT"]
 # klines
 
 #KL_ALL = [KL_1MIN, KL_5MIN, KL_15MIN, KL_30MIN, KL_60MIN, KL_1DAY, KL_1WEEK, KL_1MON]
-KL_ALL = [KL_1MIN, KL_15MIN, KL_5MIN ]#KL_60MIN, KL_1DAY#,KL_5MIN,KL_30MIN KL_1DAY
-KL_HISTORY = [KL_1MIN, KL_15MIN, KL_60MIN, KL_1DAY]#, KL_1DAY KL_5MIN,, KL_30MIN
+KL_ALL = [KL_1MIN, KL_15MIN, KL_5MIN]#KL_60MIN, KL_1DAY#,KL_5MIN,KL_30MIN KL_1DAY
+KL_HISTORY = [KL_1MIN, KL_15MIN]#, KL_60MIN, KL_1DAY KL_1DAY KL_5MIN,, KL_30MIN
 KL_REALTIME = KL_1MIN
 
 # depth type
@@ -186,7 +221,7 @@ RISK = 1.05  # 取值0.5－－1.5之间，默认是１，越大越激进（买�
 
 #是否邮件通知
 EMAIL_NOTIFY = False
-WECHAT_NOTIFY = True
+WECHAT_NOTIFY = False
 ALARM_NOTIFY = False            # 是否弹窗提醒
 ALARM_TIME = 20                 # 弹窗提醒时长, 最多不能超过120，否则可能错过交易点
 ALARM_TRADE_DEFAULT = True      # 弹窗提醒后, 人工未处理时, 默认是否交易
@@ -216,18 +251,292 @@ SEND_ACCOUNT_NOW = 0
 NICK_NAME = u"用户昵称"
 
 # 交易风格字典
-TRADE_MODE_CONFIG = {
-    "keep_0": {"display": u"保守-", "rate": 2, "trades": 6, "limit_profit": 0.05, "back_profit": 0.02, "input_multiple": 2, "multiple_list": [10, 20, 40, 80, 160, 320], "first_trade": 0.06, "expect_profit_m": 0.08, "interval": 0.10},
-    "keep": {"display": u"保守", "rate": 2, "trades": 6, "limit_profit": 0.05, "back_profit": 0.02, "input_multiple": 3, "multiple_list": [10, 20, 40, 80, 160, 320], "first_trade": 0.09, "expect_profit_m": 0.10, "interval": 0.1},
-    "keep_1": {"display": u"保守+", "rate": 2, "trades": 6, "limit_profit": 0.05, "back_profit": 0.02, "input_multiple": 4, "multiple_list": [10, 20, 40, 80, 160, 320], "first_trade": 0.12, "expect_profit_m": 0.12, "interval": 0.1},
-    "robust_0": {"display": u"稳健-", "rate": 3, "trades": 8, "limit_profit": 0.04, "back_profit": 0.01, "input_multiple": 5, "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640], "first_trade": 0.041, "expect_profit_m": 0.16, "interval": 0.08},
-    "robust": {"display": u"稳健", "rate": 3, "trades": 8, "limit_profit": 0.012, "back_profit": 0.01, "input_multiple": 6, "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640], "first_trade": 0.049, "expect_profit_m": 0.18, "interval": 0.005},
-    "robust_1": {"display": u"稳健+", "rate": 3, "trades": 8, "limit_profit": 0.04, "back_profit": 0.01, "input_multiple": 7, "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640], "first_trade": 0.057, "expect_profit_m": 0.20, "interval": 0.08},
-    "aggressive_0": {"display": u"激进-", "rate": 4, "trades": 10, "limit_profit": 0.03, "back_profit": 0.01, "input_multiple": 8, "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024], "first_trade": 0.0175, "expect_profit_m": 0.24, "interval": 0.06},
-    "aggressive": {"display": u"激进", "rate": 4, "trades": 10, "limit_profit": 0.03, "back_profit": 0.01, "input_multiple": 9, "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024], "first_trade": 0.0195, "expect_profit_m": 0.26, "interval": 0.06},
-    "aggressive_1": {"display": u"激进+", "rate": 4, "trades": 10, "limit_profit": 0.03, "back_profit": 0.01, "input_multiple": 10, "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024], "first_trade": 0.0215, "expect_profit_m": 0.28, "interval": 0.06},
+TRADE_MODE_CONFIG_STD = {
+    "keep_0": {"display": u"保守-",
+               "limit_trades": 6,       # 最大买入次数，超过这个次数，不论何种补仓模式都不再补仓，对于不同的补仓模式，这个值会动态减小，比如平方队列时，最多买入4次
+               "limit_profit": 0.05,    # 要求的盈利比例
+               "back_profit": 0.02,     # 盈利回撤比例
+               "track": 1,              # 是否启动追踪止盈
+               "grid": 1,               # 是否启用网格止盈方案
+               "smart_first": 1,        # 是否启用智能建仓
+               # "multiple_list": [10, 20, 40, 80, 160, 320], #倍投的比例队列，用不到
+               "patch_mode": "multiple",    # 补仓的模式，默认为倍投
+               "first_trade": 0.06,     # 首单买比占比（占本金预算的比例)
+               "patch_interval": 0.10,        # 补仓间隔
+               "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+               "expect_profit_m": 0.08,     # 月预估收益
+               "risk": 0.84             # 风险系数，主要用于智能买入和卖出时参考
+               },
+    "keep": {"display": u"保守",
+             "limit_trades": 6,
+             "limit_profit": 0.05,
+             "back_profit": 0.02,
+             "track": 1,  # 是否启动追踪止盈
+             "grid": 1,  # 是否启用网格止盈方案
+             "smart_first": 1,        # 是否启用智能建仓
+             "patch_mode": "multiple",    # 补仓的模式，默认为倍投
+             # "multiple_list": [10, 20, 40, 80, 160, 320],
+             "first_trade": 0.09,
+             "patch_interval": 0.10,
+             "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+             "expect_profit_m": 0.10,
+             "risk": 0.88,
+             },
+    "keep_1": {"display": u"保守+",
+               "limit_trades": 6,
+               "limit_profit": 0.05,
+               "back_profit": 0.02,
+               "smart_first": 1,  # 是否启用智能建仓
+               "track": 1,  # 是否启动追踪止盈
+               "grid": 1,  # 是否启用网格止盈方案
+               "patch_mode": "multiple",    # 补仓的模式，默认为倍投
+               # "multiple_list": [10, 20, 40, 80, 160, 320],
+               "first_trade": 0.12,
+               "patch_interval": 0.1,
+               "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+               "expect_profit_m": 0.12,
+               "risk": 0.92
+               },
+    "robust_0": {"display": u"稳健-",
+                 "limit_trades": 8,
+                 "limit_profit": 0.04,
+                 "back_profit": 0.01,
+                 "track": 1,  # 是否启动追踪止盈
+                 "grid": 1,  # 是否启用网格止盈方案
+                 "smart_first": 1,  # 是否启用智能建仓
+                 "patch_mode": "multiple",  # 补仓的模式，默认为倍投
+                 # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
+                 "first_trade": 0.041,
+                 "patch_interval": 0.08,
+                 "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+                 "expect_profit_m": 0.16,
+                 "risk": 0.96
+                 },
+    "robust": {"display": u"稳健",
+               "limit_trades": 8,
+               "limit_profit": 0.04,
+               "back_profit": 0.01,
+               "track": 1,  # 是否启动追踪止盈
+               "grid": 1,  # 是否启用网格止盈方案
+               "smart_first": 1,  # 是否启用智能建仓
+               "patch_mode": "multiple",  # 补仓的模式，默认为倍投
+               # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
+               "first_trade": 0.049,
+               "patch_interval": 0.08,
+               "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+               "expect_profit_m": 0.18,
+               "risk": 1
+               },
+    "robust_1": {"display": u"稳健+",
+                 "limit_trades": 8,
+                 "limit_profit": 0.04,
+                 "back_profit": 0.01,
+                 "track": 1,  # 是否启动追踪止盈
+                 "grid": 1,  # 是否启用网格止盈方案
+                 "smart_first": 1,  # 是否启用智能建仓
+                 "patch_mode": "multiple",  # 补仓的模式，默认为倍投
+                 # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
+                 "first_trade": 0.057,
+                 "patch_interval": 0.08,
+                 "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+                 "expect_profit_m": 0.20,
+                 "risk": 1.04
+                 },
+    "aggressive_0": {"display": u"激进-",
+                     "limit_trades": 10,
+                     "limit_profit": 0.03,
+                     "back_profit": 0.01,
+                     "track": 1,  # 是否启动追踪止盈
+                     "grid": 1,  # 是否启用网格止盈方案
+                     "smart_first": 1,  # 是否启用智能建仓
+                     "patch_mode": "multiple",  # 补仓的模式，默认为倍投
+                     # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
+                     "first_trade": 0.0175,
+                     "patch_interval": 0.06,
+                     "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+                     "expect_profit_m": 0.24,
+                     "risk": 1.08
+                     },
+    "aggressive": {"display": u"激进",
+                   "limit_trades": 10,
+                   "limit_profit": 0.03,
+                   "back_profit": 0.01,
+                   "track": 1,  # 是否启动追踪止盈
+                   "grid": 1,  # 是否启用网格止盈方案
+                   "smart_first": 1,  # 是否启用智能建仓
+                   "patch_mode": "multiple",  # 补仓的模式，默认为倍投
+                   # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
+                   "first_trade": 0.0195,
+                   "patch_interval": 0.06,
+                   "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+                   "expect_profit_m": 0.26,
+                   "risk": 1.12
+                   },
+    "aggressive_1": {"display": u"激进+",
+                     "limit_trades": 10,
+                     "limit_profit": 0.03,
+                     "back_profit": 0.01,
+                     "track": 1,  # 是否启动追踪止盈
+                     "grid": 1,  # 是否启用网格止盈方案
+                     "smart_first": 1,  # 是否启用智能建仓
+                     "patch_mode": "multiple",  # 补仓的模式，默认为倍投
+                     # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
+                     "first_trade": 0.0215,
+                     "patch_interval": 0.06,
+                     "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+                     "expect_profit_m": 0.28,
+                     "risk": 1.16
+                     },
 }
 
+
+# 交易风格字典
+TRADE_MODE_CONFIG = {
+    "keep_0": {"display": u"保守-",
+               "limit_trades": 6,       # 最大买入次数，超过这个次数，不论何种补仓模式都不再补仓，对于不同的补仓模式，这个值会动态减小，比如平方队列时，最多买入4次
+               "limit_profit": 0.04,    # 要求的盈利比例
+               "back_profit": 0.015,     # 盈利回撤比例
+               "track": 1,              # 是否启动追踪止盈
+               "grid": 1,               # 是否启用网格止盈方案
+               "smart_first": 1,        # 是否启用智能建仓
+               # "multiple_list": [10, 20, 40, 80, 160, 320], #倍投的比例队列，用不到
+               "patch_mode": "multiple",    # 补仓的模式，默认为倍投
+               "first_trade": 0.06,     # 首单买比占比（占本金预算的比例)
+               "patch_interval": 0.08,        # 补仓间隔
+               "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+               "expect_profit_m": 0.08,     # 月预估收益
+               "risk": 0.84             # 风险系数，主要用于智能买入和卖出时参考
+               },
+    "keep": {"display": u"保守",
+             "limit_trades": 6,
+             "limit_profit": 0.04,
+             "back_profit": 0.015,
+             "track": 1,  # 是否启动追踪止盈
+             "grid": 1,  # 是否启用网格止盈方案
+             "smart_first": 1,        # 是否启用智能建仓
+             "patch_mode": "multiple",    # 补仓的模式，默认为倍投
+             # "multiple_list": [10, 20, 40, 80, 160, 320],
+             "first_trade": 0.09,
+             "patch_interval": 0.08,
+             "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+             "expect_profit_m": 0.10,
+             "risk": 0.88,
+             },
+    "keep_1": {"display": u"保守+",
+               "limit_trades": 6,
+               "limit_profit": 0.04,
+               "back_profit": 0.015,
+               "smart_first": 1,  # 是否启用智能建仓
+               "track": 1,  # 是否启动追踪止盈
+               "grid": 1,  # 是否启用网格止盈方案
+               "patch_mode": "multiple",    # 补仓的模式，默认为倍投
+               # "multiple_list": [10, 20, 40, 80, 160, 320],
+               "first_trade": 0.12,
+               "patch_interval": 0.08,
+               "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+               "expect_profit_m": 0.12,
+               "risk": 0.92
+               },
+    "robust_0": {"display": u"稳健-",
+                 "limit_trades": 8,
+                 "limit_profit": 0.03,
+                 "back_profit": 0.01,
+                 "track": 1,  # 是否启动追踪止盈
+                 "grid": 1,  # 是否启用网格止盈方案
+                 "smart_first": 1,  # 是否启用智能建仓
+                 "patch_mode": "multiple",  # 补仓的模式，默认为倍投
+                 # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
+                 "first_trade": 0.041,
+                 "patch_interval": 0.06,
+                 "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+                 "expect_profit_m": 0.16,
+                 "risk": 0.96
+                 },
+    "robust": {"display": u"稳健",
+               "limit_trades": 8,
+               "limit_profit": 0.03,
+               "back_profit": 0.01,
+               "track": 1,  # 是否启动追踪止盈
+               "grid": 1,  # 是否启用网格止盈方案
+               "smart_first": 1,  # 是否启用智能建仓
+               "patch_mode": "multiple",  # 补仓的模式，默认为倍投
+               # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
+               "first_trade": 0.049,
+               "patch_interval": 0.06,
+               "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+               "expect_profit_m": 0.18,
+               "risk": 1
+               },
+    "robust_1": {"display": u"稳健+",
+                 "limit_trades": 8,
+                 "limit_profit": 0.03,
+                 "back_profit": 0.01,
+                 "track": 1,  # 是否启动追踪止盈
+                 "grid": 1,  # 是否启用网格止盈方案
+                 "smart_first": 1,  # 是否启用智能建仓
+                 "patch_mode": "multiple",  # 补仓的模式，默认为倍投
+                 # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
+                 "first_trade": 0.057,
+                 "patch_interval": 0.06,
+                 "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+                 "expect_profit_m": 0.20,
+                 "risk": 1.04
+                 },
+    "aggressive_0": {"display": u"激进-",
+                     "limit_trades": 10,
+                     "limit_profit": 0.026,
+                     "back_profit": 0.008,
+                     "track": 1,  # 是否启动追踪止盈
+                     "grid": 1,  # 是否启用网格止盈方案
+                     "smart_first": 1,  # 是否启用智能建仓
+                     "patch_mode": "multiple",  # 补仓的模式，默认为倍投
+                     # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
+                     "first_trade": 0.0175,
+                     "patch_interval": 0.04,
+                     "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+                     "expect_profit_m": 0.24,
+                     "risk": 1.08
+                     },
+    "aggressive": {"display": u"激进",
+                   "limit_trades": 10,
+                   "limit_profit": 0.026,
+                   "back_profit": 0.007,
+                   "track": 1,  # 是否启动追踪止盈
+                   "grid": 1,  # 是否启用网格止盈方案
+                   "smart_first": 1,  # 是否启用智能建仓
+                   "patch_mode": "multiple",  # 补仓的模式，默认为倍投
+                   # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
+                   "first_trade": 0.0195,
+                   "patch_interval": 0.04,
+                   "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+                   "expect_profit_m": 0.26,
+                   "risk": 1.12
+                   },
+    "aggressive_1": {"display": u"激进+",
+                     "limit_trades": 10,
+                     "limit_profit": 0.026,
+                     "back_profit": 0.006,
+                     "track": 1,  # 是否启动追踪止盈
+                     "grid": 1,  # 是否启用网格止盈方案
+                     "smart_first": 1,  # 是否启用智能建仓
+                     "patch_mode": "multiple",  # 补仓的模式，默认为倍投
+                     # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
+                     "first_trade": 0.0215,
+                     "patch_interval": 0.04,
+                     "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+                     "expect_profit_m": 0.28,
+                     "risk": 1.16
+                     },
+}
+
+# 补仓的几种队列
+PATCH_CONFIG = {
+    "multiple": {"list": [1, 2, 4, 8, 16, 32, 64, 128, 256, 512], "display": u"倍投"},
+    "square": {"list": [2, 4, 16, 256, 65536], "display": u"平方"},
+    "fibonacci": {"list": [1, 1, 2, 3, 5, 8, 13, 21, 34, 55], "display": u"斐波那契"},
+    "lucas": {"list": [1, 3, 4, 7, 11, 18, 29, 47, 76, 123, 199], "display": u"卢卡斯"},
+    "flat": {"list": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], "display": u"平推"}
+}
 
 move_stop_profit_params = {"check": 1, "msf_min": 0.018, "msf_back": 0.21}
 stop_loss_params = {"check": 0, "percent": 0.03}
@@ -269,13 +578,46 @@ SUPPORT_PLATFORMS = {"huobi":
                  {"display": u"火币",
                   "trade_pairs": {
                       "USDT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
-                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
-                      "BTC": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
-                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
-                      "ETH": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
-                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
+                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW", "ALGO",
+                               "BSV", "ITC", "BTT", "BTM", "ATP", "ZIL", "HC", "QTUM", "PAI", "LINK", "NAS", "GXC", "NKN", "IRIS",
+                               "ELF", "CMT", "DOGE", "AE", "WICC", "XLM", "LBA", "ELA", "WTC", "CTXC", "DTA", "HIT", "ACT", "THETA",
+                               "SOC", "RUFF", "VET", "NULS", "OCN", "KAN", "BTS", "SNT", "BIX", "SMT", "LET", "XEM", "DCR", "STORJ",
+                               "CVC", "ZRX", "NANO", "STEEM", "GNT", "WAVES"],
+                      "BTC": ["EOS", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW", "XMX",
+                              "UUU", "ALGO", "BOX", "SHE", "ATP", "IIC", "PORTAL", "CNN", "BSV", "LAMB", "GET", "KCASH", "EKT",
+                              "ITC", "COVA", "NKN", "TOS", "NEO", "BUT", "YCC", "HPT", "BTT", "MEX", "BKBT", "ZIL", "LINK", "PNT",
+                              "FTI", "BTM", "TNT", "PC", "HC", "ABT", "PAI", "CMT", "TNB", "AST", "DOGE", "EGCC", "SSP", "MT",
+                              "LXT", "IRIS", "GXC", "ETN", "HOT", "XLM", "QTUM", "BAT", "GTC", "NAS", "MAN", "ELA", "CTXC", "EDU",
+                              "UTK", "HIT", "XTZ", "IDT", "ZJLT", "DAC", "LBA", "AE", "SWFTC", "UC", "XZC", "TOPC", "NPXS",
+                              "WAX", "MUSK", "EKO", "PAY", "TRIO", "REQ", "VET", "WICC", "UGAS", "STK", "ELF", "GAS", "CHAT",
+                              "DGD", "YEE", "WTC", "REN", "SEELE", "LUN", "AAC", "OCN", "DATX", "BCV", "ARDR", "ACT", "ZLA",
+                              "DTA", "KAN", "NEXO", "NULS", "DAT", "WAN", "THETA", "DBC", "CVCOIN", "XVG", "MTN", "RCCC", "18C",
+                              "AIDOC", "MANA", "GSC", "BLZ", "QASH", "SMT", "RDN", "LOOM", "DGB", "UIP", "DOCK", "SOC", "ZEN",
+                              "MXC", "BTS", "SRN", "PROPY", "QUN", "MEET", "SNC", "ICX", "PHX", "WPR", "RUFF", "NCC", "BIX",
+                              "ZRX", "KNC", "GNX", "SNT", "APPC", "LYM", "XEM", "DCR", "SC", "WAVES", "POLY", "RCN", "FAIR",
+                              "NANO", "STEEM", "NCASH", "LET", "RTE", "KMD", "CVNT", "BFT", "LSK", "EVX", "SALT", "MTX", "OST",
+                              "STORJ", "GNT", "CVC", "QSP", "MTL", "ENG", "GRS", "MCO", "POWER", "ADX", "RBTC", "SBTC", "BCD",
+                              "BCX", "BIFI", "BTG"],
+                      "ETH": ["EOS", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
+                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW", "XMX",
+                              "UUU", "ALGO", "BOX", "SHE", "ATP", "IIC", "PORTAL", "CNN", "BSV", "LAMB", "GET", "KCASH", "EKT",
+                              "ITC", "COVA", "NKN", "TOS", "NEO", "BUT", "YCC", "HPT", "BTT", "MEX", "BKBT", "ZIL", "LINK", "PNT",
+                              "FTI", "BTM", "TNT", "PC", "HC", "ABT", "PAI", "CMT", "TNB", "AST", "DOGE", "EGCC", "SSP", "MT",
+                              "LXT", "IRIS", "GXC", "ETN", "HOT", "XLM", "QTUM", "BAT", "GTC", "NAS", "MAN", "ELA", "CTXC", "EDU",
+                              "UTK", "HIT", "XTZ", "IDT", "ZJLT", "DAC", "LBA", "AE", "SWFTC", "UC", "XZC", "TOPC", "NPXS",
+                              "WAX", "MUSK", "EKO", "PAY", "TRIO", "REQ", "VET", "WICC", "UGAS", "STK", "ELF", "GAS", "CHAT",
+                              "DGD", "YEE", "WTC", "REN", "SEELE", "LUN", "AAC", "OCN", "DATX", "BCV", "ARDR", "ACT", "ZLA",
+                              "DTA", "KAN", "NEXO", "NULS", "DAT", "WAN", "THETA", "DBC", "CVCOIN", "XVG", "MTN", "RCCC", "18C",
+                              "AIDOC", "MANA", "GSC", "BLZ", "QASH", "SMT", "RDN", "LOOM", "DGB", "UIP", "DOCK", "SOC", "ZEN",
+                              "MXC", "BTS", "SRN", "PROPY", "QUN", "MEET", "SNC", "ICX", "PHX", "WPR", "RUFF", "NCC", "BIX",
+                              "ZRX", "KNC", "GNX", "SNT", "APPC", "LYM", "XEM", "DCR", "SC", "WAVES", "POLY", "RCN", "FAIR",
+                              "NANO", "STEEM", "NCASH", "LET", "RTE", "KMD", "CVNT", "BFT", "LSK", "EVX", "SALT", "MTX", "OST",
+                              "STORJ", "GNT", "CVC", "QSP", "MTL", "ENG", "GRS", "MCO", "POWER", "ADX", "RBTC", "SBTC", "BCD",
+                              "BCX", "BIFI", "BTG"],
                       "HT": ["EOS", "BTC", "ETH", "XRP", "LTC", "BCH", "ETC", "HT", "ADA", "IOTA", "OMG", "ZEC", "DASH", "MDS",
-                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW"],
+                      "XMR", "HB10", "RSR", "TRX", "TOP", "ATOM", "IRIS", "IOST", "TT", "ONT", "HPT", "NEO", "LAMB", "NEW", "KCASH",
+                             "MT", "NKN", "ATP", ""],
                       "HUSD": ["USDT", "BTC", "ETH", "XRP", "EOS", "HT"]
                   }
                 },
@@ -285,16 +627,17 @@ SUPPORT_PLATFORMS = {"huobi":
 
 
 PRINCIPAL = 0.0         # 本金
-TRADE_MODE = "robust"   # 当前选择的交易风格，稳健
+TRADE_MODE = "aggressive"   # 当前选择的交易风格，稳健
+TRADE_GRID = 1
 INTERVAL_REF = {0: "整体均价", 1: "上单价格"}      # 间隔补单参考，0-参考整体持仓均价，1-参考上一单买入价
-
 
 # 单次交易信息，这样的一次交易记录，将被包含在一组执行单元中, 除非是手动买入的
 TRADE = {
-    "buy_type": "buy_auto",         # 买入模式：buy_auto 自动买入(机器策略买入)，buy_man手动买入,
+    "buy_type": "auto",         # 买入模式：auto 自动买入(机器策略买入)，man手动买入,
     "sell_type": "profit",      # 要求的卖出模式，机器买入的一般都为止盈卖出。可选：profit 止盈卖出（默认）， no-不要卖出，针对手动买入的单，smart-使用高抛，kdj等策略卖出
-    "limit_profit": 0,              # 大于零代表要求必须盈利,否则由系统智能卖出
-    "back_profit": 0,               # 追踪回撤系数
+    "limit_profit": -1,              # 大于零代表使用当前的盈利比例，否则使用所属交易组的盈利比例
+    "back_profit": -1,               # 追踪回撤系数, 同上
+    "track": -1,                     # 是否追踪止盈，同上
     "buy_time": None,
     "sell_time": None,
     "coin": "EOS",
@@ -302,41 +645,42 @@ TRADE = {
     "amount": 0,              # 买入或卖出的币量
     "buy_price": 0,            # 实际买入成交的价格
     "cost": 0,               # 实际花费的计价货币量
-    "is_sell": 0,           # 是否已经卖出
+    "is_sell": 1,           # 是否已经卖出
     "sell_price": 0,        # 实际卖出的价格
     "profit_percent": 0,    # 盈利比，卖出价格相对于买入价格
     "profit": 0,            # 盈利额，只有卖出后才有
 }
 
+
 # 一组执行单元，买和卖都在里面
 TRADE_GROUP = {
-    "trigger_reason": "",    # 首单触发原因，如kdj/boll/low
-    "mode": "robust",           # 按何种交易风格执行
-    "coin": "EOS",
-    "money": "USDT",
+    "build": "smart",           # 建仓触发模式smart－－智能建仓，　auto－－自动建仓
+    "mode": "",                  #robust,keep..按何种交易风格执行，　若未设置，则默认使用全局的交易参数，
+    "coin": "",             #EOS等　
+    "money": "",        #USDT等　
     "trades": [],            # 每一次交易记录，
-    "grid": 1,              # 是否开启网格交易
+    "grid": -1,              # 是否开启网格交易, 小于零代表使用全局配置
+    "track": -1,             # 是否开启追踪止盈, 小于零代表使用全局配置
     "amount": 0,         # 持仓数量（币）
     "cost": 0,           # 当前持仓费用（计价货币）
     "avg_price": 0,      # 持仓均价
     "max_cost": 0,      # 这组交易中最多时持仓花费，用于计算收益比
-    "profits": [],  # {"time": xxxx, "profit":1.26}这组策略的总收益， 每次卖出后都进行累加
+    "profit": 0,        # 这组策略的总收益， 每次卖出后都进行累加
     "profit_percent": 0,    # 整体盈利比（整体盈利比，当前总盈利数除以最大花费,　total_profit_amount/max_cost）
     "last_profit_percent": 0,   # 尾单盈利比（最后一单的盈利比）
-    "limit_profit": 0,      # 止盈比例，　可单独设置，如果未设置（0），则使用当前所选择的交易策略的止盈比例
-    "back_profit": 0,       # 追踪比例
-    "buy_counts": 0,             # 已建单数，目前处理买入状态的单数
+    "limit_profit": -1,      # 止盈比例，　可单独设置，如果未设置（-1），则使用当前所选择的交易策略的止盈比例
+    "back_profit": -1,       # 追踪比例，　可单独设置，如果未设置（-1），则使用当前所选择的交易策略的追踪比例
+    "buy_counts": 0,             # 已建单数，买入次数
     "sell_counts": 0,            # 卖出单数，卖出的次数，其实就是尾单收割次数
-    "patch_intervals": [],       # 每次补单实际间隔比例
-    "patch_ref": 0,          # 补仓参考
-    "last_buy_amount": 0,     # 最后一次买入币量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
-    "last_buy_cost": 0,     # 最后一次买入金额量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
-    "last_buy_price": 0,    # 最后一次买入价格，用来做网格交易，如果最后一单已经卖出，则这个价格需要变成倒数第二次买入价格，以便循环做尾单
-    "last_buy_sell": 0,     # 尾单收割次数
+    "patch_index": 0,           # 当前补单序号，每买入一单后，path_index加上，　每卖出一单后，pathc_index减1
+    "patch_ref": -1,             # 补仓参考，0--整体均价，１－－参考上一单买入价格，　小于零代表使用全局
+    "patch_interval": -1,     # 补仓间隔，　小于零代表使用全局
+    "last_buy_price": 0,    # 最后一次买入价格，补仓时有可能会选择参考上次买入价，如果上一单已经卖出，那么参考上上一单，以此类推
     "start_time": None,     # 建仓时间
     "end_time": None,       # 如果为none代表还未结束
     "last_update": None,
-    "uri": "20190608123012336"  # 唯一标识，建仓时间加随机数
+    "uri": "",  # 唯一标识，建仓时间加随机数，如20190608123012336
+    "principal": -1, #当前这组交易的预算,未单独设置的话(小于零)，则默认为全局本金预算除以监控的币对数，
 }
 
 

@@ -7,10 +7,9 @@ import time
 from tkinter import Toplevel, Button,  LEFT, RIGHT, Frame, END
 from tkinter.scrolledtext import ScrolledText
 import threading
-import sys
-if "win" in sys.platform:
-    # import win32com.client
-    import winsound
+# import sys
+# if "win" in sys.platform:
+#     import winsound
 RUNING = True
 
 class PopupTrade(Toplevel):
@@ -47,7 +46,7 @@ class PopupTrade(Toplevel):
         def alarm_th(timeout):
             global RUNING
             while timeout>0 and RUNING:
-                winsound.Beep(2015, 1000)
+                # winsound.Beep(2015, 1000)
                 print("Beep-----------------------")
                 time.sleep(1)
                 timeout -= 1

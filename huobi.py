@@ -36,7 +36,11 @@ class Huobi:
     def _req_history_kline(self):
         logger.info("---req_history_kline.")
         for symbol in config.NEED_TOBE_SUB_SYMBOL:
-            log_config.output2ui("正在请求历史价格数据: {}.".format(symbol.upper()), 0)
+            if symbol in process.KLINE_DATA.keys():
+                # 已经取过历史数据的币对，不再拉取
+                continue
+
+            log_config.output2ui("正在请求历史交易数据: {}.".format(symbol.upper()), 0)
             for kl in config.KL_HISTORY:
                 channel = "market.{}.kline.{}".format(symbol, kl)
                 logger.info("---req_history_kline: {}.".format(channel))
@@ -58,6 +62,7 @@ class Huobi:
                 logger.info("-sub_market: {}.".format(channel))
                 log_config.output2ui("-sub_market: {}.".format(channel), 7)
                 self._hws.ws_sub(channel, process.kline_sub_msg_process)
+                time.sleep(1)
 
     def _init_db(self):
         du = db_util.DBUtil()

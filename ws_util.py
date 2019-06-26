@@ -81,7 +81,7 @@ class HuobiWS:
     #关闭websocket连接
     def ws_close(self):
         logging.info("close web socket.")
-        log_config.output2ui("close web socket.")
+        log_config.output2ui("取消实时行情订阅", 0)
         self._run = False
         if self._ws:
             self._ws.shutdown()
@@ -97,13 +97,11 @@ class HuobiWS:
     #订阅频道，callback 为所订阅频道推送数的处理函数，默认为none
     def ws_sub(self, channel, call_back=None, redo=False):
         if channel in self._sub_map.keys() and not redo:
-            logger.info("subbed: {} had been subscribed".format(channel))
-            log_config.output2ui("subbed: {} had been subscribed".format(channel))
             return True
 
         if not self._ws:
             logger.warning("please create web socket before sub.")
-            log_config.output2ui("please create web socket before sub.", 2)
+            log_config.output2ui("please create web socket before sub.", 7)
             return False
 
         index = len(self._sub_map)
@@ -117,7 +115,7 @@ class HuobiWS:
         # ret = self._ws.send("""{"sub": "market.btcusdt.kline.5min","id": "id10"}""")
         if ret:
             self._sub_map[channel] = call_back
-            logger.info("SUB: {} have subscribed successfully".format(channel))
+            # logger.info("SUB: {} have subscribed successfully".format(channel))
             log_config.output2ui("SUB: {} have subscribed successfully".format(channel), 7)
             return True
         else:

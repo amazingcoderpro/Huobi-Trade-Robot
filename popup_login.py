@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 # Created by Charles on 2019/6/11
 # Function:
-import os
-from tkinter import Toplevel, Label, Button, Entry, StringVar, LEFT, RIGHT, \
-    Checkbutton, Frame, messagebox, OptionMenu, IntVar,Text, END, filedialog, ACTIVE
+
+from tkinter import Toplevel, Label, Button, Entry, StringVar, LEFT, Checkbutton, Frame, messagebox, IntVar, ACTIVE
 import config
 import webbrowser
 
@@ -114,13 +113,18 @@ class PopupLogin(MyDialog):
         frame = Frame(self)
         Label(frame, text=u'账号:', width=10).grid(row=1, column=0)
         # 创建并添加Entry,用于接受用户输入的用户名
-        self.account = Entry(frame, width=20)
+        self.account_str = StringVar()
+        self.account_str.set(config.CURRENT_ACCOUNT)
+        self.account = Entry(frame, textvariable=self.account_str, width=20)
         self.account.grid(row=1, column=1)
 
         # 创建并添加Label
         Label(frame, text=u'密码:', width=10).grid(row=2, column=0)
         # 创建并添加Entry,用于接受用户输入的密码
-        self.password = Entry(frame, width=20)
+        self.password_str = StringVar()
+        self.password_str.set(config.CURRENT_PASSWORD)
+
+        self.password = Entry(frame, textvariable=self.password_str, width=20)
         self.password.grid(row=2, column=1)
         self.password["show"] = "*"
 
@@ -148,20 +152,20 @@ class PopupLogin(MyDialog):
         webbrowser.open(config.REGISTER_URL)
 
     def validate(self):
-        account = self.account.get()
-        password = self.password.get()
+        account = self.account_str.get()
+        password = self.password_str.get()
         if not account or not password:
             messagebox.showwarning(u"提示", u"账号、密码不能为空!")  # 提出警告对话窗
             return False
 
-        if len(account) < 11 or len(password) < 6:
+        if len(account) < 6 or len(password) < 6:
             messagebox.showwarning(u"提示", u"输入的账号或密码无效!")  # 提出警告对话窗
             return False
         return True
 
     def process_input(self):
-        account = self.account.get()
-        password = self.password.get()
+        account = self.account_str.get()
+        password = self.password_str.get()
         self.result["account"] = account
         self.result["password"] = password
         self.result["remember"] = self.remember.get()

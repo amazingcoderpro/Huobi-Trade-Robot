@@ -3,8 +3,8 @@
 # Created by Charles on 2018/6/30
 # Function:
 import os
-from tkinter import Toplevel, Label, Button, Entry, StringVar, LEFT, RIGHT, Checkbutton, Frame, \
-    messagebox, OptionMenu, IntVar,Text, END, filedialog, N, S, E, W, ACTIVE
+from tkinter import Label, Button, StringVar, LEFT, Checkbutton, Frame, \
+    messagebox, OptionMenu, IntVar, N, S, W, ACTIVE
 import config
 from popup_login import MyDialog
 
@@ -35,6 +35,8 @@ class PopupCoins(MyDialog):
         row = 0
         col = 0
         coins = config.PLATFORMS.get(config.CURRENT_PLATFORM, {}).get("trade_pairs", {}).get(lst_moneys[0], [])
+        coins = list(set(coins))
+        coins.sort()
         for coin in coins:
             ckb_value = IntVar()
             ckb_value.set(0)
@@ -57,11 +59,20 @@ class PopupCoins(MyDialog):
         self.bind("<Escape>", self.on_ok)
         self.frame_btn.pack()
 
+        print(config.CURRENT_SYMBOLS)
+        for k, v in config.CURRENT_SYMBOLS.items():
+            coins = v.get("coins")
+            for coin in coins:
+                coin_name = coin.get("coin")
+                self.selected_symbols[k].append(coin_name)
+
         self.cmd_money_change(None)
 
     def cmd_money_change(self, event):
         current_money = self.money.get()
         coins = config.PLATFORMS.get(config.CURRENT_PLATFORM, {}).get("trade_pairs", {}).get(current_money, [])
+        coins = list(set(coins))
+        coins.sort()
 
         # 先销掉所有非当前计价货币的checkbtn
         self.coins_frame.destroy()
@@ -126,6 +137,7 @@ class PopupCoins(MyDialog):
     def validate(self):
         self.result["symbols"] = {}
         coin_count = 0
+        print(self.selected_symbols)
         for money, coins in self.selected_symbols.items():
             if money not in self.result["symbols"].keys():
                 self.result["symbols"][money] = {"trade": 0, "frozen": 0, "coins": []}

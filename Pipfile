@@ -18,6 +18,8 @@ ta-lib = "*"
 itchat = "*"
 pyinstaller = "*"
 pillow = "*"
+pyyaml = "*"
+tkcalendar = "*"
 
 [requires]
 python_version = "3.6"

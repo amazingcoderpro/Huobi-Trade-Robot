@@ -3,8 +3,8 @@
 # Created by Charles on 2018/6/30
 # Function: 
 import os
-from tkinter import Toplevel, Label, Button, Entry, StringVar, LEFT, RIGHT, Checkbutton, Frame, \
-    messagebox, OptionMenu, IntVar,Text, END, filedialog, N, S, E, W, ACTIVE
+from tkinter import Label, Button, Entry, StringVar, LEFT, RIGHT, Checkbutton, Frame, \
+    messagebox, OptionMenu, IntVar, filedialog, N, S, E, W, ACTIVE
 import config
 from popup_login import MyDialog
 
@@ -39,6 +39,16 @@ class PopupAPI(MyDialog):
         self.ety_secret.grid(row=2, column=1)
         self.btn_save = Button(frame, text=u"保存密钥对", command=lambda: self.on_save_key(), width=10)
         self.btn_save.grid(row=2, column=2)
+
+        self.remember = IntVar()
+        self.remember.set(1)
+        Checkbutton(frame, text=u'记住API', variable=self.remember, onvalue=1, offvalue=0, width=6).grid(row=3, column=0)
+
+        self.load_histor = IntVar()
+        self.load_histor.set(1)
+        Checkbutton(frame, text=u'加载历史交易记录', variable=self.load_histor, onvalue=1, offvalue=0, width=15).grid(row=3, column=1)
+
+
         frame.pack(padx=5, pady=5)
 
         f = Frame(self)
@@ -52,27 +62,6 @@ class PopupAPI(MyDialog):
         self.bind("<Escape>", self.on_ok)
         f.pack()
 
-        #
-        # row3 = Frame(self)
-        # row3.pack(fill="x", ipadx=1, ipady=1)
-        # Label(row3, text=u"选择币种: ", width=10).pack(side=LEFT)
-        # # lst_trade = ['ethusdt', 'btcusdt', 'eosusdt', 'xrpusdt', 'eoseth', "rsrusdt"]
-        #
-        # lst_trade_left = [x.upper() for x in config.SUPPORT_TRADE_LEFT]
-        # lst_trade_right = [x.upper() for x in config.SUPPORT_TRADE_RIGHT]
-        #
-        # self.trade_left.set(lst_trade_left[0])
-        # OptionMenu(row3, self.trade_left, *lst_trade_left).pack(side=LEFT)
-        #
-        # self.trade_right.set(lst_trade_right[0])
-        # OptionMenu(row3, self.trade_right, *lst_trade_right).pack(side=LEFT)
-        #
-        # Label(row3, text=u"WS站点: ", width=10).pack(side=LEFT)
-        # lst_site = ['BR', 'PRO', 'HX']
-        # OptionMenu(row3, self.ws_site, *lst_site).pack(side=LEFT)
-        #
-        # Label(row3, text=u"RestAPI站点: ", width=10).pack(side=LEFT)
-        # OptionMenu(row3, self.rest_site, *lst_site).pack(side=LEFT)
 
     # 该方法可对用户输入的数据进行校验
     def validate(self):
@@ -99,6 +88,8 @@ class PopupAPI(MyDialog):
         for plt, cfg in config.PLATFORMS.items():
             if cfg["display"] == self.result["platform_display"]:
                 self.result["platform"] = plt
+        self.result["remember"] = self.remember.get()
+        self.result["load_history"] = self.load_histor.get()
 
     def on_save_key(self):
         access_key = self.access_key.get()

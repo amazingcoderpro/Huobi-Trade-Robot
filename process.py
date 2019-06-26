@@ -172,7 +172,7 @@ def save_data_df(data):
                                          tick["vol"], tick["count"]]
             except Exception as e:
                 logger.exception("save_data_df, e={}".format(e))
-                df_rt.loc[len(pos)-1] = [ts, tick["id"], tick["open"], tick["high"],
+                df_rt.loc[pos-1] = [ts, tick["id"], tick["open"], tick["high"],
                                          tick["low"], tick["close"], tick["amount"],
                                          tick["vol"], tick["count"]]
         else:

@@ -16,7 +16,7 @@ class GressBar():
         top.overrideredirect(True)
         # top.attributes("-toolwindow", 1)
         top.wm_attributes("-topmost", 1)
-        top.title("Huobi Trade")
+        top.title("DDU Robert")
         # Label(top, text="正在初始化网络和历史数据，请稍等……", fg="green").pack(pady=2)
         # default_text = "Initializing network and historical data, please wait a moment..."
         default_text = u"正在初始化网络和历史数据，请稍等..."

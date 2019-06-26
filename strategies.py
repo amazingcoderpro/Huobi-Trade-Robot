@@ -35,11 +35,11 @@ TRADE_RECORD = []
 
 move_stop_profit_params = {"check": 1, "msf_min": 0.018, "msf_back": 0.21}
 stop_loss_params = {"check": 0, "percent": 0.03}
-kdj_buy_params = {"check": 1, "k": 23, "d": 21, "buy_percent": 0.22, "up_percent": 0.004, "peroid": "15min"}
-kdj_sell_params = {"check": 1, "k": 82, "d": 80, "sell_percent": 0.3, "down_percent": 0.005, "peroid": "15min"}
+kdj_buy_params = {"check": 1, "k": 23, "d": 21, "buy_percent": 0.22, "up_percent": 0.004, "period": "15min"}
+kdj_sell_params = {"check": 1, "k": 82, "d": 80, "sell_percent": 0.3, "down_percent": 0.005, "period": "15min"}
 vol_price_fly_params = {"check": 1, "vol_percent": 1.2, "high_than_last": 2, "price_up_limit": 0.01, "buy_percent": 0.3,
-                        "peroid": "5min"}
-boll_strategy_params = {"check": 1, "peroid": "15min", "open_diff1_percent": 0.025, "open_diff2_percent": 0.025,
+                        "period": "5min"}
+boll_strategy_params = {"check": 1, "period": "15min", "open_diff1_percent": 0.025, "open_diff2_percent": 0.025,
                         "close_diff1_percent": 0.0025, "close_diff2_percent": 0.0025, "open_down_percent": -0.02,
                         "open_up_percent": 0.003, "open_buy_percent": 0.35, "trade_percent": 1.5, "close_up_percent": 0.03,
                         "close_buy_percent": 0.5}
@@ -181,7 +181,7 @@ def boll_strategy():
         log_config.output2ui("boll_strategy is not check", 2)
         return False
 
-    peroid = boll_strategy_params.get("peroid", "15min")
+    period = boll_strategy_params.get("period", "15min")
     symbol = config.NEED_TOBE_SUB_SYMBOL[0]
 
     # if is_still_up(symbol):
@@ -192,7 +192,7 @@ def boll_strategy():
     #     logger.info(u"boll_strategy　still down")
     #     return False
 
-    market = "market.{}.kline.{}".format(symbol, peroid)
+    market = "market.{}.kline.{}".format(symbol, period)
     upper, middle, lower = get_boll(market, 0)
     price = get_current_price(symbol)
     diff1 = upper - middle
@@ -458,194 +458,902 @@ def trade_advise_update():
     return False
 
 
-def global_limit_profit():
+def global_limit_profit(mode=""):
+    """
+    全局配置的止盈比例
+    :return:
+    """
+    mode = config.TRADE_MODE if not mode else mode
     return config.TRADE_MODE_CONFIG.get(config.TRADE_MODE, {}).get("limit_profit", 0.25)
 
-def global_back_profit():
-    return config.TRADE_MODE_CONFIG.get(config.TRADE_MODE, {}).get("back_profit", 0.05)
 
-def auto_trade():
-    logger.info("auto trade trigger...group num={}".format(len(config.TRADE_RECORDS_NOW)))
+def global_back_profit(mode=""):
+    """
+    全局配置的回撤比例
+    :return:
+    """
+    mode = config.TRADE_MODE if not mode else mode
+    return config.TRADE_MODE_CONFIG.get(mode, {}).get("back_profit", 0.05)
 
-    def should_stop_profit(buy_price, current_price, limit_profit=0.02, back_profit=0.04, monitor_start=None):
-        if current_price >= buy_price*(1+limit_profit):
+
+def global_risk(mode=""):
+    mode = config.TRADE_MODE if not mode else mode
+    return config.TRADE_MODE_CONFIG.get(mode, {}).get("risk", 1.04)
+
+
+def global_track(mode=""):
+    mode = config.TRADE_MODE if not mode else mode
+    return config.TRADE_MODE_CONFIG.get(mode, {}).get("track", 1)
+
+
+def global_gird(mode=""):
+    mode = config.TRADE_MODE if not mode else mode
+    return config.TRADE_MODE_CONFIG.get(mode, {}).get("grid", 1)
+
+
+def global_patch_interval(mode=""):
+    mode = config.TRADE_MODE if not mode else mode
+    return config.TRADE_MODE_CONFIG.get(mode, {}).get("patch_interval", 0.05)
+
+
+def global_patch_ref(mode=""):
+    mode = config.TRADE_MODE if not mode else mode
+    return config.TRADE_MODE_CONFIG.get(mode, {}).get("patch_ref", 0)
+
+
+def global_smart_first(mode=""):
+    mode = config.TRADE_MODE if not mode else mode
+    return config.TRADE_MODE_CONFIG.get(mode, {}).get("smart_first", 1)
+
+
+def patch_multiple(index, mode="multiple", trade_limits=8):
+    # 根据当前的补仓模式和补仓序数(第几次补仓)计算出本次的补仓倍数, 这个倍数是相对于首单的哦
+    patch = 1
+    # 最多买入10次, 即最多补仓9次
+    if index >= trade_limits:
+        patch = 0
+    elif index <= 0:
+        patch = 1
+    else:
+        if mode == "multiple":
+            patch = (2*index)/1
+        elif mode == "flat":
+            patch = 1/1
+        elif mode == "fibonacci":
+            fib = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
+            patch = fib[index]/1
+        elif mode == "lucas":
+            lucas = [1, 3, 4, 7, 11, 18, 29, 47, 76, 123, 199]
+            patch = lucas[index]/1
+        elif mode == 'square':
+            square = [2, 4, 16, 256]#平方队列最多补3次
+            if index > 3:
+                patch = 0
+            else:
+                patch = square[index]/2
+
+    return patch
+
+
+def should_stop_profit(symbol, buy_price, limit_profit, back_profit, monitor_start, track=1):
+    limit_price = buy_price*(1+limit_profit)
+    limit_delta = buy_price*back_profit
+    max_price = get_max_price(symbol, monitor_start)
+
+    if max_price >= limit_price:
+        if not track:
+            #　如果不追踪，一旦达到止盈，直接卖出
             return True
-        return False
 
+        current_price = get_current_price(symbol)
+        if current_price <= max_price-limit_delta:
+            if is_still_up2(symbol):
+                logger.warning("should_stop_profit but still up!!")
+                return False
+            else:
+                return True
+
+    return False
+
+
+def should_patch(symbol, ref_price, patch_interval):
+    current_price = get_current_price(symbol=symbol)
+
+    # 如果当前价格小于整体均价的一定比例，则补单
+    if current_price < ref_price * (1 - patch_interval):
+        # 如果还在跌，暂时不补仓
+        if is_still_down2(symbol):
+            logger.warning("should_patch but still down!!")
+            return False
+        else:
+            return True
+
+    return False
+
+
+def stg_smart_profit():
+    for trade_group in config.TRADE_RECORDS_NOW:
+        #已经结束，或者trades为空
+        if trade_group["end_time"] or not trade_group["trades"]:
+            logger.info("trade group is ended or empty.")
+            continue
+
+        # logger.info("trade group={}".format(trade_group))
+        trades = trade_group.get("trades", [])
+
+        # 如果没有单独设置，则使用全局的止盈参数
+        group_mode_name = trade_group.get("mode", "")
+        group_mode_name = config.TRADE_MODE if not group_mode_name else group_mode_name
+
+        group_limit_profit = trade_group.get("limit_profit", -1)
+        group_limit_profit = global_limit_profit(group_mode_name) if group_limit_profit < 0 else group_limit_profit
+
+        group_back_profit = trade_group.get("back_profit", -1)
+        group_back_profit = global_back_profit(group_mode_name) if group_back_profit < 0 else group_back_profit
+
+        group_track = trade_group.get("track", -1)
+        group_track = global_track(group_mode_name) if group_track < 0 else group_track
+
+        #如果没有设置，则依据全局的网格参数
+        grid = trade_group.get("grid", -1)   # 是否开启网格
+        grid = global_gird(group_mode_name) if grid < 0 else grid
+
+        coin_name = trade_group.get("coin", "")
+        money_name = trade_group.get("money", "")
+        symbol = "{}{}".format(coin_name, money_name).lower()
+
+        current_price = get_current_price(symbol)
+
+        # 判断是否要开始收割了
+        if grid == 1:
+            # 网格收割法，倒序依次判断所有可以收割的单子
+            len_trades = len(trades)
+            for trade in trades[::-1]:
+                # 已经卖出
+                if trade.get("is_sell", 0):
+                    len_trades -= 1
+                    continue
+
+                # 要求的卖出方式不是止盈卖出, 则另作处理
+                if trade.get("sell_type", "profit") != "profit":
+                    continue
+
+                # 以尾单价格判断是否该收割尾单
+                ref_price = trade['buy_price']
+                ref_cost = trade["cost"]
+                ref_amount = trade['amount']    # 卖出时以币算
+                plan_sell_amount = ref_amount
+                ref_time = trade["buy_time"]
+                symbol = "{}{}".format(trade["coin"], trade["money"]).lower()
+
+                # 如果没有设置则使用group的
+                trade_limit_profit = trade.get("limit_profit", -1)
+                trade_limit_profit = group_limit_profit if trade_limit_profit < 0 else trade_limit_profit
+                trade_back_profit = trade.get('back_profit', -1)
+                trade_back_profit = group_back_profit if trade_back_profit < 0 else trade_back_profit
+                trade_track = trade.get("track", -1)
+                trade_track = group_track if trade_track < 0 else trade_track
+                # 判断是否该卖出了
+                if should_stop_profit(symbol, ref_price, trade_limit_profit, trade_back_profit, ref_time, track=trade_track):
+                    ret = sell_market(symbol, amount=plan_sell_amount, currency=coin_name.lower())
+                    if ret.get("code", 0) == 1:
+                        len_trades -= 1
+                        time_now = datetime.now()
+                        detail = ret.get("data", {})
+                        field_amount = detail.get("field_amount", 0)  # 币
+                        field_cash_amount = detail.get("field_cash_amount", 0)  # 金
+                        fees = detail.get("fees", 0)
+
+                        # 卖出盈利
+                        sell_profit = (current_price - ref_price) * field_amount
+                        # sell_profit = field_cash_amount - ref_amount
+                        sell_profit_percent = sell_profit / ref_cost
+
+                        # 修改尾单的信息，置为已卖出，修改卖出价格等
+                        trade["is_sell"] = 1
+                        trade['sell_type'] = 'profit'
+                        trade["sell_price"] = current_price
+                        trade["profit"] = sell_profit
+                        trade["profit_percent"] = sell_profit_percent
+                        trade["sell_time"] = time_now
+
+                        # 更改group信息
+                        trade_group["profit"] += sell_profit
+                        trade_group["last_profit_percent"] = sell_profit_percent    #尾单收益比
+                        trade_group["profit_percent"] = trade_group["profit"] / trade_group["max_cost"]
+
+                        # 从整体持仓量和成本减去实际卖掉量和钱，止盈，成本会被渐渐拉低，甚至为负
+                        trade_group["amount"] -= field_amount
+                        trade_group["cost"] -= field_cash_amount
+
+                        trade_group["last_update"] = time_now
+                        if trade_group["amount"] >= 0.0001 and trade_group["cost"] >= 0.0001:
+                            trade_group["avg_price"] = trade_group["cost"] / trade_group["amount"]
+
+                        trade_group["sell_counts"] += 1
+                        trade_group["patch_index"] -= 1     #每卖掉一单，补仓次数减一，以保证下次补仓的正确
+
+                        msg = "[网格止盈{}] 实际卖出币量： {}, 卖出金额: {}, 卖出价格: {}, 上次买入价格： {}, 盈利金额： {}, 盈利比： {}%". \
+                            format(symbol.upper(), round(field_amount, 4), round(field_cash_amount, 6),
+                                   round(current_price, 6),
+                                   round(ref_price, 6), round(sell_profit, 6), round(sell_profit_percent * 100, 3))
+
+                        log_config.output2ui(msg, 5)
+                        logger.warning(msg)
+                        log_config.notify_user(msg, own=True)
+                    else:
+                        log_config.output2ui(u"网格止盈失败, 请检查您的持仓情况, 计划止盈卖出[{}]币量： {}".format(symbol.upper(), round(plan_sell_amount, 4)), 3)
+                        pause = True
+
+            # 判断是不是全部卖出了
+
+            if len_trades <= 0:
+                trade_group["end_time"] = datetime.now()
+                msg = "[整组完成{}] 本组交易最大持仓本金： {}, 共盈利{}次, 总盈利金额： {}, 盈利比： {}%, 持续时间： {}分钟". \
+                    format(symbol.upper(), round(trade_group["max_cost"], 6), trade_group["sell_counts"],
+                           round(trade_group["profit"], 4),
+                           round(trade_group["profit_percent"]*100, 3), int((trade_group["end_time"]-trade_group["start_time"]).total_seconds()/60))
+                log_config.output2ui(msg, 5)
+                logger.warning(msg)
+                log_config.notify_user(msg, own=True)
+
+            else:
+                # 修改最后一次买入价格为最后一单未卖出的买入价格
+                trade_group["last_buy_price"] = trades[len_trades-1]["buy_price"]
+        else:
+            # 以整体均价判断是否该卖出所有
+            avg_price = trade_group.get("avg_price", 0)
+            amount = trade_group.get("amount", 0)   # 持币量
+            cost = trade_group.get("cost", 0)       # 当前持仓成本
+            ref_price = avg_price
+            ref_cost = cost
+            plan_sell_amount = amount
+            ref_time = trade_group.get("start_time", None)
+
+            # 判断是否该卖出了
+            if should_stop_profit(symbol, ref_price, group_limit_profit, group_back_profit, ref_time, track=group_track):
+                ret = sell_market(symbol, amount=plan_sell_amount, currency=coin_name.lower())
+                if ret.get("code", 0) == 1:
+                    time_now = datetime.now()
+                    detail = ret.get("data", {})
+                    field_amount = detail.get("field_amount", 0)  # 币
+                    field_cash_amount = detail.get("field_cash_amount", 0)  # 金
+                    fees = detail.get("fees", 0)
+
+                    # 整体卖出后，把每一单都设置为已卖出状态
+                    for trade in trade_group["trades"]:
+                        if trade["is_sell"] == 0:
+                            trade["is_sell"] = 1
+                            trade["sell_type"] = "profit"
+                            trade["sell_time"] = time_now
+                            trade["sell_price"] = current_price
+                            trade["profit"] = (current_price-trade["buy_price"]) * trade["amount"]
+                            trade["profit_percent"] = trade["profit"]/trade["cost"]
+
+                    #卖出盈利
+                    sell_profit = (current_price - ref_price) * field_amount
+                    # sell_profit = field_cash_amount - ref_amount
+                    sell_profit_percent = sell_profit / ref_cost
+
+                    trade_group["profit"] += sell_profit
+                    trade_group["profit_percent"] = trade_group["profit"]/trade_group["max_cost"]
+                    trade_group["last_profit_percent"] = sell_profit_percent
+                    trade_group["amount"] -= field_amount
+                    trade_group["cost"] -= field_cash_amount
+                    trade_group["last_update"] = time_now
+                    trade_group["sell_counts"] += 1
+                    trade_group["end_time"] = time_now
+                    trade_group["patch_index"] = 0  # 全部卖完，补仓序号置为0
+
+                    msg = "[整体止盈{}] 实际卖出币量： {}, 卖出金额: {}, 卖出价格: {}, 买入均价： {}, 本次盈利金额： {}, 盈利比： {}%, 本组交易整体盈利额： {}, 盈利比: {}%". \
+                        format(symbol.upper(), round(field_amount, 4), round(field_cash_amount, 6),
+                               round(current_price, 6),
+                               round(ref_price, 6), round(sell_profit, 6), round(sell_profit_percent * 100, 4),
+                               round(trade_group["profit"], 6), round(trade_group["profit_percent"] * 100, 4))
+
+                    log_config.output2ui(msg, 5)
+                    logger.warning(msg)
+                    log_config.notify_user(msg, own=True)
+
+                    msg = "[整组完成{}] 本组交易最大持仓本金： {}, 共盈利{}次, 总盈利金额： {}, 盈利比： {}%, 持续时间： {}分钟". \
+                        format(symbol.upper(), round(trade_group["max_cost"], 6), trade_group["sell_counts"],
+                               round(trade_group["profit"], 4),
+                               round(trade_group["profit_percent"] * 100, 3),
+                               int((trade_group["end_time"] - trade_group["start_time"]).total_seconds() / 60))
+                    log_config.output2ui(msg, 5)
+                    logger.warning(msg)
+                    log_config.notify_user(msg, own=True)
+                else:
+                    log_config.output2ui(u"整体止盈失败, 请检查您的持仓情况, 计划卖出[{}]币量： {}".format(symbol.upper(), round(plan_sell_amount, 4)), 3)
+                    pause = True
+
+
+def stg_smart_patch():
     for trade_group in config.TRADE_RECORDS_NOW:
         if trade_group["end_time"]:
             logger.info("trade group is ended.")
             continue
 
-        logger.info("trade group={}".format(trade_group))
-        interval_ref = trade_group.get("interval_ref", 0)
-        trades = trade_group.get("trades", [])
-        grid = trade_group.get("grid", 1)   # 是否开启网格
-        avg_price = trade_group.get("avg_price", 0)
-        amount = trade_group.get("amount", 0)     # 持币量
-        cost = trade_group.get("cost", 0)           # 当前持仓成本
-        max_cost = trade_group.get("max_cost", 0)   # 最大持他
-        last_buy_price = trade_group.get("last_buy_price", 0)
-        last_buy_amount = trade_group.get("last_buy_amount", 0)
-        last_buy_cost = trade_group.get("last_buy_cost", 0)
+        group_mode_name = trade_group.get("mode", "")
+        group_mode_name = config.TRADE_MODE if not group_mode_name else group_mode_name
 
-        # 如果没有单独设置，则使用全局的止盈参数
-        limit_profit = trade_group.get("limit_profit", 0)
-        limit_profit = global_limit_profit() if limit_profit == 0 else limit_profit
-        back_profit = trade_group.get("back_profit", 0)
-        back_profit = global_back_profit() if back_profit == 0 else back_profit
+        patch_ref = trade_group.get("patch_ref", -1)
+        patch_ref = global_patch_ref(group_mode_name) if patch_ref<0 else patch_ref
+        patch_ref = 0 if patch_ref > 1 else patch_ref
 
-        last_update = trade_group.get("last_update", None)
-        coin_name = trade_group.get("coin", "")
-        money_name = trade_group.get("money", "")
-        symbol = "{}{}".format(coin_name, money_name).lower()
-        current_price = get_current_price(symbol)
+        patch_interval = trade_group.get("patch_interval", -1)
+        patch_interval = global_patch_interval(group_mode_name) if patch_interval < 0 else patch_interval
 
-        trade_mode_name = trade_group.get("mode", "")
-        trade_mode_name = config.TRADE_MODE if not trade_mode_name else trade_mode_name
-        trade_mode = config.TRADE_MODE_CONFIG.get(trade_mode_name, {})
-
-        # 判断是否要开始收割了
-        if grid == 1:
-            # 以尾单价格判断是否该收割尾单
-            ref_price = last_buy_price
-            ref_cost = last_buy_cost
-            plan_sell_amount = last_buy_amount
-            profit_name = u"尾单止盈"
-        else:
-            # 以整体均价判断是否该卖出所有
-            ref_price = avg_price
-            ref_cost = cost
-            plan_sell_amount = amount
-            profit_name = u"整体止盈"
-
-        # 判断是否该卖出了
-        if should_stop_profit(ref_price, current_price, limit_profit, back_profit, last_update):
-            logger.info("auto trade should_stop_profit, grid={}, plan_sell_coin_num={}, ref_price={}, "
-                        "ref_amount={} cp={}, \ntrade group={}".format(grid, plan_sell_amount, ref_price, ref_cost, current_price, trade_group))
-
-            ret = sell_market(symbol, amount=plan_sell_amount, currency=coin_name.lower())
-            if ret.get("code", 0) == 1:
-                time_now = datetime.now()
-                detail = ret.get("data", {})
-                field_amount = detail.get("field_amount", 0)  # 币
-                field_cash_amount = detail.get("field_cash_amount", 0)  # 金
-                fees = detail.get("fees", 0)
-
-                #卖出盈利
-                sell_profit = (current_price - ref_price) * field_amount
-                # sell_profit = field_cash_amount - ref_amount
-                sell_profit_percent = sell_profit / ref_cost
-
-                logger.info("sell succeed! symbol={}, sell_coin_actual={}， sell profit={}, percent={}".format(field_amount, sell_profit, sell_profit_percent))
-
-                msg = "[{}{}] 实际卖出币量： {},  卖出金额: {},  卖出价格: {},  上次买入价格： {},  盈利金额： {},  盈利比： {}%,  手续费: {}".\
-                    format(profit_name, symbol.upper(), round(field_amount, 6), round(field_cash_amount, 6), round(current_price, 6),
-                           round(ref_price, 6), round(sell_profit, 6),  round(sell_profit_percent*100, 4), round(fees, 6))
-                log_config.output2ui(msg, 1)
-                logger.warning(msg)
-                log_config.notify_user(msg, own=True)
-
-                # 找到最后一单没有卖出的
-                last_index = len(trades)-1
-                for trade in reversed(trades):
-                    if trade.get("is_sell") == 0:
-                        # 修改尾单的信息，置为已卖出，修改卖出价格等
-                        trade["is_sell"] = 1
-                        trade["sell_price"] = current_price
-                        trade["profit"] = sell_profit
-                        trade["profit_percent"] = sell_profit_percent
-                        trade["sell_time"] = time_now
-                        break
-                    last_index -= 1
-
-                trade_group["profits"].append({"time": time_now, "profit": sell_profit})
-                trade_group["last_profit_percent"] = sell_profit_percent
-                trade_group["profit_percent"] = sell_profit/trade_group["max_cost"]
-
-                trade_group["amount"] = trade_group["amount"]-field_amount
-                trade_group["cost"] = trade_group["cost"] - field_cash_amount
-
-                trade_group["last_update"] = time_now
-                trade_group["avg_price"] = trade_group["cost"]/trade_group["amount"]
-                trade_group["sell_counts"] += 1
-                # trade_group["buy_counts"] -= 1
-                trade_group["last_buy_sell"] += 1
-
-                # 全部卖完了, ,或者是整体卖出了，这组策略结束
-                if last_index <= 0 or grid == 0:
-                    trade_group["end_time"] = time_now
-                else:
-                    # 将倒数第二单的买入价、买入量置为尾单信息
-                    new_last_trade = trade_group["trades"][last_index-1]
-                    trade_group["last_buy_amount"] = new_last_trade["amount"]
-                    trade_group["last_buy_price"] = new_last_trade["buy_price"]
-                    trade_group["last_buy_cost"] = new_last_trade["cost"]
+        coin = trade_group['coin'].upper()
+        money = trade_group['money'].upper()
+        symbol = "{}{}".format(coin, money).lower()
 
         # 是否需要补仓
-        if interval_ref == 0:   #参考是整体均价
-            ref_price = avg_price
+        if patch_ref == 0:   #参考是整体均价
+            ref_price = trade_group.get("avg_price", 0)
             patch_name = u"整体补仓"
         else:   # 参考上一次买入价
-            ref_price = last_buy_price
+            ref_price = trade_group.get("last_buy_price", 0)
             patch_name = u"尾单补仓"
 
-        fill_interval = trade_mode.get("interval", 0.01)    # 补仓间隔
-        # 如果当前价格小于整体均价的一定比例，则补单
-        if current_price < ref_price*(1-fill_interval):
-            plan_buy_cost = trade_group.get("last_buy_cost", 0) * 2      # 先直接按倍投的方式来弄
-            ret = buy_market(symbol, currency=money_name.lower(), amount=plan_buy_cost)
+        group_mode = config.TRADE_MODE_CONFIG.get(group_mode_name)
+
+        if should_patch(symbol=symbol, ref_price=ref_price, patch_interval=patch_interval):
+            # 这个交易对如果设置了单独的预算则使用单独的邓预算，否则使用全局预算
+            principal = trade_group.get("principal", 0)
+            if principal <= 0:
+                principal = config.CURRENT_SYMBOLS.get(money, {}).get("principal", 0)
+                if principal <= 0:
+                    principal = config.CURRENT_SYMBOLS.get(money, {}).get("balance", 0)*2
+
+                coins_num = len(config.CURRENT_SYMBOLS.get(money).get("coins", []))
+                coins_num = 1 if coins_num == 0 else coins_num
+                principal = principal/coins_num     #当前货币的本金预算除以需要监控的币对数，就是这个交易对的预算
+
+            multiple = patch_multiple(trade_group["patch_index"]+1, group_mode.get("patch_mode", "multiple"), group_mode.get("limit_trades", 8))
+            plan_buy_cost = principal*group_mode['first_trade']*multiple
+            ret = buy_market(symbol, currency=money.lower(), amount=plan_buy_cost)
             # 买入成功
             if ret.get("code", 0) == 1:
                 time_now = datetime.now()
+                current_price = get_current_price(symbol)
                 detail = ret.get("data", {})
                 field_amount = detail.get("field_amount", 0)  # 币
                 field_cash_amount = detail.get("field_cash_amount", 0)  # 金
                 fees = detail.get("fees", 0)
 
-                msg = "[{}{}] 实际买入币量： {},  买入金额: {},  参考价格: {},  当前价格: {},  补仓间隔: {}%, 手续费: {}". \
-                    format(patch_name, symbol.upper(), round(field_amount, 6), round(field_cash_amount, 6),
-                           round(ref_price, 6), round(current_price, 6), round(fill_interval*100, 2), round(fees, 6))
-                log_config.output2ui(msg, 1)
-                logger.warning(msg)
-                log_config.notify_user(msg, own=True)
-
-                buy_price_actual = current_price
-                time_now = datetime.now()
                 trade = {
-                    "buy_type": "buy_auto",  # 买入模式：buy_auto 自动买入(机器策略买入)，buy_man手动买入,
+                    "buy_type": "auto",  # 买入模式：auto 自动买入(机器策略买入)，man手动买入,
                     "sell_type": "profit",# 要求的卖出模式，机器买入的一般都为动止盈卖出。可选：profit 止盈卖出， no-不要卖出，针对手动买入的单，smart-使用高抛，kdj等策略卖出
                     "buy_time": time_now,
                     "sell_time": None,
-                    "coin": coin_name,
-                    "amount": field_amount,  # 买入或卖出的币量
-                    "buy_price": buy_price_actual,  # 实际挂单成交的价格
-                    "money": money_name,
+                    "coin": coin,
+                    "amount": field_amount,     # 买入或卖出的币量
+                    "buy_price": current_price,  # 实际挂单成交的价格
+                    "sell_price": 0,
+                    "money": money,
                     "cost": field_cash_amount,  # 实际花费的计价货币量
                     "is_sell": 0,  # 是否已经卖出
                     "profit_percent": 0,  # 盈利比，卖出价格相对于买入价格
                     "profit": 0,  # 盈利额，只有卖出后才有
+                    "limit_profit": -1,
+                    "back_profit": -1,
+                    "track": -1
                 }
-                logger.info("auto trade buy succeed, trade={}".format(trade))
+
                 trade_group["trades"].append(trade)
                 trade_group["amount"] += field_amount
                 trade_group["cost"] += field_cash_amount
-                trade_group["max_cost"] = trade_group["cost"] if trade_group["max_cost"]<trade_group["cost"] else trade_group["max_cost"]   #整体过程中最大持仓成本
-                trade_group["avg_price"] = trade_group["cost"]/trade_group["coin_num"]
-                trade_group["all_profit_percent"] = (current_price-trade_group["avg_price"])/trade_group["avg_price"]
+                trade_group["max_cost"] = trade_group["cost"] if trade_group["max_cost"] < trade_group["cost"] else trade_group["max_cost"]   #整体过程中最大持仓成本
+                trade_group["avg_price"] = trade_group["cost"]/trade_group["amount"]
+                trade_group["profit_percent"] = trade_group["profit"]/trade_group["max_cost"]
                 trade_group["buy_counts"] += 1
-                trade_group["patch_intervals"].append(fill_interval)
-                trade_group["last_buy_cost"] = field_cash_amount
-                trade_group["last_buy_amount"] = field_amount
-                trade_group["last_buy_price"] = buy_price_actual
+                trade_group["patch_index"] += 1
+                trade_group["last_buy_price"] = current_price
                 if not trade_group["start_time"]:
                     trade_group["start_time"] = time_now
                 trade_group["last_update"] = time_now
-                logger.info("auto trade buy succeed, trade group={}".format(trade_group))
 
-        avg_price = trade_group.get("avg_price", 0)
-        trade_group["all_profit_percent"] = (current_price-avg_price)/avg_price
+                smart_patch_interval = (ref_price-current_price)/ref_price
+                msg = "[{}{}] 计划买入金额： {}, 实际买入币量： {}, 实际买入金额: {}, 参考价格: {}, 当前价格: {}, 计划补仓间隔: {}%, 智能补仓间隔: {}%, 第{}次补仓, 补仓系数: {}". \
+                    format(patch_name, symbol.upper(), round(plan_buy_cost, 6), round(field_amount, 6), round(field_cash_amount, 6),
+                           round(ref_price, 6), round(current_price, 6), round(patch_interval*100, 4),
+                           round(smart_patch_interval*100, 4), trade_group["patch_index"], multiple)
+                log_config.output2ui(msg, 4)
+                logger.warning(msg)
+                log_config.notify_user(msg, own=True)
+            else:
+                log_config.output2ui(u"补仓{}失败, 请检查您的可操配资金是否足够, 并及时充值以或调小资金预算额, 以免影响系统正常补仓. 本次计划补仓： {}".format(symbol.upper(), round(plan_buy_cost, 6)), 3)
+                pause = True
 
+#
+# def auto_trade():
+#     logger.info("auto trade trigger...group num={}".format(len(config.TRADE_RECORDS_NOW)))
+#
+#     for trade_group in config.TRADE_RECORDS_NOW:
+#         if trade_group["end_time"]:
+#             logger.info("trade group is ended.")
+#             continue
+#
+#         logger.info("trade group={}".format(trade_group))
+#         interval_ref = trade_group.get("interval_ref", 0)
+#         trades = trade_group.get("trades", [])
+#         grid = trade_group.get("grid", 1)   # 是否开启网格
+#         avg_price = trade_group.get("avg_price", 0)
+#         amount = trade_group.get("amount", 0)     # 持币量
+#         cost = trade_group.get("cost", 0)           # 当前持仓成本
+#         max_cost = trade_group.get("max_cost", 0)   # 最大持仓成本
+#         last_buy_price = trade_group.get("last_buy_price", 0)
+#         last_buy_amount = trade_group.get("last_buy_amount", 0)
+#         last_buy_cost = trade_group.get("last_buy_cost", 0)
+#
+#         # 如果没有单独设置，则使用全局的止盈参数
+#         limit_profit = trade_group.get("limit_profit", 0)
+#         limit_profit = global_limit_profit() if limit_profit < 0 else limit_profit
+#         back_profit = trade_group.get("back_profit", 0)
+#         back_profit = global_back_profit() if back_profit < 0 else back_profit
+#
+#         last_update = trade_group.get("last_update", None)
+#         coin_name = trade_group.get("coin", "")
+#         money_name = trade_group.get("money", "")
+#         symbol = "{}{}".format(coin_name, money_name).lower()
+#         current_price = get_current_price(symbol)
+#
+#         trade_mode_name = trade_group.get("mode", "")
+#         trade_mode_name = config.TRADE_MODE if not trade_mode_name else trade_mode_name
+#         trade_mode = config.TRADE_MODE_CONFIG.get(trade_mode_name, {})
+#
+#         # 判断是否要开始收割了
+#         if grid == 1:
+#             # 以尾单价格判断是否该收割尾单
+#             ref_price = last_buy_price
+#             ref_cost = last_buy_cost
+#             plan_sell_amount = last_buy_amount
+#             profit_name = u"尾单止盈"
+#         else:
+#             # 以整体均价判断是否该卖出所有
+#             ref_price = avg_price
+#             ref_cost = cost
+#             plan_sell_amount = amount
+#             profit_name = u"整体止盈"
+#
+#         # 判断是否该卖出了
+#         if should_stop_profit(symbol.lower(), ref_price, limit_profit, back_profit, last_update):
+#             logger.info("auto trade should_stop_profit, grid={}, plan_sell_coin_num={}, ref_price={}, "
+#                         "ref_amount={} cp={}, \ntrade group={}".format(grid, plan_sell_amount, ref_price, ref_cost, current_price, trade_group))
+#
+#             ret = sell_market(symbol, amount=plan_sell_amount, currency=coin_name.lower())
+#             if ret.get("code", 0) == 1:
+#                 time_now = datetime.now()
+#                 detail = ret.get("data", {})
+#                 field_amount = detail.get("field_amount", 0)  # 币
+#                 field_cash_amount = detail.get("field_cash_amount", 0)  # 金
+#                 fees = detail.get("fees", 0)
+#
+#                 #卖出盈利
+#                 sell_profit = (current_price - ref_price) * field_amount
+#                 # sell_profit = field_cash_amount - ref_amount
+#                 sell_profit_percent = sell_profit / ref_cost
+#
+#                 # 找到最后一单没有卖出的
+#                 last_index = len(trades)-1
+#                 for trade in reversed(trades):
+#                     if trade.get("is_sell") == 0:
+#                         # 修改尾单的信息，置为已卖出，修改卖出价格等
+#                         trade["is_sell"] = 1
+#                         trade["sell_price"] = current_price
+#                         trade["profit"] = sell_profit
+#                         trade["profit_percent"] = sell_profit_percent
+#                         trade["sell_time"] = time_now
+#                         break
+#                     last_index -= 1
+#
+#                 trade_group["profits"].append({"time": time_now, "profit": sell_profit})
+#                 trade_group["last_profit_percent"] = sell_profit_percent
+#                 trade_group["profit_percent"] = sell_profit/trade_group["max_cost"]
+#
+#                 trade_group["amount"] = trade_group["amount"]-field_amount
+#                 trade_group["cost"] = trade_group["cost"] - field_cash_amount
+#
+#                 trade_group["last_update"] = time_now
+#                 trade_group["avg_price"] = trade_group["cost"]/trade_group["amount"]
+#                 trade_group["sell_counts"] += 1
+#                 # trade_group["buy_counts"] -= 1
+#                 trade_group["last_buy_sell"] += 1
+#
+#                 # 全部卖完了, ,或者是整体卖出了，这组策略结束
+#                 if last_index <= 0 or grid == 0:
+#                     trade_group["end_time"] = time_now
+#                 else:
+#                     # 将倒数第二单的买入价、买入量置为尾单信息
+#                     new_last_trade = trade_group["trades"][last_index-1]
+#                     trade_group["last_buy_amount"] = new_last_trade["amount"]
+#                     trade_group["last_buy_price"] = new_last_trade["buy_price"]
+#                     trade_group["last_buy_cost"] = new_last_trade["cost"]
+#
+#                 logger.info("sell succeed! symbol={}, sell_coin_actual={}， sell profit={}, percent={}".format(symbol,
+#                                                                                                               field_amount,
+#                                                                                                               sell_profit,
+#                                                                                                               sell_profit_percent))
+#
+#                 msg = "[{}{}] 实际卖出币量： {}, 卖出金额: {}, 卖出价格: {}, 上次买入价格： {}, 盈利金额： {}, 盈利比： {}%". \
+#                     format(profit_name, symbol.upper(), round(field_amount, 4), round(field_cash_amount, 6),
+#                            round(current_price, 6),
+#                            round(ref_price, 6), round(sell_profit, 6), round(sell_profit_percent * 100, 4))
+#
+#                 log_config.output2ui(msg, 5)
+#                 logger.warning(msg)
+#                 log_config.notify_user(msg, own=True)
+#
+#             else:
+#                 log_config.output2ui(u"移动止盈失败, 请检查您的持仓情况, 计划卖出币量： {}".format(round(plan_sell_amount, 4)), 3)
+#
+#         # 是否需要补仓
+#         if interval_ref == 0:   #参考是整体均价
+#             ref_price = avg_price
+#             patch_name = u"整体补仓"
+#         else:   # 参考上一次买入价
+#             ref_price = last_buy_price
+#             patch_name = u"尾单补仓"
+#
+#         fill_interval = trade_mode.get("interval", 0.01)    # 补仓间隔
+#         # 如果当前价格小于整体均价的一定比例，则补单
+#         if current_price < ref_price*(1-fill_interval):
+#             plan_buy_amount = trade_group.get("last_buy_amount", 0)
+#             plan_buy_cost = trade_group.get("last_buy_cost", 0) * 2      # 先直接按倍投的方式来弄
+#             ret = buy_market(symbol, currency=money_name.lower(), amount=plan_buy_cost)
+#             # 买入成功
+#             if ret.get("code", 0) == 1:
+#                 time_now = datetime.now()
+#                 detail = ret.get("data", {})
+#                 field_amount = detail.get("field_amount", 0)  # 币
+#                 field_cash_amount = detail.get("field_cash_amount", 0)  # 金
+#                 fees = detail.get("fees", 0)
+#
+#                 msg = "[{}{}] 计划买入金额： {}, 实际买入币量： {}, 实际买入金额: {}, 参考价格: {}, 当前价格: {}, 补仓间隔: {}%". \
+#                     format(patch_name, symbol.upper(), round(plan_buy_cost, 4), round(field_amount, 6), round(field_cash_amount, 6),
+#                            round(ref_price, 6), round(current_price, 6), round(fill_interval*100, 2))
+#                 log_config.output2ui(msg, 4)
+#                 logger.warning(msg)
+#                 log_config.notify_user(msg, own=True)
+#
+#                 buy_price_actual = current_price
+#                 time_now = datetime.now()
+#                 trade = {
+#                     "buy_type": "auto",  # 买入模式：auto 自动买入(机器策略买入)，man手动买入,
+#                     "sell_type": "profit",# 要求的卖出模式，机器买入的一般都为动止盈卖出。可选：profit 止盈卖出， no-不要卖出，针对手动买入的单，smart-使用高抛，kdj等策略卖出
+#                     "buy_time": time_now,
+#                     "sell_time": None,
+#                     "coin": coin_name,
+#                     "amount": field_amount,  # 买入或卖出的币量
+#                     "buy_price": buy_price_actual,  # 实际挂单成交的价格
+#                     "money": money_name,
+#                     "cost": field_cash_amount,  # 实际花费的计价货币量
+#                     "is_sell": 0,  # 是否已经卖出
+#                     "profit_percent": 0,  # 盈利比，卖出价格相对于买入价格
+#                     "profit": 0,  # 盈利额，只有卖出后才有
+#                 }
+#                 logger.info("auto trade buy succeed, trade={}".format(trade))
+#                 trade_group["trades"].append(trade)
+#                 trade_group["amount"] += field_amount
+#                 trade_group["cost"] += field_cash_amount
+#                 trade_group["max_cost"] = trade_group["cost"] if trade_group["max_cost"]<trade_group["cost"] else trade_group["max_cost"]   #整体过程中最大持仓成本
+#                 trade_group["avg_price"] = trade_group["cost"]/trade_group["amount"]
+#                 trade_group["all_profit_percent"] = (current_price-trade_group["avg_price"])/trade_group["avg_price"]
+#                 trade_group["buy_counts"] += 1
+#                 trade_group["patch_intervals"].append(fill_interval)
+#                 trade_group["last_buy_cost"] = field_cash_amount
+#                 trade_group["last_buy_amount"] = field_amount
+#                 trade_group["last_buy_price"] = buy_price_actual
+#                 if not trade_group["start_time"]:
+#                     trade_group["start_time"] = time_now
+#                 trade_group["last_update"] = time_now
+#                 logger.info("auto trade buy succeed, trade group={}".format(trade_group))
+#             else:
+#                 log_config.output2ui(u"补仓{}失败, 请检查您的可用余额是否足够, 计划买入币量: {}, 价值金额： {}".format(symbol.upper(), plan_buy_amount, plan_buy_cost), 3)
+#
+#         avg_price = trade_group.get("avg_price", 0)
+#         trade_group["all_profit_percent"] = (current_price-avg_price)/avg_price
+
+
+def should_kdj_buy(symbol, period="15min", risk=1.04):
+    """
+    用kdj指标判断是否该买入了，返回买入指数范围在0－－1, 0代表不支持买入，越趋近１越代表支持买入
+    :param symbol:
+    :param period:
+    :param risk: 当前选择的交易策略的风险承受系数
+    :return:
+    """
+    if kdj_buy_params.get("check", 1) != 1:
+        log_config.output2ui("kdj_buy_params is not check", 7)
+        return 0
+
+    market = "market.{}.kline.{}".format(symbol, period)
+    buy_percent = 0
+    cur_k2, cur_d2, cur_j2 = get_kdj(market, pos=2)
+    cur_k1, cur_d1, cur_j1 = get_kdj(market, pos=1)
+    last_diff_kd = cur_k1 - cur_d1
+    last_diff_kd2 = cur_k2 - cur_d2
+
+    cur_k, cur_d, cur_j = get_kdj(market)
+    diff_kd = cur_k - cur_d
+
+    current_price = get_current_price(symbol)
+    upper, middle, lower = get_boll(market=market)
+
+    # 低位即将金叉
+    if last_diff_kd < 0 and diff_kd >= 0 and diff_kd > last_diff_kd and cur_k > cur_k1 and diff_kd > last_diff_kd2:
+        if cur_k < 22 and cur_d < 20:
+            buy_percent += 0.22
+        elif cur_k <= 55 and cur_d <= 55 and current_price < middle and cur_d >= cur_d1:  # 中位金叉,且未出中轨
+            buy_percent += 0.12
+
+    # 低位回弹
+    # kd不能大于40
+    limit_kd = 40 * risk
+
+    limit_kd = 15 if limit_kd < 15 else limit_kd
+    limit_kd = 35 if limit_kd > 35 else limit_kd
+    now = int(time.time()) * 1000
+    min_price = get_min_price(symbol, last_time=now - (15 * 60 * 1000))
+
+    if cur_k <= limit_kd or cur_d <= limit_kd:
+        # 回暖幅度超过0.008
+        up_percent = kdj_buy_params.get("up_percent", 0.003)
+        up_percent *= (1 / risk)
+
+        if min_price and min_price > 0:
+            actual_up_percent = round((current_price - min_price) / min_price, 4)
+            if actual_up_percent >= up_percent:
+                # 最近三个周期内出现过kd小于20
+                last_k, last_d, last_j = get_kdj(market, 1)
+                last_k_2, last_d_2, last_j_2 = get_kdj(market, 2)
+                need_k = kdj_buy_params.get("k", 22) * config.RISK * (
+                            actual_up_percent / up_percent)  # 回弹幅度越大，自然kd值也会变大，需要放宽限制条件
+                need_d = kdj_buy_params.get("d", 22) * config.RISK * (
+                            actual_up_percent / up_percent)  # 回弹幅度越大，自然kd值也会变大，需要放宽限制条件
+
+                need_k = 16 if need_k < 16 else need_k
+                need_d = 14 if need_d < 14 else need_d
+                need_k = 26 if need_k > 25 else need_k
+                need_d = 24 if need_d > 24 else need_d
+
+                if (last_k <= need_k and last_d <= need_d and cur_k > last_k) or (
+                        cur_k < 15 and cur_d < 15 and (cur_k - cur_d) > -5) or (
+                        last_k_2 < need_k and last_d_2 < need_d):
+                    if cur_k - cur_d > 0:
+                        buy_percent += kdj_buy_params.get("buy_percent", 0.2)
+
+                        if cur_k < 20:
+                            logger.info("kdj lb curk<20")
+                            buy_percent += (20 - cur_k) / 100
+
+                        ret = is_buy_big_than_sell(symbol, 2)
+                        if ret:
+                            buy_percent += 0.05
+    if buy_percent > 0:
+        buy_percent *= risk
+        logger.warning("[{}]should_kdj_buy={}".format(symbol, buy_percent))
+
+    return buy_percent
+
+
+def should_boll_buy(symbol, period="15min", risk=1.04):
+    """
+
+    :param symbol:
+    :param period:
+    :param risk:
+    :return:
+    """
+    if boll_strategy_params.get("check", 1) != 1:
+        log_config.output2ui("boll_strategy is not check", 7)
+        return 0
+
+    market = "market.{}.kline.{}".format(symbol, period)
+    upper, middle, lower = get_boll(market, 0)
+    price = get_current_price(symbol)
+    diff1 = upper - middle
+    diff2 = middle - lower
+    state = 0
+    # 先初步判断是否开或缩，参数松
+    open_diff1_percent = boll_strategy_params.get("open_diff1_percent", 0.025)
+    open_diff2_percent = boll_strategy_params.get("open_diff2_percent", 0.025)
+    open_diff1_percent *= config.RISK
+    open_diff2_percent *= config.RISK
+
+    pdiff1 = diff1 / price
+    pdiff2 = diff2 / price
+    if pdiff1 > open_diff1_percent * 0.8 and pdiff2 > open_diff2_percent * 0.8:
+        state = 1  # 张口
+    close_diff1_percent = boll_strategy_params.get("close_diff1_percent", 0.0025)
+    close_diff2_percent = boll_strategy_params.get("close_diff2_percent", 0.0025)
+    if pdiff1 < close_diff1_percent * 1.25 and pdiff2 < close_diff2_percent * 1.25:
+        state = -1  # 缩口
+
+    buy_percent = 0
+    # 判断是否开口超跌
+    # up_down = get_up_down(market)
+
+    open_now = get_open(market, 0)
+    up_down = (price - open_now) / open_now  # 当前这个周期的涨跌幅
+
+    now = int(time.time()) * 1000
+    history_open_close = None
+    if state == 1 or state == -1:
+        # 历史开口幅度大于opp
+        history_open_close = is_history_open_close(market, 3, open_diff1_percent, close_diff1_percent)
+    if state == 1:
+        if price < lower:
+            # 跌幅超过open_down_percent（0.03）
+            down_percent = boll_strategy_params.get("open_down_percent", -0.02)
+            if up_down <= down_percent and up_down > -0.05:
+                # 超跌在右侧
+                open_up_percent = boll_strategy_params.get("open_up_percent", 0.01)
+                # 最近一段时间上涨幅度超过open_up_percent（0.01）
+                if price > get_min_price(symbol, now - 5 * 60 * 1000) * (1 + open_up_percent):
+                    # 历史开口幅度大于open_diff1_percent
+                    if history_open_close == "open":
+                        logger.info("开口超跌")
+                        log_config.output2ui("开口超跌")
+                        buy_percent = boll_strategy_params.get("open_buy_percent", 0.2)
+
+    # 缩口状态
+    elif state == -1:
+        # 是否向上通道中
+        if upper > price and price > middle:
+            # 上下轨缩口幅度在一定范围
+            if pdiff1 > close_diff1_percent and pdiff1 < 0.004:
+                if pdiff2 > close_diff1_percent and pdiff2 < 0.004:
+                    try:
+                        t1_vol = get_trade_vol_from_local(symbol, 0, 3).get("trade_vol", 0)
+                        t2_vol = get_trade_vol_from_local(symbol, 3, 6).get("trade_vol", 0)
+                    except:
+                        return 0
+                    trade_percent = boll_strategy_params.get("trade_percent", 1.5)
+                    # 交易量0-3 大于 1.5 倍的 3-6
+                    if t1_vol > trade_percent * t2_vol:
+                        close_up_percent = boll_strategy_params.get("close_up_percent", 0.03)
+                        # 当天上涨幅度不能超过3%
+                        if up_down < close_up_percent:
+                            # 历史开口幅度大于open_diff1_percent
+                            if history_open_close == "close":
+                                logger.info("缩口向上")
+                                log_config.output2ui("缩口向上")
+                                buy_percent = boll_strategy_params.get("close_buy_percent", 0.2)
+
+    if buy_percent > 0:
+        buy_percent *= risk
+        logger.warning("[{}]should_boll_buy={}".format(symbol, buy_percent))
+    return buy_percent
+
+
+def first_buy(coin, money, principal, multiple=1, build="smart"):
+    trade_mode = config.TRADE_MODE_CONFIG.get(config.TRADE_MODE, {})
+    plan_buy_amount = principal * trade_mode.get("first_trade", 0.05) * multiple
+    symbol = "{}{}".format(coin, money).lower()
+
+    current_price = get_current_price(symbol)
+
+    ret = buy_market(symbol, amount=plan_buy_amount, currency=money.lower())
+    if ret.get("code", 0) == 1:
+        detail = ret.get("data", {})
+        field_amount = detail.get("field_amount", 0)  # 币
+        field_cash_amount = detail.get("field_cash_amount", 0)  # 金
+        fees = detail.get("fees", 0)
+        msg = "[建仓{}] 实际买入币量： {}, 实际买入金额: {}, 买入价格: {}".format(symbol.upper(), round(field_amount, 6),
+                                                               round(field_cash_amount, 6), round(current_price, 6))
+
+        time_now = datetime.now()
+        trade = {
+            "buy_type": "auto",  # 买入模式：auto 自动买入(机器策略买入)，man手动买入,
+            "sell_type": "profit",
+            # 要求的卖出模式，机器买入的一般都为止盈卖出。可选：sell_profit 止盈卖出（默认）， sell_no-不要卖出，针对手动买入的单，sell_smart-使用高抛，kdj等策略卖出
+            "limit_profit": -1,  # 大于零有效，否则参考其所属的交易组的参数
+            "back_profit": -1,  # 追踪回撤系数
+            "track": -1,
+            "buy_time": time_now,
+            "sell_time": None,
+            "coin": coin.upper(),
+            "money": money.upper(),
+            "amount": field_amount,  # 买入或卖出的币量
+            "buy_price": current_price,  # 实际买入成交的价格
+            "cost": field_cash_amount,  # 实际花费的计价货币量
+            "is_sell": 0,  # 是否已经卖出
+            "sell_price": 0,  # 实际卖出的价格
+            "profit_percent": 0,  # 盈利比，卖出价格相对于买入价格
+            "profit": 0,        # 盈利额，只有卖出后才有
+        }
+
+        trade_group = {
+            "build": build,  # 首单触发原因，
+            "mode": "",     # 按何种交易风格执行
+            "coin": coin.upper(),
+            "money": money.upper(),
+            "trades": [trade],  # 每一次交易记录，
+            "grid": -1,      # 是否开启网格交易
+            "track": -1,     # 是否开启追踪止盈
+            "amount": field_amount,  # 持仓数量（币）
+            "cost": field_cash_amount,  # 持仓费用（计价货币）
+            "max_cost": field_cash_amount,
+            "avg_price": current_price,  # 持仓均价
+            "profit": 0,  # 这组策略的总收益， 每次卖出后都进行累加
+            "profit_percent": 0,  # 整体盈利比（整体盈利比，当前价格相对于持仓均价,）
+            "last_profit_percent": 0,  # 尾单盈利比（最后一单的盈利比）
+            "limit_profit": -1,  # 止盈比例
+            "back_profit": -1,  # 追踪比例
+            "buy_counts": 1,  # 已建单数，目前处理买入状态的单数
+            "sell_counts": 0,  # 卖出单数，卖出的次数，其实就是尾单收割次数
+            "patch_index": 0,
+            "patch_ref": -1,  # 间隔参考
+            "patch_interval": -1,
+            "last_buy_price": current_price,  # 最后一次买入价格，用来做网格交易，如果最后一单已经卖出，则这个价格需要变成倒数第二次买入价格，以便循环做尾单
+            "start_time": time_now,
+            "end_time": None,
+            "last_update": time_now,
+            "uri": "{}{}".format(time_now.strftime("%Y%m%d%H%M%S"), random.randint(100, 999)),
+            "principal": -1
+        }
+        # 把最新插在最前面
+        config.TRADE_RECORDS_NOW.insert(0, trade_group)
+        log_config.output2ui(msg, 4)
+        logger.warning(msg)
+        log_config.notify_user(msg, own=True)
+        return True
+    else:
+        logger.warning("first buy {} failed".format(symbol))
+        return False
+
+
+def stg_smart_first():
+    """
+    智能建仓
+    :return:
+    """
+    for money, value in config.CURRENT_SYMBOLS.items():
+        coins = value.get("coins", [])
+        if not coins:
+            continue
+
+        principal = value.get("principal", 0)
+        coins_num = len(coins)
+        principal = principal/coins_num
+        if principal <= 0:
+            continue
+
+        for coin_info in coins:
+            # 保存交易对, 用于加载历史数据
+            coin = coin_info["coin"]
+            symbol = "{}{}".format(coin, money).lower()
+            if is_already_buy_first(symbol):
+                continue
+
+            if is_still_down2(symbol, bp=0.0030):
+                continue
+
+            smart_first = global_smart_first()
+            build_mode = "smart"
+            risk = global_risk()
+            if smart_first:
+                kdj_buy = should_kdj_buy(symbol, period="15min", risk=risk)
+                boll_buy = should_boll_buy(symbol, period="15min", risk=risk)
+                low_buy = should_low_buy(symbol, period="15min", risk=risk)
+                fly_buy = should_fly_buy(symbol, period="5min", risk=risk)
+                buy_multiple = kdj_buy + boll_buy + low_buy + fly_buy
+            else:
+                # 如果没有开启智能建仓模式, 则不作任何分析处理，直直接以当前价格建仓
+                buy_multiple = 0.15
+                build_mode = "auto"
+
+            if buy_multiple > 0:
+                buy_multiple *= risk    # 能承担的风险系数越大，首单买的越多
+                ret = first_buy(coin, money, principal, buy_multiple/0.15, build=build_mode)
+                if ret:
+                    if smart_first:
+                        log_config.output2ui(
+                            u"[{}]智能建仓成功, 智能分析建仓推荐指数: {}".format(symbol.upper(), round(buy_multiple, 4)), 0)
+                    else:
+                        log_config.output2ui(u"[{}]市价建仓成功, 因未开启智能建仓, 当前行情已稳定, 直接以当前市价建仓！".format(symbol.upper()))
 
 
 def kdj_strategy_buy():
@@ -654,10 +1362,13 @@ def kdj_strategy_buy():
         return False
 
     buy_in = False
-    peroid = kdj_buy_params.get("peroid", "15min")
+    period = kdj_buy_params.get("period", "15min")
     for money, value in config.CURRENT_SYMBOLS.items():
         coins = value.get("coins", [])
         principal = value.get("principal", 0)
+        coins_num = len(coins)
+        coins_num = 1 if coins_num <= 0 else coins_num
+        principal = principal/coins_num
         if principal <= 0:
             continue
 
@@ -669,7 +1380,7 @@ def kdj_strategy_buy():
                 if is_already_buy_first(symbol):
                     continue
 
-                market = "market.{}.kline.{}".format(symbol, peroid)
+                market = "market.{}.kline.{}".format(symbol, period)
 
                 buy_percent = 0
 
@@ -815,18 +1526,18 @@ def kdj_strategy_buy():
                     field_amount = detail.get("field_amount", 0)                # 币
                     field_cash_amount = detail.get("field_cash_amount", 0)      # 金
                     fees = detail.get("fees", 0)
-                    msg = "[建仓{}] 实际买入币量： {},  买入金额: {},  买入价格: {},  手续费: {}".format(symbol.upper(), round(field_amount, 6), round(field_cash_amount, 6), round(current_price, 6), round(fees, 6))
-                    log_config.output2ui(msg, 1)
+                    msg = "[建仓{}] 实际买入币量： {}, 实际买入金额: {}, 买入价格: {}".format(symbol.upper(), round(field_amount, 6), round(field_cash_amount, 6), round(current_price, 6))
+                    log_config.output2ui(msg, 4)
                     logger.warning(msg)
                     log_config.notify_user(msg, own=True)
 
                     time_now = datetime.now()
                     trade = {
-                        "buy_type": "buy_auto",  # 买入模式：buy_auto 自动买入(机器策略买入)，buy_man手动买入,
-                        "sell_type": "sell_profit",
+                        "buy_type": "auto",  # 买入模式：auto 自动买入(机器策略买入)，man手动买入,
+                        "sell_type": "profit",
                         # 要求的卖出模式，机器买入的一般都为止盈卖出。可选：sell_profit 止盈卖出（默认）， sell_no-不要卖出，针对手动买入的单，sell_smart-使用高抛，kdj等策略卖出
-                        "limit_profit": trade_mode.get("limit_profit", 0.012),  # 大于零代表要求必须盈利,否则由系统智能卖出
-                        "back_profit": trade_mode.get("back_profit", 0.01),  # 追踪回撤系数
+                        "limit_profit": 0,  # 大于零代表要求必须盈利,否则由系统智能卖出
+                        "back_profit": 0,  # 追踪回撤系数
                         "buy_time": time_now,
                         "sell_time": None,
                         "coin": coin,
@@ -838,7 +1549,6 @@ def kdj_strategy_buy():
                         "sell_price": 0,  # 实际卖出的价格
                         "profit_percent": 0,  # 盈利比，卖出价格相对于买入价格
                         "profit": 0,  # 盈利额，只有卖出后才有
-                        "fees": fees
                     }
 
                     trade_group = {
@@ -847,28 +1557,27 @@ def kdj_strategy_buy():
                         "coin": coin,
                         "money": money,
                         "trades": [trade],            # 每一次交易记录，
-                        "grid": 1,              # 是否开启网格交易
+                        "grid": -1,                 # 是否开启网格交易
                         "amount": field_amount,         # 持仓数量（币）
                         "cost": field_cash_amount,           # 持仓费用（计价货币）
                         "max_cost": field_cash_amount,
                         "avg_price": current_price,      # 持仓均价
-                        "profits": [],  # {"time": xxxx, "profit":1.26}这组策略的总收益， 每次卖出后都进行累加
+                        "profit": 0,                #这组策略的总收益， 每次卖出后都进行累加
                         "profit_percent": 0,        # 整体盈利比（整体盈利比，当前价格相对于持仓均价,）
                         "last_profit_percent": 0,   # 尾单盈利比（最后一单的盈利比）
                         "limit_profit": 0,   # 止盈比例
                         "back_profit": 0,    # 追踪比例
+                        "track": -1,
                         "buy_counts": 1,           # 已建单数，目前处理买入状态的单数
                         "sell_counts": 0,          # 卖出单数，卖出的次数，其实就是尾单收割次数
-                        "patch_intervals": [],   # 每次补单间隔比例
+                        "patch_index": 0,
                         "patch_ref": 0,         # 间隔参考
-                        "last_buy_amount": field_amount,     # 最后一次买入币量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
-                        "last_buy_cost":  field_cash_amount,         # 最后一次买入量，如果最后一单卖出后，需要设置该值为倒数第二次买入量
                         "last_buy_price": current_price,    # 最后一次买入价格，用来做网格交易，如果最后一单已经卖出，则这个价格需要变成倒数第二次买入价格，以便循环做尾单
-                        "last_buy_sell": 0,     # 尾单收割次数
                         "start_time": time_now,
                         "end_time": None,
                         "last_update": time_now,
-                        "uri": "{}{}".format(time_now.strftime("%Y%m%d%H%M%S"), random.randint(100, 999))
+                        "uri": "{}{}".format(time_now.strftime("%Y%m%d%H%M%S"), random.randint(100, 999)),
+                        "principal": 0
                         }
                     #把最新插在最前面
                     config.TRADE_RECORDS_NOW.insert(0, trade_group)
@@ -890,8 +1599,8 @@ def kdj_strategy_sell(currency=[], max_trade=1):
         log_config.output2ui("kdj_sell is not check", 2)
         return False
 
-    peroid = kdj_sell_params.get("peroid", "15min")
-    market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], peroid)
+    period = kdj_sell_params.get("period", "15min")
+    market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], period)
     symbol = config.NEED_TOBE_SUB_SYMBOL[0]
 
     # if is_still_up(symbol):
@@ -906,8 +1615,8 @@ def kdj_strategy_sell(currency=[], max_trade=1):
     limit_diff_kd = 5 - (config.RISK-1)*5
     diff_kd = cur_k - cur_d
 
-    entry_msg = "kdj_strategy_sell peroid={}, current k={}, d={}, current_price={}, actural diff_kd={}, limit diff_kd={}"\
-        .format(peroid, cur_k, cur_d, current_price, diff_kd, limit_diff_kd)
+    entry_msg = "kdj_strategy_sell period={}, current k={}, d={}, current_price={}, actural diff_kd={}, limit diff_kd={}"\
+        .format(period, cur_k, cur_d, current_price, diff_kd, limit_diff_kd)
     logger.info(entry_msg)
     log_config.output2ui(entry_msg)
 
@@ -1191,8 +1900,8 @@ def move_stop_profit():
             return False
 
     # 获取布林的上轨，当前价格突破上轨后，降低卖出难度，尽快卖出
-    peroid = boll_strategy_params.get("peroid", "15min")
-    market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], peroid)
+    period = boll_strategy_params.get("period", "15min")
+    market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], period)
     upper, middle, lower = get_boll(market, 0)
 
     for trade in BUY_RECORD:
@@ -1341,8 +2050,8 @@ def vol_price_fly():
         log_config.output2ui("vol price fily is not check", 2)
         return False
 
-    peroid = vol_price_fly_params.get("peroid", "5min")
-    market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], peroid)
+    period = vol_price_fly_params.get("period", "5min")
+    market = "market.{}.kline.{}".format(config.NEED_TOBE_SUB_SYMBOL[0], period)
     symbol = market.split(".")[1]
     multiple = vol_price_fly_params.get("vol_percent", 1.2) * (1/config.RISK)
     mul_21 = 1.1
@@ -1354,11 +2063,11 @@ def vol_price_fly():
         mul_21 *= buy_factor
 
     peroid_5min = 1
-    if peroid == "5min":
+    if period == "5min":
         peroid_5min = 1
-    elif peroid == "15min":
+    elif period == "15min":
         peroid_5min = 3
-    # elif peroid == "30min":
+    # elif period == "30min":
     #     peroid_5min = 6
     # else:
     #     peroid_5min = 12
@@ -1537,11 +2246,13 @@ def buy_market(symbol, amount, percent=0.1, currency=""):
                 result["msg"] = "buy amount and percent less than zero."
                 return result
         else:
-            # 余额不足
-            amount = balance if amount > balance else amount
+            if amount >= balance:
+                # 余额不足
+                log_config.output2ui(u"买入[{}]时余额不足, 计划买入: {}, 余额: {}, 将按照余额数买入！".format(symbol.upper(), amount, balance), 2)
+                amount = balance*0.95
 
     # 市价amount代表买多少钱的
-    amount = round(amount, 6)
+    amount = round(amount, 4)
     logger.warning("buy {} amount={}, balance={}".format(symbol, amount, balance))
 
     hrs = HuobiREST()
@@ -1564,7 +2275,7 @@ def buy_market(symbol, amount, percent=0.1, currency=""):
             fees = float(order_detail.get("field-fees", 0))
             price = float(order_detail.get("price", 0))
 
-            logger.warning("买入{}成功, 计划买入额: {}, 实际成交额: {}, 实际买入币量: {}, 手续费: {}, 买入价格: {}".format(symbol, round(amount, 6), round(field_cash_amount, 6), round(field_amount, 6), round(fees, 6), round(price, 6)))
+            logger.warning("买入{}成功, 计划买入额: {}, 实际成交额: {}, 实际买入币量: {}, 买入价格: {}".format(symbol, round(amount, 6), round(field_cash_amount, 6), round(field_amount, 6), round(price, 6)))
 
             result["code"] = 1
             result["data"] = {
@@ -1581,8 +2292,8 @@ def buy_market(symbol, amount, percent=0.1, currency=""):
             update_balance(money_only=True)
             return result
 
-    logger.error("buy market failed, symbol={}, amount={},".format(symbol, amount))
-    log_config.output2ui("买入{}失败, 计划买入额: {}．".format(symbol, amount), 2)
+    logger.error("buy market failed, symbol={}, amount={}, ret={}".format(symbol, amount, ret))
+    log_config.output2ui("买入{}失败, 计划买入币量: {}．".format(symbol, amount), 7)
     result["code"] = 0
     result["msg"] = "Trade buy failed!"
     return result
@@ -1606,9 +2317,11 @@ def sell_market(symbol, amount, percent=0.1, currency=""):
                 return result
         else:
             # 余额不足
-            amount = balance if amount > balance else amount
+            if amount >= balance:
+                log_config.output2ui(u"卖出[{}]时余币不足, 计划卖出: {}, 余币: {}, 将按照余币数卖出！".format(symbol.upper(), amount, balance), 2)
+                amount = balance*0.95
 
-    amount = round(amount, 6)
+    amount = round(amount, 4)
     logger.warning("sell {} amount={}, balance={}".format(symbol, amount, balance))
 
     # 卖出时amount代表币量
@@ -1637,11 +2350,10 @@ def sell_market(symbol, amount, percent=0.1, currency=""):
             # price = current_price if price == 0 else price
 
             logger.warning(
-                "卖出{}成功, 计划卖出币量: {}, 实际成交币量: {}, 实际成交金额: {}, 手续费: {}, 卖出价格: {}".format(symbol,
+                "卖出{}成功, 计划卖出币量: {}, 实际成交币量: {}, 实际成交金额: {}, 卖出价格: {}".format(symbol,
                                                                                        round(amount, 6),
                                                                                        round(field_amount, 6),
                                                                                        round(field_cash_amount, 6),
-                                                                                       round(fees, 6),
                                                                                        round(price, 6)))
 
             result["code"] = 1
@@ -1658,7 +2370,7 @@ def sell_market(symbol, amount, percent=0.1, currency=""):
             update_balance(money_only=True)
             return result
 
-    logger.error("sell market failed, symbol={}, amount={}, ".format(symbol, amount))
+    logger.error("sell market failed, symbol={}, amount={}, ret={}".format(symbol, amount, ret))
     log_config.output2ui("卖出{}失败, 计划卖出币量: {}．".format(symbol, amount), 2)
     result["code"] = 0
     result["msg"] = "Trade sell failed!"
@@ -1765,6 +2477,9 @@ def get_max_price(symbol, last_time, current=0):
         df = process.KLINE_DATA.get(symbol, None)
         if df is None:
             return -1
+
+        if isinstance(last_time, datetime):
+            last_time = float(datetime.timestamp(last_time)*1000)
 
         if current>0:
             # 默认取五分钟之前往前的最大价格
@@ -2067,12 +2782,22 @@ def get_balance(currency, result_type=0, retry=2):
         return None
 
 
-
-def is_still_down2(cp, mp, bp=0.0035):
-    if (cp-mp)/mp > bp:
+def is_still_down2(symbol, bp=0.0035, delta_time=310):
+    """
+    最近五分钟内的最低价格和当前价格对比．如果当前价格未超过最低价格的千分之3,则认为仍处于下跌状态
+    :param symbol:
+    :param bp:
+    :param delta_time:
+    :return:
+    """
+    now = int(time.time()) * 1000
+    current_price = get_current_price(symbol)
+    min_price = get_min_price(symbol, last_time=now - (delta_time * 1000))
+    if (current_price-min_price)/min_price > bp:
         return False
     else:
         return True
+
 
 def is_still_down(symbol, delta=100, percent=1):
     """
@@ -2114,13 +2839,15 @@ def is_still_down(symbol, delta=100, percent=1):
         process.data_lock.release()
 
 
-def is_still_up2(cp, mp, bp=0.0035):
+def is_still_up2(symbol, bp=0.0035, delta_time=310):
     # 根据最大价格与当前价格的回撤幅度判断是否还在涨
-    if (mp-cp)/mp > bp:
-        logger.info("is still up2 return False cp={}, mp={}, bp={}".format(cp,mp,bp))
+    now = int(time.time()) * 1000
+    current_price = get_current_price(symbol)
+    max_price = get_max_price(symbol, now - (delta_time * 1000), current=0)
+
+    if (max_price-current_price)/max_price > bp:
         return False
     else:
-        logger.info("is still up2 return True cp={}, mp={}, bp={}".format(cp, mp, bp))
         return True
 
 
@@ -2170,6 +2897,145 @@ def is_still_up(symbol, delta=100, percent=1):
 #         return True
 #
 #     return False
+
+def should_low_buy(symbol, period="15min", risk=1.04):
+    now = int(time.time()) * 1000
+    market = "market.{}.kline.{}".format(symbol, period)
+    current_price = get_current_price(symbol)
+
+    if current_price <= 0:
+        return 0
+
+    k, d, j = get_kdj(market)
+    if k - d < -7:
+        logging.info(u"BL k远小于d, 暂时不买, k={}, d={}, cp={}".format(k, d, current_price))
+        return 0
+
+    min_price_5 = get_min_price(symbol, now - (15 * 60 * 1000) * 5, current=now - (7 * 60 * 1000))
+    min_price_20 = get_min_price(symbol, now - (15 * 60 * 1000) * 20, now - (7 * 60 * 1000))
+    min_price_60 = get_min_price(symbol, now - (15 * 60 * 1000) * 60, now - (7 * 60 * 1000))
+    if min_price_5 <= 0 or min_price_20 <= 0 or min_price_60 <= 0:
+        logger.warning("buy low min price <0")
+        return 0
+
+    # 比最低价还低1％以上，且最近三个周期都在跌
+    # percent_factor = 0  # 价格越代，这个值越大，　买的越多
+    low_percent = 1.005 + (risk - 1) / 100
+
+    # 　如果当前持仓比低于用户预设的值，则降低买入门槛，尽快达到用户要求的持仓比
+    low_percent = 1.001 if low_percent < 1.001 else low_percent
+    low_percent = 1.01 if low_percent > 1.01 else low_percent
+
+    low_percent_5 = low_percent * 1.15
+    low_percent_20 = low_percent
+    low_percent_60 = low_percent * 0.998
+
+    buy_percent = 0
+    if current_price * low_percent_5 < min_price_5 and get_open(market, 1) > get_close(market, 1):
+        # 跌的越多，percent_factor 越大
+        logger.info("buy low 5")
+        factor = min_price_5 / current_price - low_percent_5
+        buy_percent += 0.1 + factor
+    if current_price * low_percent_60 <= min_price_60:
+        logger.info("buy low 60")
+        factor = min_price_60 / current_price - low_percent_60
+        buy_percent += 0.5 + factor
+    elif current_price * low_percent_20 <= min_price_20:
+        logger.info("buy low 20")
+        factor = min_price_20 / current_price - low_percent_20
+        buy_percent += 0.3 + factor
+
+    if buy_percent > 0:
+        buy_percent *= risk
+        logger.warning("[{}]should_low_buy={}".format(symbol, buy_percent))
+
+    return buy_percent
+
+
+def should_fly_buy(symbol, period="5min", risk=1.04):
+    if vol_price_fly_params.get("check", 1) != 1:
+        log_config.output2ui("vol price fly is not check", 7)
+        return 0
+
+    market = "market.{}.kline.{}".format(symbol, period)
+    multiple = vol_price_fly_params.get("vol_percent", 1.2) * (1 / risk)
+    mul_21 = 1.1
+
+    peroid_5min = 1
+    if period == "5min":
+        peroid_5min = 1
+    elif period == "15min":
+        peroid_5min = 3
+
+    last_peroid_0_3 = get_trade_vol_from_local(symbol, 0, 3 * peroid_5min)
+    last_peroid_3_7 = get_trade_vol_from_local(symbol, 3 * peroid_5min, 7 * peroid_5min)
+
+    if not last_peroid_0_3 or not last_peroid_3_7:
+        return 0
+
+    try:
+        # 最近三个周期的量要大于最近7个周期(3-10)的量
+        time_0_3 = (last_peroid_0_3.get("end_time", 0) - last_peroid_0_3.get("start_time", 0)) / (
+                1000 * 60 * 5 * peroid_5min)
+        time_3_7 = (last_peroid_3_7.get("end_time", 0) - last_peroid_3_7.get("start_time", 0)) / (
+                1000 * 60 * 5 * peroid_5min)
+        time_0_3 = 3 if time_0_3 == 0 else time_0_3
+        time_3_7 = 7 if time_3_7 == 0 else time_3_7
+        avg_0_3_vol = last_peroid_0_3.get("trade_vol", 0) / time_0_3
+        avg_3_7_vol = last_peroid_3_7.get("trade_vol", 0) / time_3_7
+        if not avg_0_3_vol >= avg_3_7_vol * multiple:
+            return 0
+
+        # (5分钟）当前周期的交易量是上一个周期的3倍以上， 且当前周期的交易量要大于1.1倍的最近21个周期平均交易量
+        last_peroid_0 = get_trade_vol_from_local(symbol, 0, 1).get("trade_vol", 0)
+        last_peroid_1 = get_trade_vol_from_local(symbol, 1, 1).get("trade_vol", 0)
+        last_peroid_2 = get_trade_vol_from_local(symbol, 2, 1).get("trade_vol", 0)
+        high_than_last = vol_price_fly_params.get("high_than_last", 2) * (1 / risk)
+        local_21 = get_trade_vol_from_local(symbol, 3, 7)
+        if local_21:
+            local_21 = local_21.get("trade_vol", 0)
+        else:
+            return 0
+
+        if not all([last_peroid_0, last_peroid_1, last_peroid_2, local_21]):
+            return 0
+
+        if not last_peroid_0 >= last_peroid_1 * high_than_last or not last_peroid_1 >= high_than_last * last_peroid_2:
+            return 0
+
+        last_peroid_21 = local_21 / 7
+        if not last_peroid_0 >= mul_21 * last_peroid_21:
+            return 0
+
+        # 当前价格不能超过前面第三个周期的收盘价*（1+规定涨幅）
+        current_price = get_current_price(symbol)
+        close_before_2 = (get_close(market, before=3) + get_close(market, before=4) + get_close(market, before=5)) / 3
+        if close_before_2 < 0:
+            return 0
+
+        if (current_price > close_before_2 * (1 + vol_price_fly_params.get("price_up_limit", 0.02) * risk)):
+            return 0
+
+        if current_price < close_before_2:
+            return 0
+
+        if current_price < get_open(market, before=1):
+            return 0
+
+        percent = vol_price_fly_params["buy_percent"]
+        percent *= risk
+        logger.warning("[{}]should_fly_buy={}".format(symbol, percent))
+    except:
+        return 0
+
+    return percent
+
+
+def should_any_buy(symbol):
+    if is_still_down2(symbol):
+        return 0
+    else:
+        return 0.2
 
 
 def buy_low():
@@ -2571,7 +3437,7 @@ STRATEGY_LIST = [
     # Strategy(macd_strategy_1day, 20, 1, "macd_strategy_1day"),
     # Strategy(kdj_strategy_buy, 240, -1, after_execute_sleep=900 * 3, name="kdj_strategy_buy"),
     # Strategy(kdj_strategy_sell, 240, -1, after_execute_sleep=900 * 3, name="kdj_strategy_sell"),
-    Strategy(kdj_strategy_buy, 10, -1, after_execute_sleep=30, name="kdj_strategy_buy"),#1800
+    # Strategy(kdj_strategy_buy, 10, -1, after_execute_sleep=30, name="kdj_strategy_buy"),#1800
     # Strategy(kdj_strategy_sell, 10, -1, after_execute_sleep=900 * 2, name="kdj_strategy_sell"),
     # Strategy(stop_loss, 20, -1, after_execute_sleep=300, name="stop_loss"),
     # Strategy(move_stop_profit, 12, -1, after_execute_sleep=300, name="move_stop_profit"),
@@ -2582,7 +3448,10 @@ STRATEGY_LIST = [
     # Strategy(trade_advise_update, 3600, -1, name="advise_msg", after_execute_sleep=10),
     # Strategy(buy_low, 10, -1, name="buy_low", after_execute_sleep=600),
     # Strategy(sell_high, 11, -1, name="sell_high", after_execute_sleep=600),
-    Strategy(auto_trade, 11, -1, name="auto trade", after_execute_sleep=10),
+    # Strategy(auto_trade, 11, -1, name="auto trade", after_execute_sleep=10),
+    Strategy(stg_smart_first, 15, -1, name="smart first", after_execute_sleep=15),
+    Strategy(stg_smart_profit, 11, -1, name="smart profit", after_execute_sleep=180),
+    Strategy(stg_smart_patch, 11, -1, name="smart patch", after_execute_sleep=180),
 ]
 
 
