@@ -1241,11 +1241,12 @@ class MainUI:
 
     def save_trades(self):
         try:
-            history_file = "{}.pkl".format(config.CURRENT_ACCOUNT)
-            # 以追加的方式保存
-            with open(history_file, 'ab') as f:
-                pickle.dump(config.TRADE_RECORDS_NOW, f)
-                log_config.output2ui(u"保存历史交易信息成功!")
+            if self.account:
+                history_file = "{}.pkl".format(config.CURRENT_ACCOUNT)
+                # 以追加的方式保存
+                with open(history_file, 'ab') as f:
+                    pickle.dump(config.TRADE_RECORDS_NOW, f)
+                    log_config.output2ui(u"保存历史交易信息成功!")
         except:
             log_config.output2ui(u"保存交易信息失败, 请以管理员身份运行本系统！", 2)
 
