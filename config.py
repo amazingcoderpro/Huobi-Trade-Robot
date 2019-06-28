@@ -493,7 +493,7 @@ TRADE_MODE_CONFIG = {
                      "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                      # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
                      "first_trade": 0.0175,
-                     "patch_interval": 0.045,
+                     "patch_interval": 0.05,
                      "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
                      "expect_profit_m": 0.24,
                      "risk": 1.08
@@ -508,7 +508,7 @@ TRADE_MODE_CONFIG = {
                    "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                    # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
                    "first_trade": 0.0195,
-                   "patch_interval": 0.04,
+                   "patch_interval": 0.045,
                    "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
                    "expect_profit_m": 0.26,
                    "risk": 1.12
@@ -523,7 +523,7 @@ TRADE_MODE_CONFIG = {
                      "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                      # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
                      "first_trade": 0.0215,
-                     "patch_interval": 0.035,
+                     "patch_interval": 0.04,
                      "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
                      "expect_profit_m": 0.28,
                      "risk": 1.16
@@ -630,6 +630,7 @@ TRADE_GROUP = {
     "last_update": None,
     "uri": "",  # 唯一标识，建仓时间加随机数，如20190608123012336
     "principal": -1, #当前这组交易的预算,未单独设置的话(小于零)，则默认为全局本金预算除以监控的币对数，
+    "sell_out": 0
 }
 
 

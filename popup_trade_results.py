@@ -23,8 +23,7 @@ class PopupTradeResults(MyDialog):
     def __init__(self, parent, trade_records, title=u"收益统计"):
         self.trade_records = trade_records
         self.end = datetime.datetime.now()
-        self.beg = self.end - datetime.timedelta(days=1)
-        datetime.datetime.combine(self.beg, datetime.time.min)
+        self.beg = datetime.datetime.combine(self.end, datetime.time.min)
 
         MyDialog.__init__(self, parent, title, modal=True)
 
@@ -34,20 +33,19 @@ class PopupTradeResults(MyDialog):
 
     def cmd_recent1(self):
         self.end = datetime.datetime.now()
-        self.beg = self.end - datetime.timedelta(days=1)
-        datetime.datetime.combine(self.beg, datetime.time.min)
+        self.beg = datetime.datetime.combine(self.end, datetime.time.min)
         self.update_trades()
 
     def cmd_recent7(self):
         self.end = datetime.datetime.now()
         self.beg = self.end - datetime.timedelta(days=7)
-        datetime.datetime.combine(self.beg, datetime.time.min)
+        self.beg = datetime.datetime.combine(self.beg, datetime.time.min)
         self.update_trades()
 
     def cmd_recent30(self):
         self.end = datetime.datetime.now()
         self.beg = self.end - datetime.timedelta(days=30)
-        datetime.datetime.combine(self.beg, datetime.time.min)
+        self.beg = datetime.datetime.combine(self.beg, datetime.time.min)
         self.update_trades()
 
     def cmd_search(self):
@@ -57,9 +55,9 @@ class PopupTradeResults(MyDialog):
             pass
         else:
             self.end = self.dpk_end.current_date
-            datetime.datetime.combine(self.end, datetime.time.max)
+            self.end = datetime.datetime.combine(self.end, datetime.time.max)
             self.beg = self.dpk_beg.current_date
-            datetime.datetime.combine(self.beg, datetime.time.min)
+            self.beg = datetime.datetime.combine(self.beg, datetime.time.min)
         self.update_trades()
 
     def update_trades(self):
@@ -110,9 +108,9 @@ class PopupTradeResults(MyDialog):
         self.opt_money = OptionMenu(frame, self.money, *self.lst_money, command=self.cmd_money_change)
         self.opt_money.grid(row=0, column=1)
 
-        Button(frame, text=u"近1天", command=self.cmd_recent1, width=8, font=("", 10, 'bold')).grid(row=0, column=2)
+        Button(frame, text=u"今天", command=self.cmd_recent1, width=8, font=("", 10, 'bold')).grid(row=0, column=2)
         Button(frame, text=u"近7天", command=self.cmd_recent7, width=8, font=("", 10, 'bold')).grid(row=0, column=3)
-        Button(frame, text=u"近1月", command=self.cmd_recent30, width=8, font=("", 10, 'bold')).grid(row=0, column=4)
+        Button(frame, text=u"近30天", command=self.cmd_recent30, width=8, font=("", 10, 'bold')).grid(row=0, column=4)
 
         Label(frame, text=u"筛选日期:", width=8).grid(row=1, column=0)
         self.dpk_beg = Datepicker(master=frame, entrywidth=12)
@@ -124,7 +122,7 @@ class PopupTradeResults(MyDialog):
 
         columns = (
             u"序号", u"交易对", u"结单时间", u"持仓成本", u"结单收益", u"盈利比%")
-        self.tree = ttk.Treeview(frame, show="headings", columns=columns, height=15)  # 表格
+        self.tree = ttk.Treeview(frame, show="headings", columns=columns, height=22)  # 表格
         for name in columns:
             if name == u"序号":
                 self.tree.column(name, width=30, anchor="center")
@@ -143,7 +141,7 @@ class PopupTradeResults(MyDialog):
         self.total_profit.set(0)
         Label(frame2, textvariable=self.total_profit, width=14, font=("", 12, 'bold')).grid(row=3, column=1)
 
-        Label(frame2, text=u"成交单数:", width=8).grid(row=3, column=2)
+        Label(frame2, text=u"盈利单数:", width=8).grid(row=3, column=2)
         self.trades_num = IntVar()
         self.trades_num.set(0)
         Label(frame2, textvariable=self.trades_num, width=5, font=("", 12, 'bold')).grid(row=3, column=3)

@@ -9,9 +9,19 @@ import config
 from popup_login import MyDialog
 
 class PopupCoins(MyDialog):
-    def __init__(self, parent, title=u"币种设置"):
+    def __init__(self, parent, history_pairs=[], title=u"币种设置"):
         self.ckb_values = {}
         self.selected_symbols = {}
+        self.history_pairs = history_pairs
+        # for pair in self.history_pairs:
+        #     coin = pair.get("coin", "")
+        #     money = pair.get("money", "")
+        #     if money in self.selected_symbols.keys():
+        #         self.selected_symbols[money].append(coin)
+        #     else:
+        #         self.selected_symbols[money] = []
+        #         self.selected_symbols[money].append(coin)
+
         MyDialog.__init__(self, parent, title, modal=True)
 
     def setup_ui(self):

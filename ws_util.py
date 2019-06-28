@@ -51,7 +51,7 @@ class HuobiWS:
             else:
                 self._ws = ws
                 logger.info("connect web socket succeed.")
-                log_config.output2ui(u"建立服务器连接成功.", 0)
+                log_config.output2ui(u"建立服务器连接成功.", 7)
                 return True
 
         logger.critical("create connection failed.")
@@ -197,7 +197,7 @@ class HuobiWS:
                 # 如果已经关闭了，则不需要重连
                 if self._run:
                     logger.warning("need reconnect..")
-                    log_config.output2ui(u"服务器断开, 正在重连...", 2)
+                    log_config.output2ui(u"服务器断开, 正在重连...", 7)
                     ret = self.ws_reconnect(resub=True)
                     #如查重连失败，则接收线程退出
                     if not ret:

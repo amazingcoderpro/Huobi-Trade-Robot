@@ -5,7 +5,7 @@
 import os
 import time
 from datetime import datetime, timedelta
-from tkinter import Tk, Label, Button, IntVar, DoubleVar, StringVar, VERTICAL, Entry, END, messagebox, OptionMenu, ttk, N, S, E, W  #上对齐/下对齐/左对齐/右对齐
+from tkinter import Tk, Label, Menu, Button, IntVar, DoubleVar, StringVar, VERTICAL, Entry, END, messagebox, OptionMenu, ttk, N, S, E, W  #上对齐/下对齐/左对齐/右对齐
 from tkinter.scrolledtext import ScrolledText
 from queue import Queue
 import logging
@@ -66,6 +66,15 @@ class MainUI:
         root.title(config.TITLE)
         log_config.init_log_config(use_mail=False)
         self.first_login = True
+
+        self.history_pairs = [] # 历史未完成的交易对
+
+        self.pop_menu = Menu(root, tearoff=0)
+        self.pop_menu.add_command(label="平仓", command=self.cmd_sell_out)
+        self.pop_menu.add_command(label="设置")
+        self.pop_menu.add_separator()
+        self.pop_menu.add_command(label="取消")
+
         self._hb = None
         self._strategy_pool = StrategyPool()
 
@@ -176,7 +185,7 @@ class MainUI:
         for name in columns:
             if name == u"序号":
                 self.tree.column(name, width=30, anchor="center")
-            if name in [ u"状态"]:
+            if name in [u"状态"]:
                 self.tree.column(name, width=50, anchor="center")
             elif name in [u"收益比", u"已做单数"]:
                 self.tree.column(name, width=70, anchor="center")
@@ -203,6 +212,9 @@ class MainUI:
         # "20190613 04:44:10"))  # 插入数据，
 
         self.tree.bind("<Double-1>", self.cmd_tree_double_click)
+        self.tree.bind("<Button-3>", self.cmd_right_menu)
+        self.tree.bind("<ButtonRelease-1>", self.cmd_left_menu)
+
         vbar = ttk.Scrollbar(root, orient=VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=vbar.set)
 
@@ -281,6 +293,44 @@ class MainUI:
             ret = requests.post(url=url, headers=headers, data=json_data)
             self.is_login = False
             # print(ret.text)
+
+    def cmd_sell_out(self):
+        if not self.tree.selection():
+            return
+
+        item = self.tree.selection()[0]
+        group_uri = self.tree.item(item, "values")[12]
+        for group in config.TRADE_RECORDS_NOW:
+            if group.get("uri") == group_uri:
+                if not group.get("end_time", None):
+                    group["grid"] = 0
+                    group["sell_out"] = 1
+                    log_config.output2ui("将对当前选择的交易组进行平仓, 并开启新一轮监控！", 3)
+                    break
+                else:
+                    log_config.output2ui("该组交易已经结束, 不用平仓!", 2)
+
+    def cmd_left_menu(self, event):
+        self.pop_menu.grab_release()
+
+    def cmd_right_menu(self, event):
+        if not self.working:
+            return
+
+        try:
+            iid = self.tree.identify_row(event.y)
+            if iid:
+                # mouse pointer over item
+                self.tree.selection_set(iid)
+                self.pop_menu.post(event.x_root, event.y_root)
+
+            else:
+                pass
+                # mouse pointer not over item
+                # occurs when items do not fill frame
+                # no action required
+        finally:
+            self.pop_menu.grab_release()
 
     def cmd_tree_double_click(self, event):
         if not self.tree.selection():
@@ -508,7 +558,7 @@ class MainUI:
             messagebox.showinfo(u"提示", u"请先进行 [API设置]!")
             return
 
-        pop = PopupCoins(parent=root)
+        pop = PopupCoins(parent=root, history_pairs=self.history_pairs)
         if pop.result["is_ok"]:
             config.CURRENT_SYMBOLS = pop.result["symbols"]
             logger.info("current symbols: {}".format(config.CURRENT_SYMBOLS))
@@ -1107,13 +1157,25 @@ class MainUI:
 
         def update_heart():
             while 1:
-                time.sleep(300)
+                time.sleep(180)
                 data = {"account": self.account}
                 json_data = json.dumps(data)
                 headers = {'Content-Type': 'application/json'}
                 url = "http://{}:5000/huobi/heart/".format(config.HOST)
                 ret = requests.post(url=url, headers=headers, data=json_data)
-                # print(ret.text)
+                result = json.loads(ret.text)
+                code = result.get("code", -1)
+                if code == 0:
+                    log_config.output2ui(u"您的账号信息异常, 无法继续使用, 如有疑问请与客服联系!", 3)
+                    self.cmd_stop()
+                elif code == 1:
+                    data = result.get("data", "")
+                    dt = datetime.strptime(data, "%Y-%m-%d %H:%M:%S")
+                    if dt < datetime.now():
+                        log_config.output2ui(u"抱歉! 您的账号已经过期, 无法继续使用本系统! 感谢您对本系统的支持, 如需继续使用请联系客服人员进行续费！", 3)
+                        self.cmd_stop()
+                    elif dt < datetime.now()+timedelta(hours=24):
+                        log_config.output2ui(u"您的账号将在24小时内过期, 为保障您的稳定收益, 请及时联系客服人员续费, 否则系统将在24小内停止工作！", 3)
 
 
         def notify_profit_info():
@@ -1271,7 +1333,7 @@ class MainUI:
             log_config.output2ui(u"未发现历史数据！", 2)
             return
 
-        log_config.output2ui(u"加载历史未完成的交易对成功, 共{}对!".format(num), 0)
+
         if num > 0:
             # 从历史文件中删除未完成的交易组
             with open(history_file, 'wb') as f:
@@ -1279,8 +1341,21 @@ class MainUI:
 
             pair_names = []
             for group in config.TRADE_RECORDS_NOW:
-                pair_names.append("{}{}".format(group.get("coin", ""), group.get("money", "")).upper())
-            log_config.output2ui(u"为确保系统在运行时可以继续监控上次退出时未完成的交易对, 请确保选择币种时包含以下交易对：{}".format(pair_names), 3)
+                coin = group.get("coin", "").upper()
+                money = group.get("money", "").upper()
+
+                pair_names.append("{}{}".format(coin, money).upper())
+                self.history_pairs.append({"coin": group.get("coin", "").upper(), "money": group.get("money", "").upper()})
+
+                # {'USDT': {'trade': 0, 'frozen': 0, 'coins': [{'coin': 'HT', 'trade': 0, 'frozen': 0}], 'principal': 0}
+                if money in config.CURRENT_SYMBOLS.keys():
+                    config.CURRENT_SYMBOLS[money]["coins"].append({"coin": coin, 'trade': 0, 'frozen': 0})
+                else:
+                    config.CURRENT_SYMBOLS[money] = {"coins": [{"coin": coin, 'trade': 0, 'frozen': 0}], 'trade': 0, 'frozen': 0, 'principal': 0}
+
+            log_config.output2ui(u"加载历史未完成的交易对成功, 共{}对! 系统将在币种设置中为您自动勾以下待完成的币种, 继续上次退出时未完成的监控工作：　{}".format(num, pair_names), 3)
+        else:
+            log_config.output2ui(u"未发现历史待完成的交易对!", 0)
 
     def cmd_trade_result(self):
         try:
