@@ -27,7 +27,7 @@ class PopupTradeInfo(MyDialog):
         frame = Frame(self)
         columns = (
             u"序号", u"交易对", u"状　态", u"持币数量", u"持仓费用", u"买入价格", u"卖出价格", u"盈利额", u"盈利比%", u"买入时间", u"卖出时间")
-        self.tree = ttk.Treeview(frame, show="headings", columns=columns, height=6)  # 表格
+        self.tree = ttk.Treeview(frame, show="headings", columns=columns, height=11)  # 表格
         for name in columns:
             if name == u"序号":
                 self.tree.column(name, width=30, anchor="center")
@@ -42,9 +42,15 @@ class PopupTradeInfo(MyDialog):
         index = 0
         for trade in self.trades:
             trade_pair = "{}/{}".format(trade["coin"], trade['money'])
+            str_status = u"监控中"
+            if trade.get("is_sell", 0) == 1:
+                str_status = u"已完成"
+                if trade.get("sell_type", "") == "failed":
+                    str_status = u"失败"
+
             self.tree.insert("", index, values=(index+1,
             trade_pair,
-            u"监控中" if not trade.get("is_sell", 0) else u"已完成",
+            str_status,
             round(trade["amount"], 6),
             round(trade["cost"], 6),
             round(trade["buy_price"], 6),

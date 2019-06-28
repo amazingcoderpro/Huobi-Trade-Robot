@@ -763,18 +763,18 @@ if __name__ == '__main__':
     # print("get_symbols = {}".format(hrs.get_symbols()))
     # print("get_accounts = {}".format(hrs.get_accounts()))
     # print(hrs._account_id)
-    import time
-    while 1:
-        symbol = "ongusdt"
-        amount = 400
-        ret = hrs.get_detail(symbol)
-        if ret[0] == 200 and ret[1]["status"]=="ok":
-            ret = hrs.send_order(amount=400, source="api", symbol=symbol, _type="buy-market")
-            print("buy {}: {}".format(symbol, amount))
-            break
-        else:
-            print(ret[1]["err-msg"])
-            time.sleep(3)
+    # import time
+    # while 1:
+    #     symbol = "ongusdt"
+    #     amount = 400
+    #     ret = hrs.get_detail(symbol)
+    #     if ret[0] == 200 and ret[1]["status"]=="ok":
+    #         ret = hrs.send_order(amount=400, source="api", symbol=symbol, _type="buy-market")
+    #         print("buy {}: {}".format(symbol, amount))
+    #         break
+    #     else:
+    #         print(ret[1]["err-msg"])
+    #         time.sleep(3)
 
     print("get_balance = {}".format(hrs.get_balance(currency="eth")))
     print("get_balance = {}".format(hrs.get_balance(currency="usdt")))
@@ -792,7 +792,7 @@ if __name__ == '__main__':
     # print("order_info = {}".format(hrs.order_info(ret[1])))
 
     # sell ---------
-    ret = hrs.send_order(0.01, source="api", symbol="ethusdt", _type="sell-market")
+    ret = hrs.send_order(0.1, source="api", symbol="mdsusdt", _type="sell-market")
     print("send_order = {}".format(ret))
     print("order_info = {}".format(hrs.order_info(ret[1])))
 

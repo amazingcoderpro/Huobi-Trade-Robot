@@ -571,6 +571,18 @@ def should_patch(symbol, ref_price, patch_interval):
     return False
 
 
+def format_float(num, pos=2):
+    if pos <= 0:
+        return int(num)
+
+    num_split = str(num).split('.')
+    if len(num_split) == 1:
+        return num
+
+    num = float(num_split[0] + '.' + num_split[1][0:pos])
+    return num
+
+
 def stg_smart_profit():
     for trade_group in config.TRADE_RECORDS_NOW:
         #已经结束，或者trades为空
@@ -617,6 +629,11 @@ def stg_smart_profit():
                 # 要求的卖出方式不是止盈卖出, 则另作处理
                 if trade.get("sell_type", "profit") != "profit":
                     continue
+
+                if trade.get("last_failed", None):
+                    # 对于刚刚失败过的订单，15分钟内不再尝试卖出
+                    if (datetime.now() - trade["last_failed"]).total_seconds() < 600:
+                        continue
 
                 # 以尾单价格判断是否该收割尾单
                 ref_price = trade['buy_price']
@@ -665,7 +682,8 @@ def stg_smart_profit():
                         # 从整体持仓量和成本减去实际卖掉量和钱，止盈，成本会被渐渐拉低，甚至为负
                         trade_group["amount"] -= field_amount
                         trade_group["cost"] -= field_cash_amount
-                        trade_group["cost"] = 0 if trade_group["cost"] < 0 else trade_group["cost"]
+                        trade_group["cost"] = 0 if trade_group["cost"] < 0.0001 else trade_group["cost"]
+                        trade_group["amount"] = 0 if trade_group["amount"] < 0.0001 else trade_group["amount"]
 
                         trade_group["last_update"] = time_now
                         if trade_group["amount"] >= 0.0001 and trade_group["cost"] >= 0.0001:
@@ -684,10 +702,39 @@ def stg_smart_profit():
                         log_config.notify_user(msg, own=True)
                     else:
                         log_config.output2ui(u"网格止盈失败, 请检查您的持仓情况, 计划止盈卖出[{}]币量： {}".format(symbol.upper(), round(plan_sell_amount, 4)), 3)
+                        time_now = datetime.now()
+                        trade["last_failed"] = time_now
+                        if "failed_times" in trade.keys():
+                            trade["failed_times"] += 1
+                        else:
+                            trade["failed_times"] = 1
+
+                        if trade.get("failed_times", 0) >= 3:
+                            len_trades -= 1
+                            trade["is_sell"] = 1
+                            trade['sell_type'] = 'failed'
+                            trade["sell_price"] = 0
+                            trade["profit"] = 0
+                            trade["profit_percent"] = 0
+                            trade["sell_time"] = time_now
+
+                            # 更改group信息
+                            # 从整体持仓量和成本减去实际卖掉量和钱，止盈，成本会被渐渐拉低，甚至为负
+                            trade_group["amount"] -= trade["amount"]
+                            trade_group["cost"] -= trade["cost"]
+                            trade_group["cost"] = 0 if trade_group["cost"] < 0.0001 else trade_group["cost"]
+                            trade_group["amount"] = 0 if trade_group["amount"] < 0.0001 else trade_group["amount"]
+
+                            trade_group["last_update"] = time_now
+                            if trade_group["amount"] >= 0.0001 and trade_group["cost"] >= 0.0001:
+                                trade_group["avg_price"] = trade_group["cost"] / trade_group["amount"]
+
+                            trade_group["patch_index"] -= 1  # 每卖掉一单，补仓次数减一，以保证下次补仓的正确
+                            log_config.output2ui(u"网格止盈[{}]连续失败次数超限, 为不影响后续交易的监控, 放弃对本次交易的监控．".format(symbol.upper()), 3)
+
                         pause = True
 
             # 判断是不是全部卖出了
-
             if len_trades <= 0:
                 trade_group["end_time"] = datetime.now()
                 msg = "[整组完成{}] 本组交易最大持仓本金： {}, 共盈利{}次, 总盈利金额： {}, 盈利比： {}%, 持续时间： {}分钟". \
@@ -697,7 +744,6 @@ def stg_smart_profit():
                 log_config.output2ui(msg, 5)
                 logger.warning(msg)
                 log_config.notify_user(msg, own=True)
-
             else:
                 # 修改最后一次买入价格为最后一单未卖出的买入价格
                 trade_group["last_buy_price"] = trades[len_trades-1]["buy_price"]
@@ -712,7 +758,7 @@ def stg_smart_profit():
             ref_time = trade_group.get("start_time", None)
 
             # 判断是否该卖出了
-            if should_stop_profit(symbol, ref_price, group_limit_profit, group_back_profit, ref_time, track=group_track):
+            if trade_group.get("sell_out", 0) or should_stop_profit(symbol, ref_price, group_limit_profit, group_back_profit, ref_time, track=group_track):
                 ret = sell_market(symbol, amount=plan_sell_amount, currency=coin_name.lower())
                 if ret.get("code", 0) == 1:
                     time_now = datetime.now()
@@ -813,6 +859,10 @@ def stg_smart_patch():
                 principal = principal/coins_num     #当前货币的本金预算除以需要监控的币对数，就是这个交易对的预算
 
             multiple = patch_multiple(trade_group["patch_index"]+1, group_mode.get("patch_mode", "multiple"), group_mode.get("limit_trades", 8))
+            if multiple == 0:
+                log_config.output2ui(u"[{}]已经达到补仓次数上限, 暂停买入!".format(symbol.upper()), 2)
+                continue
+
             plan_buy_cost = principal*group_mode['first_trade']*multiple
             ret = buy_market(symbol, currency=money.lower(), amount=plan_buy_cost)
             # 买入成功
@@ -1316,6 +1366,7 @@ def stg_smart_first():
     智能建仓
     :return:
     """
+    pause = False
     for money, value in config.CURRENT_SYMBOLS.items():
         coins = value.get("coins", [])
         if not coins:
@@ -1360,6 +1411,11 @@ def stg_smart_first():
                             u"[{}]智能建仓成功, 智能分析建仓推荐指数: {}".format(symbol.upper(), round(buy_multiple, 4)), 0)
                     else:
                         log_config.output2ui(u"[{}]市价建仓成功, 因未开启智能建仓, 当前行情已稳定, 直接以当前市价建仓！".format(symbol.upper()))
+                else:
+                    log_config.output2ui(u"建仓[{}]失败! 请关注您的账户可操配资金是否充足！".format(symbol.upper()), 3)
+                    pause = True
+
+    return pause
 
 
 def kdj_strategy_buy():
@@ -2254,52 +2310,60 @@ def buy_market(symbol, amount, percent=0.1, currency=""):
         else:
             if amount >= balance:
                 # 余额不足
-                log_config.output2ui(u"买入[{}]时余额不足, 计划买入: {}, 余额: {}, 将按照余额数买入！".format(symbol.upper(), amount, balance), 2)
+                log_config.output2ui(u"买入[{}]时余额不足, 计划买入: {}, 余额: {}, 将按照余额数买入！".format(symbol.upper(), round(amount, 4), round(balance, 4)), 2)
                 amount = balance*0.95
 
     # 市价amount代表买多少钱的
-    amount = round(amount, 4)
+    amount = format_float(amount, 4)
     logger.warning("buy {} amount={}, balance={}".format(symbol, amount, balance))
 
     hrs = HuobiREST()
-    ret = hrs.send_order(amount=amount, source="api", symbol=symbol, _type="buy-market")
-    if ret[0] == 200 and ret[1]:
-        logger.info("buy market success, symbol={}, amount={}".format(symbol, amount))
-        order_id = ret[1]
-        order_response = hrs.order_info(order_id)
-        # (200, {'status': 'ok',
-        #        'data': {'id': 6766866273, 'symbol': 'ethusdt', 'account-id': 4091798, 'amount': '1.000000000000000000',
-        #                 'price': '0.0', 'created-at': 1530233353821, 'type': 'buy-market',
-        #                 'field-amount': '0.002364960741651688', 'field-cash-amount': '0.999999999999999753',
-        #                 'field-fees': '0.000004729921483303', 'finished-at': 1530233354117, 'source': 'api',
-        #                 'state': 'filled', 'canceled-at': 0}})
-        if order_response[0] == 200 and order_response[1].get("status", "") == config.STATUS_OK:
-            order_detail = order_response[1].get("data", {})
-            amount = float(order_detail.get("amount", amount))
-            field_cash_amount = float(order_detail.get("field-cash-amount", 0))   # 成交金额
-            field_amount = float(order_detail.get("field-amount", 0))   #买入币量
-            fees = float(order_detail.get("field-fees", 0))
-            price = float(order_detail.get("price", 0))
+    retry = 3
+    while retry >= 0:
+        ret = hrs.send_order(amount=amount, source="api", symbol=symbol, _type="buy-market")
+        if ret[0] == 200 and ret[1]:
+            logger.info("buy market success, symbol={}, amount={}".format(symbol, amount))
+            order_id = ret[1]
+            order_response = hrs.order_info(order_id)
+            # (200, {'status': 'ok',
+            #        'data': {'id': 6766866273, 'symbol': 'ethusdt', 'account-id': 4091798, 'amount': '1.000000000000000000',
+            #                 'price': '0.0', 'created-at': 1530233353821, 'type': 'buy-market',
+            #                 'field-amount': '0.002364960741651688', 'field-cash-amount': '0.999999999999999753',
+            #                 'field-fees': '0.000004729921483303', 'finished-at': 1530233354117, 'source': 'api',
+            #                 'state': 'filled', 'canceled-at': 0}})
+            if order_response[0] == 200 and order_response[1].get("status", "") == config.STATUS_OK:
+                order_detail = order_response[1].get("data", {})
+                amount = float(order_detail.get("amount", amount))
+                field_cash_amount = float(order_detail.get("field-cash-amount", 0))   # 成交金额
+                field_amount = float(order_detail.get("field-amount", 0))   #买入币量
+                fees = float(order_detail.get("field-fees", 0))
+                price = float(order_detail.get("price", 0))
 
-            logger.warning("买入{}成功, 计划买入额: {}, 实际成交额: {}, 实际买入币量: {}, 买入价格: {}".format(symbol, round(amount, 6), round(field_cash_amount, 6), round(field_amount, 6), round(price, 6)))
+                logger.warning("买入{}成功, 计划买入额: {}, 实际成交额: {}, 实际买入币量: {}, 买入价格: {}".format(symbol, round(amount, 6), round(field_cash_amount, 6), round(field_amount, 6), round(price, 6)))
 
-            result["code"] = 1
-            result["data"] = {
-                "symbol": symbol,
-                "amount": amount,
-                "field_cash_amount": field_cash_amount,
-                "field_amount": field_amount,
-                "finished_at": order_detail.get("finished-at", ""),
-                "price": price,
-                "fees": fees
+                result["code"] = 1
+                result["data"] = {
+                    "symbol": symbol,
+                    "amount": amount,
+                    "field_cash_amount": field_cash_amount,
+                    "field_amount": field_amount,
+                    "finished_at": order_detail.get("finished-at", ""),
+                    "price": price,
+                    "fees": fees
 
-            }
-            result["msg"] = "Buy succeed!"
-            update_balance(money_only=True)
-            return result
+                }
+                result["msg"] = "Buy succeed!"
+                update_balance(money_only=True)
+                return result
+        elif ret[0] == 200:
+            #精度有问题，可以降低精度再试试
+            amount = format_float(amount, retry-1)
+            retry -= 1
+        else:
+            break
 
     logger.error("buy market failed, symbol={}, amount={}, ret={}".format(symbol, amount, ret))
-    log_config.output2ui("买入{}失败, 计划买入币量: {}．".format(symbol, amount), 7)
+    log_config.output2ui("买入{}失败, 计划买入币量: {}".format(symbol, amount), 2)
     result["code"] = 0
     result["msg"] = "Trade buy failed!"
     return result
@@ -2327,54 +2391,68 @@ def sell_market(symbol, amount, percent=0.1, currency=""):
                 log_config.output2ui(u"卖出[{}]时余币不足, 计划卖出: {}, 余币: {}, 将按照余币数卖出！".format(symbol.upper(), amount, balance), 2)
                 amount = balance*0.95
 
-    amount = round(amount, 4)
+    # if currency.lower() in ["btc", "eth", "bch", "bsv", "dash", "ltc", "zec", "xmr", "dcr", "neo", "etc", "eos", "qtum"]:
+    #     amount = format_float(amount, 4)
+    # else:
+    #     amount = format_float(amount, 2)
+
+    amount = format_float(amount, 4)
     logger.warning("sell {} amount={}, balance={}".format(symbol, amount, balance))
 
     # 卖出时amount代表币量
+
     hrs = HuobiREST()
-    ret = hrs.send_order(amount=amount, source="api", symbol=symbol, _type="sell-market")
-    # (True, '6766866273')
-    if ret[0] == 200 and ret[1]:
-        order_id = ret[1]
-        order_response = hrs.order_info(order_id)
-        # order_info = (200, {'status': 'ok', 'data': {'id': 6767239276, 'symbol': 'ethusdt', 'account-id': 4091798,
-        #                                              'amount': '0.001000000000000000', 'price': '0.0',
-        #                                              'created-at': 1530233815111, 'type': 'sell-market',
-        #                                              'field-amount': '0.001000000000000000',
-        #                                              'field-cash-amount': '0.422820000000000000',
-        #                                              'field-fees': '0.000845640000000000',
-        #                                              'finished-at': 1530233815527, 'source': 'api',
-        #                                              'state': 'filled', 'canceled-at': 0}})
-        if order_response[0] == 200 and order_response[1].get("status", "") == config.STATUS_OK:
-            order_detail = order_response[1].get("data", {})
+    retry = 3
+    while retry >= 0:
+        ret = hrs.send_order(amount=amount, source="api", symbol=symbol, _type="sell-market")
+        # (True, '6766866273')
+        if ret[0] == 200 and ret[1]:
+            order_id = ret[1]
+            order_response = hrs.order_info(order_id)
+            # order_info = (200, {'status': 'ok', 'data': {'id': 6767239276, 'symbol': 'ethusdt', 'account-id': 4091798,
+            #                                              'amount': '0.001000000000000000', 'price': '0.0',
+            #                                              'created-at': 1530233815111, 'type': 'sell-market',
+            #                                              'field-amount': '0.001000000000000000',
+            #                                              'field-cash-amount': '0.422820000000000000',
+            #                                              'field-fees': '0.000845640000000000',
+            #                                              'finished-at': 1530233815527, 'source': 'api',
+            #                                              'state': 'filled', 'canceled-at': 0}})
+            if order_response[0] == 200 and order_response[1].get("status", "") == config.STATUS_OK:
+                order_detail = order_response[1].get("data", {})
 
-            amount = float(order_detail.get("amount", amount))
-            field_cash_amount = float(order_detail.get("field-cash-amount", 0))   # 成交金额
-            field_amount = float(order_detail.get("field-amount", 0))   #卖出币量
-            fees = float(order_detail.get("field-fees", 0))
-            price = float(order_detail.get("price", 0))
-            # price = current_price if price == 0 else price
+                amount = float(order_detail.get("amount", amount))
+                field_cash_amount = float(order_detail.get("field-cash-amount", 0))   # 成交金额
+                field_amount = float(order_detail.get("field-amount", 0))   #卖出币量
+                fees = float(order_detail.get("field-fees", 0))
+                price = float(order_detail.get("price", 0))
+                # price = current_price if price == 0 else price
 
-            logger.warning(
-                "卖出{}成功, 计划卖出币量: {}, 实际成交币量: {}, 实际成交金额: {}, 卖出价格: {}".format(symbol,
-                                                                                       round(amount, 6),
-                                                                                       round(field_amount, 6),
-                                                                                       round(field_cash_amount, 6),
-                                                                                       round(price, 6)))
+                logger.warning(
+                    "卖出{}成功, 计划卖出币量: {}, 实际成交币量: {}, 实际成交金额: {}, 卖出价格: {}".format(symbol,
+                                                                                           round(amount, 6),
+                                                                                           round(field_amount, 6),
+                                                                                           round(field_cash_amount, 6),
+                                                                                           round(price, 6)))
 
-            result["code"] = 1
-            result["data"] = {
-                "symbol": symbol,
-                "amount": amount,
-                "field_cash_amount": field_cash_amount,
-                "field_amount": field_amount,
-                "finished_at": order_detail.get("finished-at", ""),
-                "price": price
+                result["code"] = 1
+                result["data"] = {
+                    "symbol": symbol,
+                    "amount": amount,
+                    "field_cash_amount": field_cash_amount,
+                    "field_amount": field_amount,
+                    "finished_at": order_detail.get("finished-at", ""),
+                    "price": price
 
-            }
-            result["msg"] = "Sell succeed!"
-            update_balance(money_only=True)
-            return result
+                }
+                result["msg"] = "Sell succeed!"
+                update_balance(money_only=True)
+                return result
+        elif ret[0] == 200:
+            # 精度有问题，可以降低精度再试试
+            amount = format_float(amount, retry-1)
+            retry -= 1
+        else:
+            break
 
     logger.error("sell market failed, symbol={}, amount={}, ret={}".format(symbol, amount, ret))
     log_config.output2ui("卖出{}失败, 计划卖出币量: {}．".format(symbol, amount), 2)
@@ -3456,7 +3534,7 @@ STRATEGY_LIST = [
     # Strategy(buy_low, 10, -1, name="buy_low", after_execute_sleep=600),
     # Strategy(sell_high, 11, -1, name="sell_high", after_execute_sleep=600),
     # Strategy(auto_trade, 11, -1, name="auto trade", after_execute_sleep=10),
-    Strategy(stg_smart_first, 15, -1, name="smart first", after_execute_sleep=15),
+    Strategy(stg_smart_first, 15, -1, name="smart first", after_execute_sleep=900),
     Strategy(stg_smart_profit, 11, -1, name="smart profit", after_execute_sleep=180),
     Strategy(stg_smart_patch, 11, -1, name="smart patch", after_execute_sleep=180),
 ]
