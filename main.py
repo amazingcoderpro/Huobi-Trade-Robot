@@ -31,10 +31,13 @@ from popup_coins import PopupCoins
 from popup_trade_info import PopupTradeInfo
 from popup_mode import PopupMode
 from popup_trade_results import PopupTradeResults
+from popup_system import PopupSystem
+from popup_group_mode import PopupGroupMode
 import hashlib
 import yaml
 import base64
 import pickle
+import sqlite3
 
 
 def treeview_sort_column(tv, col, reverse):
@@ -70,8 +73,11 @@ class MainUI:
         self.history_pairs = [] # 历史未完成的交易对
 
         self.pop_menu = Menu(root, tearoff=0)
-        self.pop_menu.add_command(label="平仓", command=self.cmd_sell_out)
-        self.pop_menu.add_command(label="设置")
+        self.pop_menu.add_command(label="交易参数设置", command=self.cmd_group_setting)
+        self.pop_menu.add_command(label="停止补仓", command=self.cmd_stop_patch)
+        self.pop_menu.add_command(label="开启补仓", command=self.cmd_start_patch)
+        self.pop_menu.add_command(label="平仓(卖出当前币种)", command=self.cmd_sell_out)
+        self.pop_menu.add_command(label="清仓(卖出所有币种)", command=self.cmd_sell_all)
         self.pop_menu.add_separator()
         self.pop_menu.add_command(label="取消")
 
@@ -179,8 +185,13 @@ class MainUI:
         self.btn_results = Button(root, text="收益统计", command=self.cmd_trade_result, width=7, font=("", 12, 'bold'))
 
         # columns = (u"启动时间", u"状态", u"交易对", u"当前价格", u"持仓均价", u"货币数量", u"持仓费用", u"收益比%", u"已做单数", u"止盈比例%", u"止盈追踪%", u"间隔参考", u"网格止盈", u"尾单收益比%", u"累计收益", u"最近更新", u"结束时间")
+        # columns = (
+        # u"序号", u"交易对", u"状态", u"当前价格", u"持仓均价", u"持币数量", u"持仓费用", u"已做单数", u"已盈利单数", u"尾单收益比%", u"累计收益", u"收益比%", u"建仓时间",  u"最近更新", u"结束时间")
+
         columns = (
-        u"序号", u"交易对", u"状态", u"当前价格", u"持仓均价", u"持币数量", u"持仓费用", u"已做单数", u"已盈利单数", u"尾单收益比%", u"累计收益", u"收益比%", u"建仓时间",  u"最近更新", u"结束时间")
+            u"序号", u"交易对", u"状态", u"持仓均价", u"持币数量", u"持仓费用", u"已做单数", u"已盈利单数", u"尾单收益比%", u"累计收益", u"收益比%",
+            u"建仓时间", u"最近更新", u"结束时间")
+
         self.tree = ttk.Treeview(root, show="headings", columns=columns, height=16)  # 表格
         for name in columns:
             if name == u"序号":
@@ -294,28 +305,136 @@ class MainUI:
             self.is_login = False
             # print(ret.text)
 
-    def cmd_sell_out(self):
+    def cmd_stop_patch(self):
         if not self.tree.selection():
+            log_config.output2ui(u"请选中特定的交易组后方可进行操作!", 2)
             return
 
         item = self.tree.selection()[0]
-        group_uri = self.tree.item(item, "values")[12]
+        group_uri = self.tree.item(item, "values")[11]
+
         for group in config.TRADE_RECORDS_NOW:
-            if group.get("uri") == group_uri:
+            if group.get("uri", "-1") == group_uri:
+                if not group.get("end_time", None):
+                    group["stop_patch"] = 1
+                    pair = "{}{}".format(group["coin"], group["money"]).upper()
+                    log_config.output2ui(u"将停止对交易组{}补仓, 但仍会监控其是否达到盈利条件并进行卖出！".format(pair), 3)
+                    strategies.should_update_ui_tree = True
+                    break
+                else:
+                    log_config.output2ui("[提示]该组交易已经结束, 无需设置!", 2)
+
+    def cmd_start_patch(self):
+        if not self.tree.selection():
+            log_config.output2ui(u"请选中特定的交易组后方可进行操作!", 2)
+            return
+
+        item = self.tree.selection()[0]
+        group_uri = self.tree.item(item, "values")[11]
+
+        for group in config.TRADE_RECORDS_NOW:
+            if group.get("uri", "-1") == group_uri:
+                if not group.get("end_time", None):
+                    group["stop_patch"] = 0
+                    pair = "{}{}".format(group["coin"], group["money"]).upper()
+                    log_config.output2ui(u"将继续对交易组{}进行补仓！".format(pair), 3)
+                    strategies.should_update_ui_tree = True
+                    break
+                else:
+                    log_config.output2ui("[提示]该组交易已经结束, 无需设置!", 2)
+
+    def cmd_sell_out(self):
+        if not self.working:
+            log_config.output2ui(u"平仓前请先启动工作, 否则无法平仓!", 2)
+            return
+
+        if not self.tree.selection():
+            log_config.output2ui(u"请选中特定的交易组后方可进行平仓!", 2)
+            return
+
+        item = self.tree.selection()[0]
+        group_uri = self.tree.item(item, "values")[11]
+
+        for group in config.TRADE_RECORDS_NOW:
+            if group.get("uri", "-1") == group_uri:
                 if not group.get("end_time", None):
                     group["grid"] = 0
                     group["sell_out"] = 1
-                    log_config.output2ui("将对当前选择的交易组进行平仓, 并开启新一轮监控！", 3)
+                    pair = "{}{}".format(group["coin"], group["money"]).upper()
+                    log_config.output2ui(u"正在对交易组{}进行平仓, 平仓后将开启新一轮监控. 如果您不想再买入该币种, 请在币种设置中取消对该币种的勾选！".format(pair), 3)
                     break
                 else:
-                    log_config.output2ui("该组交易已经结束, 不用平仓!", 2)
+                    log_config.output2ui("[提示]该组交易已经结束, 无须平仓!", 2)
+
+    def cmd_group_setting(self):
+        if not self.tree.selection():
+            log_config.output2ui("请选择特定的交易组后方可进行参数设置.", 2)
+            return
+
+        item = self.tree.selection()[0]
+        group_uri = self.tree.item(item, "values")[11]
+        selected_group = None
+        for group in config.TRADE_RECORDS_NOW:
+            if group.get("uri", "-1") == group_uri:
+                if group.get("end_time", None):
+                    log_config.output2ui(u"[提示]该组交易已经结束, 不支持参数设置!", 2)
+                    return
+
+                selected_group = group
+                break
+
+        if not selected_group:
+            log_config.output2ui(u"未找到该组交易信息, 无法设置, 将按照全局交易参数进行交易处理!", 2)
+            return
+
+        pop = PopupGroupMode(self.root, selected_group)
+        if pop.result["is_ok"]:
+            for k, v in pop.result.items():
+                if k in selected_group.keys():
+                    selected_group[k] = v
+
+            log_config.output2ui(
+                u"[{}]本组交易策略设置成功! 本组交易将按照您设置的参数进行交易, 其他未设置的交易组仍会按照全局的交易参数进行处理！\n以下是您为当前交易组选择的策略参数: [{}], 补仓数列为: [{}], 补仓参考: [{}], 补仓间隔: {}%, 止盈比例为: {}%, 追踪止盈: {}, "
+                u"追踪回撤比例: {}%, 网格止盈: {}, 智能止盈: {}, 智能补仓: {}".format(self.tree.item(item, "values")[1], pop.result["mode_name"],
+                                                                              pop.result["patch_name"],
+                                                                              pop.result["patch_ref_name"],
+                                                                              round(pop.result["patch_interval"] * 100,
+                                                                                    4),
+                                                                              round(pop.result["limit_profit"] * 100,
+                                                                                    4),
+                                                                              u"开启" if pop.result["track"] else u"关闭",
+                                                                              round(pop.result["back_profit"] * 100, 4),
+                                                                              u"开启" if pop.result["grid"] else u"关闭",
+                                                                              u"开启" if pop.result[
+                                                                                  "smart_profit"] else u"关闭",
+                                                                              u"开启" if pop.result[
+                                                                                  "smart_patch"] else u"关闭"), 0)
+            self.update_trade_info_to_db()
+
+    def cmd_sell_all(self):
+        if not self.working:
+            log_config.output2ui(u"清仓前请先启动工作, 否则无法清仓!", 2)
+            return
+
+        resp = messagebox.askyesno(u"清仓提示", u"将按当前市价卖出当前计价货币({})下的所有处于监控状态的币种, 确认是否继续?".format(self.money.get()))
+        if resp:
+            for group in config.TRADE_RECORDS_NOW:
+                # 将当前计价货币下的所有币种进行清仓
+                if not group.get("end_time", None) and group.get("money", "") == self.money.get():
+                    group["grid"] = 0
+                    group["sell_out"] = 1
+                    pair = "{}{}".format(group["coin"], group["money"]).upper()
+                    log_config.output2ui(u"正在对交易组{}进行平仓...".format(pair), 3)
 
     def cmd_left_menu(self, event):
         self.pop_menu.grab_release()
 
     def cmd_right_menu(self, event):
-        if not self.working:
-            return
+        # self.tree.selection_set(iid)
+        # self.pop_menu.post(event.x_root, event.y_root)
+        # return
+        # if not self.working:
+        #     return
 
         try:
             iid = self.tree.identify_row(event.y)
@@ -337,7 +456,7 @@ class MainUI:
             return
 
         item = self.tree.selection()[0]
-        group_uri = self.tree.item(item, "values")[12]
+        group_uri = self.tree.item(item, "values")[11]
 
         select_record = None
         for record in config.TRADE_RECORDS_NOW:
@@ -422,6 +541,83 @@ class MainUI:
         """
         pass
 
+    def save_account_info_to_db(self):
+        try:
+            conn = sqlite3.connect(config.DB_FILE, detect_types=sqlite3.PARSE_DECLTYPES)
+            cursor = conn.cursor()
+            # user
+            cursor.execute(
+                "create table if not exists user(id integer primary key autoincrement, name varchar(256), password varchar(256))")
+
+            cursor.execute("select password from `user` where name=?", (config.CURRENT_ACCOUNT, ))
+            user = cursor.fetchone()
+            if not user:
+                cursor.execute("insert into `user` values(?, ?, ?)", (None, config.CURRENT_ACCOUNT, base64.b64encode(bytes(config.CURRENT_PASSWORD, encoding="utf-8"))))
+                conn.commit()
+        except Exception as e:
+            logger.exception("save account info to db. e=%s".format(e))
+            return False
+        finally:
+            conn.close()
+        return True
+
+    def save_api_info_to_db(self):
+        try:
+            conn = sqlite3.connect(config.DB_FILE, detect_types=sqlite3.PARSE_DECLTYPES)
+            cursor = conn.cursor()
+            cursor.execute("select api_key from `api_key` where user=? and platform=?", (config.CURRENT_ACCOUNT, config.CURRENT_PLATFORM))
+            api_key = cursor.fetchone()
+            if not api_key:
+                cursor.execute("insert into `api_key` values(?, ?, ?, ?, ?)", (None, config.CURRENT_ACCOUNT, config.CURRENT_PLATFORM, config.ACCESS_KEY, config.SECRET_KEY))
+            else:
+                cursor.execute("update `api_key` set api_key=?, secret_key=? where user=? and platform=?", (config.ACCESS_KEY, config.SECRET_KEY, config.CURRENT_ACCOUNT, config.CURRENT_PLATFORM))
+            conn.commit()
+        except Exception as e:
+            logger.exception("save_api_info_to_db. e=%s".format(e))
+            return False
+        finally:
+            conn.close()
+        return True
+
+    # "track integer, grid integer, smart_first integer, smart_profit integer, smart_patch integer, patch_mode varchar(20), patch_interval real,
+    def get_access_key_from_db(self):
+        try:
+            conn = sqlite3.connect(config.DB_FILE, detect_types=sqlite3.PARSE_DECLTYPES)
+            cursor = conn.cursor()
+            # api key
+            cursor.execute(
+                "create table if not exists api_key(id integer primary key autoincrement, user varchar(256), platform varchar(40), "
+                "api_key varchar(256), secret_key varchar(256))")
+            conn.commit()
+            cursor.execute("select platform, api_key, secret_key from `api_key` where user=?", (config.CURRENT_ACCOUNT, ))
+            res = cursor.fetchone()
+            if not res:
+                return "", "", ""
+
+            return res[0], res[1], res[2]
+        except Exception as e:
+            return "", "", ""
+        finally:
+            conn.close()
+
+    def get_account_info_from_db(self):
+        try:
+            conn = sqlite3.connect(config.DB_FILE, detect_types=sqlite3.PARSE_DECLTYPES)
+            cursor = conn.cursor()
+            cursor.execute(
+                "create table if not exists user(id integer primary key autoincrement, name varchar(256), password varchar(256))")
+            conn.commit()
+            cursor.execute("select name, password from `user` where id>=0")
+            res = cursor.fetchone()
+            if not res:
+                return "", ""
+
+            return res[0], res[1]
+        except Exception as e:
+            return "", ""
+        finally:
+            conn.close()
+
     def cmd_login(self):
         def login(account, password):
             sha = hashlib.sha256()
@@ -434,7 +630,7 @@ class MainUI:
             try:
                 retry = 3
                 while retry >= 0:
-                    host = "127.0.0.1"
+                    # host = "127.0.0.1"
                     data = {"account": account, "password": encode_password}
                     json_data = json.dumps(data)
                     headers = {'Content-Type': 'application/json'}
@@ -453,14 +649,20 @@ class MainUI:
 
         # 读出账号信息
         try:
-            with open(r'ddu.yml', 'r') as f:
-                yaml_dict = yaml.load(f, Loader=yaml.FullLoader)
+            account, password = self.get_account_info_from_db()
 
-            config.CURRENT_ACCOUNT = str(base64.b64decode(yaml_dict.get("account", b"")), encoding="utf-8")
-            config.CURRENT_PASSWORD = str(base64.b64decode(yaml_dict.get("password", b"")), encoding="utf-8")
-            config.ACCESS_KEY = str(base64.b64decode(yaml_dict.get("access_key", b"")), encoding="utf-8")
-            config.SECRET_KEY = str(base64.b64decode(yaml_dict.get("secret_key", b"")), encoding="utf-8")
-            config.CURRENT_PLATFORM = str(base64.b64decode(yaml_dict.get("platform", b"")), encoding="utf-8")
+            if not account:
+                with open(r'ddu.yml', 'r') as f:
+                    yaml_dict = yaml.load(f, Loader=yaml.FullLoader)
+
+                config.CURRENT_ACCOUNT = str(base64.b64decode(yaml_dict.get("account", b"")), encoding="utf-8")
+                config.CURRENT_PASSWORD = str(base64.b64decode(yaml_dict.get("password", b"")), encoding="utf-8")
+                config.ACCESS_KEY = str(base64.b64decode(yaml_dict.get("access_key", b"")), encoding="utf-8")
+                config.SECRET_KEY = str(base64.b64decode(yaml_dict.get("secret_key", b"")), encoding="utf-8")
+                config.CURRENT_PLATFORM = str(base64.b64decode(yaml_dict.get("platform", b"")), encoding="utf-8")
+            else:
+                config.CURRENT_ACCOUNT = account
+                config.CURRENT_PASSWORD = str(base64.b64decode(password), encoding="utf-8")
         except:
             pass
 
@@ -480,13 +682,14 @@ class MainUI:
                 config.CURRENT_ACCOUNT = account
                 config.CURRENT_PASSWORD = password
                 if remember:
-                    yaml_dict = {"account": base64.b64encode(bytes(account, encoding="utf-8")),
-                                 "password": base64.b64encode(bytes(password, encoding="utf-8"))}
-                    try:
-                        with open("ddu.yml", 'w') as f:
-                            yaml.dump(yaml_dict, f)
-                    except:
-                        pass
+                    self.save_account_info_to_db()
+                    # yaml_dict = {"account": base64.b64encode(bytes(account, encoding="utf-8")),
+                    #              "password": base64.b64encode(bytes(password, encoding="utf-8"))}
+                    # try:
+                    #     with open("ddu.yml", 'w') as f:
+                    #         yaml.dump(yaml_dict, f)
+                    # except:
+                    #     pass
 
                 self.account = account
                 self.is_login = True
@@ -527,6 +730,11 @@ class MainUI:
             return
 
         show_information()
+        platform, api_key, secret_key = self.get_access_key_from_db()
+        if api_key:
+            config.CURRENT_PLATFORM = platform
+            config.ACCESS_KEY = api_key
+            config.SECRET_KEY = secret_key
 
         pop = PopupAPI(parent=root)
         if pop.result["is_ok"]:
@@ -538,20 +746,21 @@ class MainUI:
                 return
 
             log_config.output2ui(u"你当前选择的平台是: [{}], 授权码为: [{}].".format(pop.result["platform_display"], config.ACCESS_KEY))
-            if pop.result.get("remember", 1):
-                yaml_dict = {"account": base64.b64encode(bytes(config.CURRENT_ACCOUNT, encoding="utf-8")),
-                             "password": base64.b64encode(bytes(config.CURRENT_PASSWORD, encoding="utf-8")),
-                             "access_key": base64.b64encode(bytes(config.ACCESS_KEY, encoding="utf-8")),
-                             "secret_key": base64.b64encode(bytes(config.SECRET_KEY, encoding="utf-8")),
-                             "platform": base64.b64encode(bytes(config.CURRENT_PLATFORM, encoding="utf-8"))
-                             }
-                f = open(r'ddu.yml', 'w')
-                yaml.dump(yaml_dict, f)
+            # if pop.result.get("remember", 1):
+            #     self.save_api_info_to_db()
+                # yaml_dict = {"account": base64.b64encode(bytes(config.CURRENT_ACCOUNT, encoding="utf-8")),
+                #              "password": base64.b64encode(bytes(config.CURRENT_PASSWORD, encoding="utf-8")),
+                #              "access_key": base64.b64encode(bytes(config.ACCESS_KEY, encoding="utf-8")),
+                #              "secret_key": base64.b64encode(bytes(config.SECRET_KEY, encoding="utf-8")),
+                #              "platform": base64.b64encode(bytes(config.CURRENT_PLATFORM, encoding="utf-8"))
+                #              }
+                # f = open(r'ddu.yml', 'w')
+                # yaml.dump(yaml_dict, f)
 
             if pop.result.get("load_history", 1):
                 self.load_trades()
 
-            self.api_verify()
+            self.api_verify(remember=pop.result.get("remember", 1))
 
     def cmd_coin(self):
         if not self.is_api_ok:
@@ -600,16 +809,18 @@ class MainUI:
             messagebox.showinfo(u"提示", u"请先选择您想要交易的币种！")
             return
 
+        self.btn_start.config(state="disabled")
         if not self._hb:
             self._hb = Huobi()
 
         th = Thread(target=start, args=(self._hb,))
         th.setDaemon(True)
         th.start()
+
+        self.btn_start.config(state="disabled")
         self.btn_start_str.set(u"正在运行")
         self.btn_pause.config(state="normal")
         self.btn_coin.config(state="disabled")
-        self.btn_start.config(state="disabled")
         self.btn_api.config(state="disabled")
         self.btn_login.config(state="disabled")
         self.btn_mode_setting.config(state="normal")
@@ -617,12 +828,15 @@ class MainUI:
         self.btn_pending_setting.config(state="normal")
         # self.btn_wechat.config(state="normal")
         self.btn_principal.config(state="normal")
-
+        time.sleep(0.5)
         self.register_strategy()
         self.start_check_strategy()
         self.working = True
 
     def cmd_stop(self):
+        if not self.working:
+            return
+
         logger.info("stop_work!")
         if self._hb:
             self._hb.exit()
@@ -649,18 +863,23 @@ class MainUI:
                     config.TRADE_MODE_CONFIG[config.TRADE_MODE][k] = v
 
             log_config.output2ui(u"交易策略设置成功! 您当前选择的策略为: [{}], 补仓数列为: [{}], 补仓参考: [{}], 补仓间隔: {}%, 止盈比例为: {}%, 追踪止盈: {}, "
-                                 u"追踪回撤比例: {}%, 网格止盈: {}, 智能建仓: {}".format(pop.result["mode_name"], pop.result["patch_name"],
+                                 u"追踪回撤比例: {}%, 网格止盈: {}, 智能建仓: {}, 智能止盈: {}, 智能补仓: {}".format(pop.result["mode_name"], pop.result["patch_name"],
                                                                            pop.result["patch_ref_name"], round(pop.result["patch_interval"]*100, 4),
                                                                          round(pop.result["limit_profit"]*100, 4),
                                                                          u"开启" if pop.result["track"] else u"关闭",
                                                                          round(pop.result["back_profit"]*100, 4),
                                                                          u"开启" if pop.result["grid"] else u"关闭",
-                                                                         u"开启" if pop.result["smart_first"] else u"关闭"), 0)
+                                                                         u"开启" if pop.result["smart_first"] else u"关闭",
+                                                                         u"开启" if pop.result["smart_profit"] else u"关闭",
+                                                                            u"开启" if pop.result["smart_patch"] else u"关闭"), 0)
 
             self.mode.set(pop.result["mode_name"])
 
     def cmd_system_setting(self):
-        pass
+        pop = PopupSystem(parent=self.root)
+        if pop.result["is_ok"]:
+            config.TRADE_MIN_LIMIT_VALUE = pop.result.get("trade_min", 0)
+            config.TRADE_MAX_LIMIT_VALUE = pop.result.get("trade_max", 0)
 
     def cmd_pending_setting(self):
         pass
@@ -987,6 +1206,127 @@ class MainUI:
         except Exception as e:
             logger.exception("update_coin e={}".format(e))
 
+    def update_trade_info_to_db(self):
+        try:
+            conn = sqlite3.connect(config.DB_FILE, detect_types=sqlite3.PARSE_DECLTYPES)
+            cursor = conn.cursor()
+            # trade
+            cursor.execute(
+                """create table if not exists trade (id integer primary key autoincrement, buy_type varchar(128), 
+                sell_type varchar(128), limit_profit real, back_profit real, track integer, buy_time timestamp, 
+                sell_time timestamp, coin varchar(10), money varchar(10), amount real, buy_price real, cost real, 
+                is_sell integer, sell_price real, profit_percent real, profit real, failed_times integer, 
+                uri varchar(100), group_uri varchar(100), user varchar(128), platform varchar(40))""")
+
+            # trade_group
+            cursor.execute(
+                "create table if not exists trade_group(id integer primary key autoincrement, build varchar(20), mode varchar(20), smart_profit integer,"
+                "smart_patch integer, patch_mode varchar(20), coin varchar(20), money varchar(20), grid integer, track integer, amount real, cost real,"
+                "avg_price real, max_cost real, profit real, profit_percent real, last_profit_percent real, limit_profit real, back_profit real, "
+                "buy_counts integer, sell_counts integer, patch_index integer, patch_ref integer, patch_interval real, last_buy_price real, "
+                "start_time timestamp, end_time timestamp, last_update timestamp, uri varchar(100), principal real, last_sell_failed timestamp, sell_out integer,"
+                "is_sell integer, stop_patch integer, first_cost real, user varchar(128), platform varchar(40))")
+
+            # trade_mode
+            cursor.execute(
+                "create table if not exists trade_mode(id integer primary key autoincrement, mode varchar(20), limit_profit real, back_profit real)")
+
+            conn.commit()
+            cursor.execute('select uri from trade_group where id>=0')
+            group_uris = []
+            results = cursor.fetchall()
+            if results:
+                for res in results:
+                    group_uris.append(res[0])
+
+            cursor.execute('select uri from trade where id>=0')
+            trade_uris = []
+            results = cursor.fetchall()
+            if results:
+                for res in results:
+                    trade_uris.append(res[0])
+
+            for group in config.TRADE_RECORDS_NOW:
+                if group.get("uri", "") not in group_uris:
+                    cursor.execute(
+                        'insert into `trade_group` values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        (None, group.get("build", ""), group.get("mode", ""), group.get("smart_profit", -1),
+                         group.get("smart_patch", -1),
+                         group.get("patch_mode", ""), group.get("coin", ""), group.get("money", ""),
+                         group.get("grid", -1),
+                         group.get("track", -1), group.get("amount", 0), group.get("cost", 0),
+                         group.get("avg_price", 0),
+                         group.get("max_cost", 0), group.get("profit", 0), group.get("profit_percent", 0),
+                         group.get("last_profit_percent", 0), group.get("limit_profit", -1),
+                         group.get("back_profit", -1),
+                         group.get("buy_counts", 0), group.get("sell_counts", 0), group.get("patch_index", 0),
+                         group.get("patch_ref", -1), group.get("patch_interval", -1), group.get("last_buy_price", 0),
+                         group.get("start_time", None),
+                         group.get("end_time", None), group.get("last_update", None), group.get("uri", ''),
+                         group.get("principal", -1),
+                         group.get("last_sell_failed", None), group.get("sell_out", 0), group.get("is_sell", 0),
+                         group.get("stop_patch", 0), group.get("first_cost", 10), group.get("user", config.CURRENT_ACCOUNT),
+                         group.get("platform", config.CURRENT_PLATFORM)))
+                else:
+                    cursor.execute(
+                        'update `trade_group` set build=?, mode=?, smart_profit=?, smart_patch=?, patch_mode=?, grid=?, '
+                        'track=?, amount=?, cost=?, avg_price=?, max_cost=?, profit=?, profit_percent=?, '
+                        'last_profit_percent=?, limit_profit=?, back_profit=?, buy_counts=?, sell_counts=?, patch_index=?, '
+                        'patch_ref=?, patch_interval=?, last_buy_price=?, start_time=?, end_time=?, last_update=?, '
+                        'principal=?, last_sell_failed=?, sell_out=?, stop_patch=? where uri=? and user=?',
+                        (group.get("build", ""), group.get("mode", ""), group.get("smart_profit", -1),
+                         group.get("smart_patch", -1),
+                         group.get("patch_mode", ""), group.get("grid", -1),
+                         group.get("track", -1), group.get("amount", 0), group.get("cost", 0),
+                         group.get("avg_price", 0),
+                         group.get("max_cost", 0), group.get("profit", 0), group.get("profit_percent", 0),
+                         group.get("last_profit_percent", 0), group.get("limit_profit", -1),
+                         group.get("back_profit", -1),
+                         group.get("buy_counts", 0), group.get("sell_counts", 0), group.get("patch_index", 0),
+                         group.get("patch_ref", -1), group.get("patch_interval", -1), group.get("last_buy_price", 0),
+                         group.get("start_time", None),
+                         group.get("end_time", None), group.get("last_update", None), group.get("principal", -1),
+                         group.get("last_sell_failed", None), group.get("sell_out", 0), group.get("stop_patch", 0),
+                         group.get("uri", ''), group.get("user", config.CURRENT_ACCOUNT)))
+                conn.commit()
+
+                trades = group.get("trades", [])
+                for trade in trades:
+                    if trade.get("uri", "") not in trade_uris:
+                        cursor.execute(
+                            "insert into `trade` values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            (None, trade.get("buy_type", ""), trade.get("sell_type", ""),
+                             trade.get("limit_profit", -1), trade.get("back_profit", -1),
+                             trade.get("track", -1), trade.get("buy_time", None),
+                             trade.get("sell_time", None), trade.get("coin", ""),
+                             trade.get("money", ""), trade.get("amount", 0),
+                             trade.get("buy_price", 0), trade.get("cost", 0),
+                             trade.get("is_sell", 0), trade.get("sell_price", 0),
+                             trade.get("profit_percent", 0), trade.get("profit", 0),
+                             trade.get("failed_times", 0), trade.get("uri", ""),
+                             trade.get("group_uri", ""), trade.get("user", config.CURRENT_ACCOUNT),
+                             trade.get("platform", config.CURRENT_PLATFORM)))
+                    else:
+                        cursor.execute(
+                            "update `trade` set buy_type=?, sell_type=?, limit_profit=?, back_profit=?, track=?,"
+                            "buy_time=?, sell_time=?, amount=?, buy_price=?, cost=?, is_sell=?, sell_price=?, "
+                            "profit_percent=?, profit=?, failed_times=? where uri=?",
+                            (trade.get("buy_type", ""), trade.get("sell_type", ""),
+                             trade.get("limit_profit", -1), trade.get("back_profit", -1),
+                             trade.get("track", -1), trade.get("buy_time", None),
+                             trade.get("sell_time", None), trade.get("amount", 0),
+                             trade.get("buy_price", 0), trade.get("cost", 0),
+                             trade.get("is_sell", 0), trade.get("sell_price", 0),
+                             trade.get("profit_percent", 0), trade.get("profit", 0),
+                             trade.get("failed_times", 0), trade.get("uri", "")))
+                conn.commit()
+            conn.commit()
+        except Exception as e:
+            log_config.output2ui(u"更新数据失败!", 2)
+            logger.exception(str(e))
+        finally:
+            conn.close()
+
     def update_ui_trade_info(self):
         self.tree.delete(*self.tree.get_children())
         index = 0
@@ -1000,8 +1340,28 @@ class MainUI:
                     current_price_dict["{}/{}".format(coin_name, money)] = coin.get("price", 0)
 
         # config.TRADE_RECORDS_NOW.sort(cmp=None, key=lambda x: x["start_time"], reverse=False)
-
+        #去重
+        unique_uri = []
+        unique_trades = []
         for trade in config.TRADE_RECORDS_NOW:
+            if trade["uri"] not in unique_uri:
+                unique_uri.append(trade["uri"])
+                unique_trades.append(trade)
+
+        config.TRADE_RECORDS_NOW = unique_trades
+
+        #对交易进行排序，未结束的在前，然后再按更新时间倒排序
+        tt_list_not_selled = list(filter(lambda x: x.get("is_sell", 0) == 0 and not x.get("end_time"), config.TRADE_RECORDS_NOW))
+        tt_list_not_selled.sort(key=lambda x: x["last_update"], reverse=True)
+
+        tt_list_selled = list(filter(lambda x: x.get("is_sell", 0) == 1 or x.get("end_time"), config.TRADE_RECORDS_NOW))
+        tt_list_selled.sort(key=lambda x: x["last_update"], reverse=True)
+
+        # 页面最多显示50个
+        if len(tt_list_not_selled) < 50:
+            tt_list_not_selled += tt_list_selled[0: 50-len(tt_list_not_selled)]
+
+        for trade in tt_list_not_selled:
             if trade["money"] != self.money.get():
                 continue
 
@@ -1010,10 +1370,17 @@ class MainUI:
             total_profit = trade["profit"]        # 单组的累计营利
             all_profit += total_profit          # 所有当前货币对的总盈利
 
+            if not trade.get("end_time", None):
+                state = u"监控中"
+            if trade.get("stop_patch", 0):
+                state = u"停止补仓"
+            if trade.get("end_time"):
+                state = u"已完成"
+
             self.tree.insert("", index, values=(index+1,
                                                 trade_pair,
-            u"进行中" if not trade.get("end_time", None) else u"已结束",
-            current_price,
+            state,
+            # current_price,
             round(trade["avg_price"], 6),
             round(trade["amount"], 6),
             round(trade["cost"], 6),
@@ -1029,6 +1396,7 @@ class MainUI:
 
         self.total_profit.set(round(all_profit, 4))
         self.coin_counts.set(index)
+        self.update_trade_info_to_db()
 
     def update_ui_balance(self):
         money = self.money.get()
@@ -1157,7 +1525,11 @@ class MainUI:
 
         def update_heart():
             while 1:
+
                 time.sleep(180)
+                if not self.working:
+                    continue
+
                 data = {"account": self.account}
                 json_data = json.dumps(data)
                 headers = {'Content-Type': 'application/json'}
@@ -1261,10 +1633,11 @@ class MainUI:
 
         def update_ui_trade_info_thread():
             while 1:
-                time.sleep(20)
-                if self.working:
+                time.sleep(1)
+                if self.working and strategies.should_update_ui_tree:
                     self.update_ui_trade_info()
                     self.update_ui_balance()
+                    strategies.should_update_ui_tree = False
 
             # self.tree.after(5000, update_trade_record)
 
@@ -1314,31 +1687,124 @@ class MainUI:
 
     def load_trades(self):
         log_config.output2ui(u"正在加载历史未完成的交易对...", 0)
+        num = 0
         try:
-            num = 0
-            history_file = "{}.pkl".format(config.CURRENT_ACCOUNT)
-            finished_trades = []
-            with open(history_file, 'rb') as f:
-                while True:
-                    try:
-                        trades_records = pickle.load(f)
-                        for trade_group in trades_records:
-                            if not trade_group.get("end_time", None):
-                                num += 1
-                                config.TRADE_RECORDS_NOW.append(trade_group)
-                            else:
-                                finished_trades.append(trade_group)
-                    except:
-                        break
-        except:
-            log_config.output2ui(u"未发现历史数据！", 2)
-            return
+            conn = sqlite3.connect(config.DB_FILE, detect_types=sqlite3.PARSE_DECLTYPES)
+            cursor = conn.cursor()
+            cursor.execute(
+                "create table if not exists trade_group(id integer primary key autoincrement, build varchar(20), mode varchar(20), smart_profit integer,"
+                "smart_patch integer, patch_mode varchar(20), coin varchar(20), money varchar(20), grid integer, track integer, amount real, cost real,"
+                "avg_price real, max_cost real, profit real, profit_percent real, last_profit_percent real, limit_profit real, back_profit real, "
+                "buy_counts integer, sell_counts integer, patch_index integer, patch_ref integer, patch_interval real, last_buy_price real, "
+                "start_time timestamp, end_time timestamp, last_update timestamp, uri varchar(100), principal real, last_sell_failed timestamp, sell_out integer,"
+                "is_sell integer, stop_patch integer, first_cost real, user varchar(128), platform varchar(40))")
+
+
+            cursor.execute("select * from `trade_group` where is_sell=0 and user=? and platform=?", (config.CURRENT_ACCOUNT, config.CURRENT_PLATFORM))
+            res = cursor.fetchall()
+            config.TRADE_RECORDS_NOW = []
+            if res:
+                for r in res:
+                    # 一组执行单元，买和卖都在里面
+                    group = {
+                        "build": r[1],  # 建仓触发模式smart－－智能建仓，　auto－－自动建仓
+                        "mode": r[2],  # robust,keep..按何种交易风格执行，　若未设置，则默认使用全局的交易参数，
+                        "smart_profit": r[3],  # 是否启用智能止盈
+                        "smart_patch": r[4],  # 是否启用智能补仓
+                        "patch_mode": r[5],  # 补仓的模式，默认为倍投
+                        "coin": r[6],  # EOS等　
+                        "money": r[7],  # USDT等　
+                        "trades": [],  # 每一次交易记录，
+                        "grid": r[8],  # 是否开启网格交易, 小于零代表使用全局配置
+                        "track": r[9],  # 是否开启追踪止盈, 小于零代表使用全局配置
+                        "amount": r[10],  # 持仓数量（币）
+                        "cost": r[11],  # 当前持仓费用（计价货币）
+                        "avg_price": r[12],  # 持仓均价
+                        "max_cost": r[13],  # 这组交易中最多时持仓花费，用于计算收益比
+                        "profit": r[14],  # 这组策略的总收益， 每次卖出后都进行累加
+                        "profit_percent": r[15],  # 整体盈利比（整体盈利比，当前总盈利数除以最大花费,　total_profit_amount/max_cost）
+                        "last_profit_percent": r[16],  # 尾单盈利比（最后一单的盈利比）
+                        "limit_profit": r[17],  # 止盈比例，　可单独设置，如果未设置（-1），则使用当前所选择的交易策略的止盈比例
+                        "back_profit": r[18],  # 追踪比例，　可单独设置，如果未设置（-1），则使用当前所选择的交易策略的追踪比例
+                        "buy_counts": r[19],  # 已建单数，买入次数
+                        "sell_counts": r[20],  # 卖出单数，卖出的次数，其实就是尾单收割次数
+                        "patch_index": r[21],  # 当前补单序号，每买入一单后，path_index加上，　每卖出一单后，pathc_index减1
+                        "patch_ref": r[22],  # 补仓参考，0--整体均价，１－－参考上一单买入价格，　小于零代表使用全局
+                        "patch_interval": r[23],  # 补仓间隔，　小于零代表使用全局
+                        "last_buy_price": r[24],  # 最后一次买入价格，补仓时有可能会选择参考上次买入价，如果上一单已经卖出，那么参考上上一单，以此类推
+                        "start_time": r[25],  # 建仓时间
+                        "end_time": None,  # 如果为none代表还未结束
+                        "last_update": r[27],  # 最近一次更新的时间　
+                        "uri": r[28],  # 唯一标识，建仓时间加随机数，如20190608123012336
+                        "principal": r[29],  # 当前这组交易的预算,未单独设置的话(小于零)，则默认为全局本金预算除以监控的币对数，
+                        "last_sell_failed": r[30],  # 上次卖出失败的时间，　用于做卖出暂停
+                        "sell_out": r[31],  # 是否设置为平仓
+                        "is_sell": r[32],  # 是否已经卖出
+                        "stop_patch": r[33],  # 是否停止补仓
+                        "first_cost": r[34],  # 第一单买入花费，以后补仓就参考这个
+                        "user": r[35],
+                        "platform": r[36]
+                    }
+                    cursor.execute("select * from `trade` where group_uri=? and user=? and platform=?", (r[28], r[35], r[36]))
+
+                    t_res = cursor.fetchall()
+                    if t_res:
+                        for tr in t_res:
+                            trade = {
+                                "buy_type": tr[1],  # 买入模式：auto 自动买入(机器策略买入)，man手动买入,
+                                "sell_type": tr[2],
+                                # 要求的卖出模式，机器买入的一般都为止盈卖出。可选：profit 止盈卖出（默认）， no-不要卖出，针对手动买入的单，smart-使用高抛，kdj等策略卖出
+                                "limit_profit": tr[3],  # 大于零代表使用当前的盈利比例，否则使用所属交易组的盈利比例
+                                "back_profit": tr[4],  # 追踪回撤系数, 同上
+                                "track": tr[5],  # 是否追踪止盈，同上
+                                "buy_time": tr[6],
+                                "sell_time": tr[7],
+                                "coin": tr[8],
+                                "money": tr[9],
+                                "amount": tr[10],  # 买入或卖出的币量
+                                "buy_price": tr[11],  # 实际买入成交的价格
+                                "cost": tr[12],  # 实际花费的计价货币量
+                                "is_sell": tr[13],  # 是否已经卖出
+                                "sell_price": tr[14],  # 实际卖出的价格
+                                "profit_percent": tr[15],  # 盈利比，卖出价格相对于买入价格
+                                "profit": tr[16],  # 盈利额，只有卖出后才有
+                                "failed_times": tr[17],  # 卖出失败次数，连续三次卖出失败则认为该单已经被手动卖出．
+                                "uri": tr[18],  # 唯一标识，　时间戳加随机数
+                                "group_uri": tr[19],  # 所属的group的uri
+                                "user": tr[20],
+                                "platform": tr[21]
+                            }
+                            group["trades"].append(trade)
+                    config.TRADE_RECORDS_NOW.append(group)
+                    num += 1
+        except Exception as e:
+            log_config.output2ui(u"加载历史交易数据失败！", 2)
+
+        # try:
+        #     num = 0
+        #     history_file = "{}.pkl".format(config.CURRENT_ACCOUNT)
+        #     finished_trades = []
+        #     with open(history_file, 'rb') as f:
+        #         while True:
+        #             try:
+        #                 trades_records = pickle.load(f)
+        #                 for trade_group in trades_records:
+        #                     if not trade_group.get("end_time", None):
+        #                         num += 1
+        #                         config.TRADE_RECORDS_NOW.append(trade_group)
+        #                     else:
+        #                         finished_trades.append(trade_group)
+        #             except:
+        #                 break
+        # except:
+        #     log_config.output2ui(u"未发现历史数据！", 2)
+        #     return
 
 
         if num > 0:
-            # 从历史文件中删除未完成的交易组
-            with open(history_file, 'wb') as f:
-                pickle.dump(finished_trades, f)
+            # # 从历史文件中删除未完成的交易组
+            # with open(history_file, 'wb') as f:
+            #     pickle.dump(finished_trades, f)
 
             pair_names = []
             for group in config.TRADE_RECORDS_NOW:
@@ -1359,23 +1825,31 @@ class MainUI:
             log_config.output2ui(u"未发现历史待完成的交易对!", 0)
 
     def cmd_trade_result(self):
-        try:
-            history_file = "{}.pkl".format(config.CURRENT_ACCOUNT)
-            trade_records = config.TRADE_RECORDS_NOW
-            if os.path.exists(history_file):
-                with open(history_file, 'rb') as f:
-                    while True:
-                        try:
-                            records = pickle.load(f)
-                            trade_records += records
-                        except:
-                            break
-            else:
-                log_config.output2ui("未发现历史数据文件(*.pkl), 仅支持查看系统本次运行期间的交易记录！", 2)
+        def load_history():
+            try:
+                trade_records = []
+                conn = sqlite3.connect("ddu.db", detect_types=sqlite3.PARSE_DECLTYPES)
+                cursor = conn.cursor()
+                cursor.execute(
+                    "select sell_time, coin, money, cost, profit, profit_percent from `trade` where is_sell=1 and id>=0 and user=?",
+                    (config.CURRENT_ACCOUNT,))
+                res = cursor.fetchall()
+                if res:
+                    for r in res:
+                        trade_records.append({"sell_time": r[0], "coin": r[1], "money": r[2], "cost": r[3],
+                                                   "profit": r[4], "profit_percent": r[5]})
+            except Exception as e:
+                messagebox.showerror(u"错误", u"加载历史交易数据失败, 无法查看历史收益记录.")
+                return None
+            return trade_records
 
-            PopupTradeResults(parent=self.root, trade_records=trade_records)
-        except:
-            log_config.output2ui(u"查看收益统计异常!", 3)
+        records = load_history()
+        if records is None:
+            log_config.output2ui(u"加载历史交易数据失败, 无法查看历史收益记录.", 2)
+            return
+
+        PopupTradeResults(parent=self.root, trade_records=records)
+
 
     def close_window(self):
         # ans = askyesno("Warning", message="Are you sure to quit？")
@@ -1393,7 +1867,7 @@ class MainUI:
         else:
             return
 
-    def api_verify(self):
+    def api_verify(self, remember=1):
         def verify_user_by_get_balance():
             from rs_util import HuobiREST
             if config.CURRENT_PLATFORM == "huobi":
@@ -1408,6 +1882,10 @@ class MainUI:
                     self.btn_wechat.config(state="normal")
                     self.btn_principal.config(state="normal")
                     # self.btn_login.config(state="disabled")
+
+                    if remember:
+                        self.save_api_info_to_db()
+
                     log_config.output2ui(u"API授权认证成功! ", 1)
                     log_config.output2ui(u"第三步, 请点击 [币种设置] 选择您想要进行交易的币对.", 1)
                 else:
@@ -1566,7 +2044,7 @@ class MainUI:
             log_config.output2ui(u"登录微信成功, 实时交易信息和账号周期统计信息将通过微信发送给您的[文件传输助手].", 8)
 
 
-        from popup_system import PopupSystem
+        from popup_system1 import PopupSystem
         value_dict = {"is_email": config.EMAIL_NOTIFY, "is_wechat": config.WECHAT_NOTIFY, "is_alarm": config.ALARM_NOTIFY, "is_alarm_trade": config.ALARM_TRADE_DEFAULT,
                       "trade_min": config.TRADE_MIN_LIMIT_VALUE, "alarm_time": config.ALARM_TIME,
                       "trade_max": config.TRADE_MAX_LIMIT_VALUE, "wait_buy_price": config.WAIT_BUY_PRICE,

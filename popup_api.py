@@ -46,7 +46,7 @@ class PopupAPI(MyDialog):
 
         self.load_histor = IntVar()
         self.load_histor.set(1)
-        Checkbutton(frame, text=u'加载历史交易记录', variable=self.load_histor, onvalue=1, offvalue=0, width=15).grid(row=3, column=1)
+        Checkbutton(frame, text=u'加载上次退出时未完成的交易', variable=self.load_histor, onvalue=1, offvalue=0, width=25).grid(row=3, column=1)
 
 
         frame.pack(padx=5, pady=5)

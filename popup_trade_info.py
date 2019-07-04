@@ -27,18 +27,19 @@ class PopupTradeInfo(MyDialog):
         frame = Frame(self)
         columns = (
             u"序号", u"交易对", u"状　态", u"持币数量", u"持仓费用", u"买入价格", u"卖出价格", u"盈利额", u"盈利比%", u"买入时间", u"卖出时间")
-        self.tree = ttk.Treeview(frame, show="headings", columns=columns, height=11)  # 表格
+        self.tree = ttk.Treeview(frame, show="headings", columns=columns, height=12)  # 表格
         for name in columns:
             if name == u"序号":
                 self.tree.column(name, width=30, anchor="center")
             if name in [u"状态"]:
                 self.tree.column(name, width=50, anchor="center")
-            elif name in [u"买入时间", u"卖出时间"]:
+            elif name in [u"买入时间", u"卖出时间", u"买入价格", u"卖出价格"]:
                 self.tree.column(name, width=100, anchor="center")
             else:
                 self.tree.column(name, width=80, anchor="center")
             self.tree.heading(name, text=name, command=lambda _col=name:treeview_sort_column(self.tree, _col, False))
 
+        self.trades.sort(key=lambda x: x.get("is_sell", 0), reverse=False)
         index = 0
         for trade in self.trades:
             trade_pair = "{}/{}".format(trade["coin"], trade['money'])
@@ -46,7 +47,7 @@ class PopupTradeInfo(MyDialog):
             if trade.get("is_sell", 0) == 1:
                 str_status = u"已完成"
                 if trade.get("sell_type", "") == "failed":
-                    str_status = u"失败"
+                    str_status = u"交易失败"
 
             self.tree.insert("", index, values=(index+1,
             trade_pair,

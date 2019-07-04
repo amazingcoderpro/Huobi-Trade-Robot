@@ -55,16 +55,22 @@ class Huobi:
     def _sub_market(self):
         logger.info("---start sub.")
         log_config.output2ui(u"启动实时行情数据订阅.", 0)
+        this_time_symbol = []
         for symbol in config.NEED_TOBE_SUB_SYMBOL:
+            if symbol in this_time_symbol:
+                continue
+
+            this_time_symbol.append(symbol)
             log_config.output2ui(u"订阅{}...".format(symbol.upper()), 0)
             for kl in config.KL_ALL:
                 channel = "market.{}.kline.{}".format(symbol, kl)
                 logger.info("-sub_market: {}.".format(channel))
                 log_config.output2ui("-sub_market: {}.".format(channel), 7)
                 self._hws.ws_sub(channel, process.kline_sub_msg_process)
-                time.sleep(1)
+                time.sleep(2)
 
     def _init_db(self):
+        return True
         du = db_util.DBUtil()
         du.init()
         db_util.DB_INSTANCE = du

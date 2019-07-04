@@ -30,7 +30,7 @@ class StrategyPool:
     def start_work(self):
         def check_strategy():
             while self._run:
-                time.sleep(3)
+                time.sleep(1)
                 try:
                     for st in self._pool:
                         st.run()
@@ -119,7 +119,6 @@ class Strategy:
             self._last_check_time = current_time
 
     def should_be_check(self):
-        # logger.debug("should_be_check...")
         if self._state != 1:
             return False
 
@@ -129,12 +128,9 @@ class Strategy:
 
         current_time = int(time.time())
         if current_time-self._last_check_time < self._check_period:
-            # logger.debug("should_be_check return false, _last_check_time={}".format(self._last_check_time))
             return False
 
         if self._last_execute_time > 0 and current_time-self._last_execute_time < self._after_execute_sleep:
-            # logger.debug("should_be_check return false, _last_execute_time={}, _after_execute_sleep={}"
-            #             .format(self._last_execute_time, self._after_execute_sleep))
             return False
         logger.info("should_be_check return True")
         return True

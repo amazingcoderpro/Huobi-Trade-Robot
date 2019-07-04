@@ -7,7 +7,8 @@ RUN_MODE = "product"    #product/debug
 STATUS = ""#after_login, after_api_verify, after_trade_setting, running, pausing,
 SYSTEM_NAME = "DDU智能量化交易系统"
 REGISTER_URL = "https://www.huobi.de.com/topic/invited/?invite_code=8jbg4&from=groupmessage"
-TITLE = u"DDU量化交易系统v2.0.1 (官方交流QQ群:761222621, 管理员:15691820861)"
+TITLE = u"DDU量化交易系统v2.0.3 (官方交流QQ群:761222621, 管理员:15691820861)"
+DB_FILE = "ddu.db"
 
 KL_1MIN = "1min"
 KL_5MIN = "5min"
@@ -209,8 +210,8 @@ NET_TIMEOUT = 45
 RETRY_TIMES = -1  # 小于0无限重试
 
 
-TRADE_MIN_LIMIT_VALUE = 1  # 单次最小交易額不能低於20美金
-TRADE_MAX_LIMIT_VALUE = 2000  # 单次最大交易額不能高於1000美金
+TRADE_MIN_LIMIT_VALUE = 10  # 单次最小交易額不能低於20美金
+TRADE_MAX_LIMIT_VALUE = 100000  # 单次最大交易額不能高於100000美金
 
 WAIT_BUY_PRICE = [0, 0, 0]
 WAIT_BUY_ACCOUNT = [0, 0, 0]
@@ -226,7 +227,7 @@ WECHAT_NOTIFY = False
 ALARM_NOTIFY = False            # 是否弹窗提醒
 ALARM_TIME = 20                 # 弹窗提醒时长, 最多不能超过120，否则可能错过交易点
 ALARM_TRADE_DEFAULT = True      # 弹窗提醒后, 人工未处理时, 默认是否交易
-TRADE_HISTORY_REPORT_INTERVAL = 24  # 历史交易记录播报周期, 小时
+TRADE_HISTORY_REPORT_INTERVAL = 12  # 历史交易记录播报周期, 小时
 ACCOUNT_REPORT_INTERVAL = 2     # 账户情况播报周期, 小时
 
 
@@ -260,6 +261,8 @@ TRADE_MODE_CONFIG_STD = {
                "track": 1,              # 是否启动追踪止盈
                "grid": 1,               # 是否启用网格止盈方案
                "smart_first": 1,        # 是否启用智能建仓
+               "smart_profit": 1,        # 是否启用智能止盈
+               "smart_patch": 1,        # 是否启用智能补仓
                # "multiple_list": [10, 20, 40, 80, 160, 320], #倍投的比例队列，用不到
                "patch_mode": "multiple",    # 补仓的模式，默认为倍投
                "first_trade": 0.06,     # 首单买比占比（占本金预算的比例)
@@ -275,6 +278,8 @@ TRADE_MODE_CONFIG_STD = {
              "track": 1,  # 是否启动追踪止盈
              "grid": 1,  # 是否启用网格止盈方案
              "smart_first": 1,        # 是否启用智能建仓
+             "smart_profit": 1,  # 是否启用智能止盈
+             "smart_patch": 1,  # 是否启用智能补仓
              "patch_mode": "multiple",    # 补仓的模式，默认为倍投
              # "multiple_list": [10, 20, 40, 80, 160, 320],
              "first_trade": 0.09,
@@ -288,6 +293,8 @@ TRADE_MODE_CONFIG_STD = {
                "limit_profit": 0.05,
                "back_profit": 0.02,
                "smart_first": 1,  # 是否启用智能建仓
+               "smart_profit": 1,  # 是否启用智能止盈
+               "smart_patch": 1,  # 是否启用智能补仓
                "track": 1,  # 是否启动追踪止盈
                "grid": 1,  # 是否启用网格止盈方案
                "patch_mode": "multiple",    # 补仓的模式，默认为倍投
@@ -305,6 +312,8 @@ TRADE_MODE_CONFIG_STD = {
                  "track": 1,  # 是否启动追踪止盈
                  "grid": 1,  # 是否启用网格止盈方案
                  "smart_first": 1,  # 是否启用智能建仓
+                 "smart_profit": 1,  # 是否启用智能止盈
+                 "smart_patch": 1,  # 是否启用智能补仓
                  "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                  # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
                  "first_trade": 0.041,
@@ -320,6 +329,8 @@ TRADE_MODE_CONFIG_STD = {
                "track": 1,  # 是否启动追踪止盈
                "grid": 1,  # 是否启用网格止盈方案
                "smart_first": 1,  # 是否启用智能建仓
+               "smart_profit": 1,  # 是否启用智能止盈
+               "smart_patch": 1,  # 是否启用智能补仓
                "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
                "first_trade": 0.049,
@@ -335,6 +346,8 @@ TRADE_MODE_CONFIG_STD = {
                  "track": 1,  # 是否启动追踪止盈
                  "grid": 1,  # 是否启用网格止盈方案
                  "smart_first": 1,  # 是否启用智能建仓
+                 "smart_profit": 1,  # 是否启用智能止盈
+                 "smart_patch": 1,  # 是否启用智能补仓
                  "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                  # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
                  "first_trade": 0.057,
@@ -350,6 +363,8 @@ TRADE_MODE_CONFIG_STD = {
                      "track": 1,  # 是否启动追踪止盈
                      "grid": 1,  # 是否启用网格止盈方案
                      "smart_first": 1,  # 是否启用智能建仓
+                     "smart_profit": 1,  # 是否启用智能止盈
+                     "smart_patch": 1,  # 是否启用智能补仓
                      "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                      # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
                      "first_trade": 0.0175,
@@ -365,6 +380,8 @@ TRADE_MODE_CONFIG_STD = {
                    "track": 1,  # 是否启动追踪止盈
                    "grid": 1,  # 是否启用网格止盈方案
                    "smart_first": 1,  # 是否启用智能建仓
+                   "smart_profit": 1,  # 是否启用智能止盈
+                   "smart_patch": 1,  # 是否启用智能补仓
                    "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                    # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
                    "first_trade": 0.0195,
@@ -380,6 +397,8 @@ TRADE_MODE_CONFIG_STD = {
                      "track": 1,  # 是否启动追踪止盈
                      "grid": 1,  # 是否启用网格止盈方案
                      "smart_first": 1,  # 是否启用智能建仓
+                     "smart_profit": 1,  # 是否启用智能止盈
+                     "smart_patch": 1,  # 是否启用智能补仓
                      "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                      # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
                      "first_trade": 0.0215,
@@ -400,6 +419,8 @@ TRADE_MODE_CONFIG = {
                "track": 1,              # 是否启动追踪止盈
                "grid": 1,               # 是否启用网格止盈方案
                "smart_first": 1,        # 是否启用智能建仓
+               "smart_profit": 1,  # 是否启用智能止盈
+               "smart_patch": 1,  # 是否启用智能补仓
                # "multiple_list": [10, 20, 40, 80, 160, 320], #倍投的比例队列，用不到
                "patch_mode": "multiple",    # 补仓的模式，默认为倍投
                "first_trade": 0.06,     # 首单买比占比（占本金预算的比例)
@@ -428,6 +449,8 @@ TRADE_MODE_CONFIG = {
                "limit_profit": 0.04,
                "back_profit": 0.015,
                "smart_first": 1,  # 是否启用智能建仓
+               "smart_profit": 1,  # 是否启用智能止盈
+               "smart_patch": 1,  # 是否启用智能补仓
                "track": 1,  # 是否启动追踪止盈
                "grid": 1,  # 是否启用网格止盈方案
                "patch_mode": "multiple",    # 补仓的模式，默认为倍投
@@ -445,6 +468,8 @@ TRADE_MODE_CONFIG = {
                  "track": 1,  # 是否启动追踪止盈
                  "grid": 1,  # 是否启用网格止盈方案
                  "smart_first": 1,  # 是否启用智能建仓
+                 "smart_profit": 1,  # 是否启用智能止盈
+                 "smart_patch": 1,  # 是否启用智能补仓
                  "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                  # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
                  "first_trade": 0.041,
@@ -460,6 +485,8 @@ TRADE_MODE_CONFIG = {
                "track": 1,  # 是否启动追踪止盈
                "grid": 1,  # 是否启用网格止盈方案
                "smart_first": 1,  # 是否启用智能建仓
+               "smart_profit": 1,  # 是否启用智能止盈
+               "smart_patch": 1,  # 是否启用智能补仓
                "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
                "first_trade": 0.049,
@@ -471,10 +498,12 @@ TRADE_MODE_CONFIG = {
     "robust_1": {"display": u"稳健+",
                  "limit_trades": 8,
                  "limit_profit": 0.027,
-                 "back_profit": 0.09,
+                 "back_profit": 0.009,
                  "track": 1,  # 是否启动追踪止盈
                  "grid": 1,  # 是否启用网格止盈方案
                  "smart_first": 1,  # 是否启用智能建仓
+                 "smart_profit": 1,  # 是否启用智能止盈
+                 "smart_patch": 1,  # 是否启用智能补仓
                  "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                  # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
                  "first_trade": 0.057,
@@ -489,7 +518,9 @@ TRADE_MODE_CONFIG = {
                      "back_profit": 0.007,
                      "track": 1,  # 是否启动追踪止盈
                      "grid": 1,  # 是否启用网格止盈方案
-                     "smart_first": 1,  # 是否启用智能建仓
+                     "smart_first": 0,  # 是否启用智能建仓
+                     "smart_profit": 1,  # 是否启用智能止盈
+                     "smart_patch": 1,  # 是否启用智能补仓
                      "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                      # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
                      "first_trade": 0.0175,
@@ -504,7 +535,9 @@ TRADE_MODE_CONFIG = {
                    "back_profit": 0.006,
                    "track": 1,  # 是否启动追踪止盈
                    "grid": 1,  # 是否启用网格止盈方案
-                   "smart_first": 1,  # 是否启用智能建仓
+                   "smart_first": 0,  # 是否启用智能建仓
+                   "smart_profit": 1,  # 是否启用智能止盈
+                   "smart_patch": 1,  # 是否启用智能补仓
                    "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                    # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
                    "first_trade": 0.0195,
@@ -519,7 +552,9 @@ TRADE_MODE_CONFIG = {
                      "back_profit": 0.005,
                      "track": 1,  # 是否启动追踪止盈
                      "grid": 1,  # 是否启用网格止盈方案
-                     "smart_first": 1,  # 是否启用智能建仓
+                     "smart_first": 0,  # 是否启用智能建仓
+                     "smart_profit": 1,  # 是否启用智能止盈
+                     "smart_patch": 1,  # 是否启用智能补仓
                      "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                      # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
                      "first_trade": 0.0215,
@@ -594,10 +629,14 @@ TRADE = {
     "amount": 0,              # 买入或卖出的币量
     "buy_price": 0,            # 实际买入成交的价格
     "cost": 0,               # 实际花费的计价货币量
-    "is_sell": 1,           # 是否已经卖出
+    "is_sell": 0,           # 是否已经卖出
     "sell_price": 0,        # 实际卖出的价格
     "profit_percent": 0,    # 盈利比，卖出价格相对于买入价格
     "profit": 0,            # 盈利额，只有卖出后才有
+    "failed_times": 0,     # 卖出失败次数，连续三次卖出失败则认为该单已经被手动卖出．
+    "uri": "",              # 唯一标识，　时间戳加随机数
+    "group_uri": "",         # 所属的group的uri
+    "user": ""
 }
 
 
@@ -605,6 +644,9 @@ TRADE = {
 TRADE_GROUP = {
     "build": "smart",           # 建仓触发模式smart－－智能建仓，　auto－－自动建仓
     "mode": "",                  #robust,keep..按何种交易风格执行，　若未设置，则默认使用全局的交易参数，
+    "smart_profit": -1,  # 是否启用智能止盈
+    "smart_patch": -1,  # 是否启用智能补仓
+    "patch_mode": "",  # 补仓的模式，默认为倍投
     "coin": "",             #EOS等　
     "money": "",        #USDT等　
     "trades": [],            # 每一次交易记录，
@@ -627,10 +669,16 @@ TRADE_GROUP = {
     "last_buy_price": 0,    # 最后一次买入价格，补仓时有可能会选择参考上次买入价，如果上一单已经卖出，那么参考上上一单，以此类推
     "start_time": None,     # 建仓时间
     "end_time": None,       # 如果为none代表还未结束
-    "last_update": None,
-    "uri": "",  # 唯一标识，建仓时间加随机数，如20190608123012336
-    "principal": -1, #当前这组交易的预算,未单独设置的话(小于零)，则默认为全局本金预算除以监控的币对数，
-    "sell_out": 0
+    "last_update": None,    # 最近一次更新的时间　
+    "uri": "",              # 唯一标识，建仓时间加随机数，如20190608123012336
+    "principal": -1,            #　当前这组交易的预算,未单独设置的话(小于零)，则默认为全局本金预算除以监控的币对数，
+    "last_sell_failed": None,   #　上次卖出失败的时间，　用于做卖出暂停
+    "sell_out": 0,          # 是否设置为平仓
+    "is_sell": 0,           # 是否已经卖出
+    "stop_patch": 0,        # 是否停止补仓
+    "first_cost": -1,       #第一单买入花费，以后补仓就参考这个
+    "user": "",
+    "platform": ""
 }
 
 

@@ -143,6 +143,7 @@ def notify_user(msg, own=False):
         try:
             if not config.WECHAT_NOTIFY:
                 logging.getLogger().info("send wechat have been disabled.")
+                return True
 
             time_str = datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
             msg = u"[{}]\n用户: {}\n{}".format(time_str, config.CURRENT_ACCOUNT, msg)
