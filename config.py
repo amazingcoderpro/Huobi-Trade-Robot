@@ -7,7 +7,7 @@ RUN_MODE = "product"    #product/debug
 STATUS = ""#after_login, after_api_verify, after_trade_setting, running, pausing,
 SYSTEM_NAME = "DDU智能量化交易系统"
 REGISTER_URL = "https://www.huobi.de.com/topic/invited/?invite_code=8jbg4&from=groupmessage"
-TITLE = u"DDU量化交易系统v2.0.3 (官方交流QQ群:761222621, 管理员:15691820861)"
+TITLE = u"DDU量化交易系统v2.1.0 (官方交流QQ群:761222621, 管理员:15691820861)"
 DB_FILE = "ddu.db"
 
 KL_1MIN = "1min"
