@@ -415,7 +415,7 @@ TRADE_MODE_CONFIG = {
     "keep_0": {"display": u"保守-",
                "limit_trades": 6,       # 最大买入次数，超过这个次数，不论何种补仓模式都不再补仓，对于不同的补仓模式，这个值会动态减小，比如平方队列时，最多买入4次
                "limit_profit": 0.04,    # 要求的盈利比例
-               "back_profit": 0.015,     # 盈利回撤比例
+               "back_profit": 0.012,     # 盈利回撤比例
                "track": 1,              # 是否启动追踪止盈
                "grid": 1,               # 是否启用网格止盈方案
                "smart_first": 1,        # 是否启用智能建仓
@@ -431,23 +431,23 @@ TRADE_MODE_CONFIG = {
                },
     "keep": {"display": u"保守",
              "limit_trades": 6,
-             "limit_profit": 0.04,
-             "back_profit": 0.015,
+             "limit_profit": 0.038,
+             "back_profit": 0.010,
              "track": 1,  # 是否启动追踪止盈
              "grid": 1,  # 是否启用网格止盈方案
              "smart_first": 1,        # 是否启用智能建仓
              "patch_mode": "multiple",    # 补仓的模式，默认为倍投
              # "multiple_list": [10, 20, 40, 80, 160, 320],
              "first_trade": 0.09,
-             "patch_interval": 0.08,
+             "patch_interval": 0.075,
              "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
              "expect_profit_m": 0.10,
              "risk": 0.88,
              },
     "keep_1": {"display": u"保守+",
                "limit_trades": 6,
-               "limit_profit": 0.04,
-               "back_profit": 0.015,
+               "limit_profit": 0.036,
+               "back_profit": 0.010,
                "smart_first": 1,  # 是否启用智能建仓
                "smart_profit": 1,  # 是否启用智能止盈
                "smart_patch": 1,  # 是否启用智能补仓
@@ -456,7 +456,7 @@ TRADE_MODE_CONFIG = {
                "patch_mode": "multiple",    # 补仓的模式，默认为倍投
                # "multiple_list": [10, 20, 40, 80, 160, 320],
                "first_trade": 0.12,
-               "patch_interval": 0.075,
+               "patch_interval": 0.07,
                "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
                "expect_profit_m": 0.12,
                "risk": 0.92
@@ -464,7 +464,7 @@ TRADE_MODE_CONFIG = {
     "robust_0": {"display": u"稳健-",
                  "limit_trades": 8,
                  "limit_profit": 0.03,
-                 "back_profit": 0.01,
+                 "back_profit": 0.008,
                  "track": 1,  # 是否启动追踪止盈
                  "grid": 1,  # 是否启用网格止盈方案
                  "smart_first": 1,  # 是否启用智能建仓
@@ -473,7 +473,7 @@ TRADE_MODE_CONFIG = {
                  "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                  # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
                  "first_trade": 0.041,
-                 "patch_interval": 0.065,
+                 "patch_interval": 0.060,
                  "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
                  "expect_profit_m": 0.16,
                  "risk": 0.96
@@ -481,7 +481,7 @@ TRADE_MODE_CONFIG = {
     "robust": {"display": u"稳健",
                "limit_trades": 8,
                "limit_profit": 0.028,
-               "back_profit": 0.01,
+               "back_profit": 0.007,
                "track": 1,  # 是否启动追踪止盈
                "grid": 1,  # 是否启用网格止盈方案
                "smart_first": 1,  # 是否启用智能建仓
@@ -490,7 +490,7 @@ TRADE_MODE_CONFIG = {
                "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
                "first_trade": 0.049,
-               "patch_interval": 0.06,
+               "patch_interval": 0.055,
                "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
                "expect_profit_m": 0.18,
                "risk": 1
@@ -498,57 +498,23 @@ TRADE_MODE_CONFIG = {
     "robust_1": {"display": u"稳健+",
                  "limit_trades": 8,
                  "limit_profit": 0.027,
-                 "back_profit": 0.009,
+                 "back_profit": 0.006,
                  "track": 1,  # 是否启动追踪止盈
                  "grid": 1,  # 是否启用网格止盈方案
-                 "smart_first": 1,  # 是否启用智能建仓
+                 "smart_first": 0,  # 是否启用智能建仓
                  "smart_profit": 1,  # 是否启用智能止盈
                  "smart_patch": 1,  # 是否启用智能补仓
                  "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                  # "multiple_list": [5, 10, 20, 40, 80, 160, 320, 640],
                  "first_trade": 0.057,
-                 "patch_interval": 0.055,
+                 "patch_interval": 0.05,
                  "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
                  "expect_profit_m": 0.20,
                  "risk": 1.04
                  },
     "aggressive_0": {"display": u"激进-",
                      "limit_trades": 10,
-                     "limit_profit": 0.026,
-                     "back_profit": 0.007,
-                     "track": 1,  # 是否启动追踪止盈
-                     "grid": 1,  # 是否启用网格止盈方案
-                     "smart_first": 0,  # 是否启用智能建仓
-                     "smart_profit": 1,  # 是否启用智能止盈
-                     "smart_patch": 1,  # 是否启用智能补仓
-                     "patch_mode": "multiple",  # 补仓的模式，默认为倍投
-                     # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
-                     "first_trade": 0.0175,
-                     "patch_interval": 0.05,
-                     "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
-                     "expect_profit_m": 0.24,
-                     "risk": 1.08
-                     },
-    "aggressive": {"display": u"激进",
-                   "limit_trades": 10,
-                   "limit_profit": 0.026,
-                   "back_profit": 0.006,
-                   "track": 1,  # 是否启动追踪止盈
-                   "grid": 1,  # 是否启用网格止盈方案
-                   "smart_first": 0,  # 是否启用智能建仓
-                   "smart_profit": 1,  # 是否启用智能止盈
-                   "smart_patch": 1,  # 是否启用智能补仓
-                   "patch_mode": "multiple",  # 补仓的模式，默认为倍投
-                   # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
-                   "first_trade": 0.0195,
-                   "patch_interval": 0.045,
-                   "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
-                   "expect_profit_m": 0.26,
-                   "risk": 1.12
-                   },
-    "aggressive_1": {"display": u"激进+",
-                     "limit_trades": 10,
-                     "limit_profit": 0.026,
+                     "limit_profit": 0.025,
                      "back_profit": 0.005,
                      "track": 1,  # 是否启动追踪止盈
                      "grid": 1,  # 是否启用网格止盈方案
@@ -557,8 +523,42 @@ TRADE_MODE_CONFIG = {
                      "smart_patch": 1,  # 是否启用智能补仓
                      "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                      # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
-                     "first_trade": 0.0215,
+                     "first_trade": 0.045,
                      "patch_interval": 0.04,
+                     "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+                     "expect_profit_m": 0.24,
+                     "risk": 1.08
+                     },
+    "aggressive": {"display": u"激进",
+                   "limit_trades": 10,
+                   "limit_profit": 0.024,
+                   "back_profit": 0.005,
+                   "track": 1,  # 是否启动追踪止盈
+                   "grid": 1,  # 是否启用网格止盈方案
+                   "smart_first": 0,  # 是否启用智能建仓
+                   "smart_profit": 1,  # 是否启用智能止盈
+                   "smart_patch": 1,  # 是否启用智能补仓
+                   "patch_mode": "multiple",  # 补仓的模式，默认为倍投
+                   # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
+                   "first_trade": 0.043,
+                   "patch_interval": 0.036,
+                   "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
+                   "expect_profit_m": 0.26,
+                   "risk": 1.12
+                   },
+    "aggressive_1": {"display": u"激进+",
+                     "limit_trades": 10,
+                     "limit_profit": 0.022,
+                     "back_profit": 0.004,
+                     "track": 1,  # 是否启动追踪止盈
+                     "grid": 1,  # 是否启用网格止盈方案
+                     "smart_first": 0,  # 是否启用智能建仓
+                     "smart_profit": 1,  # 是否启用智能止盈
+                     "smart_patch": 1,  # 是否启用智能补仓
+                     "patch_mode": "multiple",  # 补仓的模式，默认为倍投
+                     # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
+                     "first_trade": 0.041,
+                     "patch_interval": 0.032,
                      "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
                      "expect_profit_m": 0.28,
                      "risk": 1.16
