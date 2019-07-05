@@ -1863,7 +1863,7 @@ class MainUI:
             self.stop_check_strategy()
             self.cmd_stop()
             # 把当次运行运程中的所有交易记录保存到文件中
-            self.save_trades()
+            # self.save_trades()
             self.root.destroy()
         else:
             return
