@@ -683,7 +683,7 @@ def stg_smart_profit():
                         detail = ret.get("data", {})
                         field_amount = detail.get("field_amount", 0)  # 币
                         field_cash_amount = detail.get("field_cash_amount", 0)  # 金
-                        deal_price = detail.get("price", 0)
+                        deal_price = detail.get("price", 0) #这里的成交价格已经是刨除手续之外的了，
                         deal_price = get_current_price(symbol) if deal_price<=0 else deal_price
                         fees = detail.get("fees", 0)
 
@@ -707,7 +707,7 @@ def stg_smart_profit():
 
                         # 从整体持仓量和成本减去实际卖掉量和钱，止盈，成本会被渐渐拉低，甚至为负
                         trade_group["amount"] -= field_amount
-                        trade_group["cost"] -= field_cash_amount
+                        trade_group["cost"] -= (field_cash_amount-fees)
                         trade_group["cost"] = 0 if trade_group["cost"] < 0.0001 else trade_group["cost"]
                         trade_group["amount"] = 0 if trade_group["amount"] < 0.0001 else trade_group["amount"]
 
@@ -815,8 +815,8 @@ def stg_smart_profit():
                     trade_group["profit"] += sell_profit
                     trade_group["profit_percent"] = trade_group["profit"]/trade_group["max_cost"]
                     trade_group["last_profit_percent"] = sell_profit_percent
-                    trade_group["amount"] -= field_amount
-                    trade_group["cost"] -= field_cash_amount
+                    trade_group["amount"] = field_amount
+                    trade_group["cost"] -= (field_cash_amount-fees)
                     trade_group["amount"] = 0 if trade_group["amount"] < 0.0001 else trade_group["amount"]
                     trade_group["cost"] = 0 if trade_group["cost"] < 0.0001 else trade_group["cost"]
                     trade_group["last_update"] = time_now
@@ -943,7 +943,7 @@ def stg_smart_patch():
                     "buy_time": time_now,
                     "sell_time": None,
                     "coin": coin,
-                    "amount": field_amount,     # 买入或卖出的币量
+                    "amount": field_amount-fees,     # 买入或卖出的币量
                     "buy_price": deal_price,    # 实际挂单成交的价格
                     "sell_price": 0,
                     "money": money,
@@ -962,7 +962,7 @@ def stg_smart_patch():
                 }
 
                 trade_group["trades"].append(trade)
-                trade_group["amount"] += field_amount
+                trade_group["amount"] += (field_amount-fees)
                 trade_group["cost"] += field_cash_amount
                 trade_group["max_cost"] = trade_group["cost"] if trade_group["max_cost"] < trade_group["cost"] else trade_group["max_cost"]   #整体过程中最大持仓成本
                 trade_group["avg_price"] = trade_group["cost"]/trade_group["amount"]
@@ -1372,7 +1372,7 @@ def first_buy(coin, money, principal, multiple=1, build="smart"):
         detail = ret.get("data", {})
         field_amount = detail.get("field_amount", 0)  # 币
         field_cash_amount = detail.get("field_cash_amount", 0)  # 金
-        # fees = detail.get("fees", 0)
+        fees = detail.get("fees", 0)
         deal_price = detail.get("price", 0)
         deal_price = get_current_price(symbol) if deal_price <= 0 else deal_price
         msg = "[建仓{}] 实际买入币量： {}, 实际买入金额: {}, 买入成交价格: {}".format(symbol.upper(), round(field_amount, 6),
@@ -1390,7 +1390,7 @@ def first_buy(coin, money, principal, multiple=1, build="smart"):
             "sell_time": None,
             "coin": coin.upper(),
             "money": money.upper(),
-            "amount": field_amount,  # 买入或卖出的币量
+            "amount": field_amount-fees,  # 买入或卖出的币量，实际买到的币被平台扣了千二
             "buy_price": deal_price,  # 实际买入成交的价格
             "cost": field_cash_amount,  # 实际花费的计价货币量
             "is_sell": 0,  # 是否已经卖出
@@ -1415,7 +1415,7 @@ def first_buy(coin, money, principal, multiple=1, build="smart"):
             "patch_mode": "",  # 补仓的模式，默认为倍投
             "last_sell_failed": None,
 
-            "amount": field_amount,  # 持仓数量（币）
+            "amount": field_amount-fees,  # 持仓数量（币）
             "cost": field_cash_amount,  # 持仓费用（计价货币）
             "max_cost": field_cash_amount,
             "avg_price": deal_price,  # 持仓均价
@@ -2447,10 +2447,11 @@ def buy_market(symbol, amount, percent=0.1, currency=""):
                 field_amount = float(order_detail.get("field-amount", 0))   #买入币量
                 fees = float(order_detail.get("field-fees", 0))
                 # price = float(order_detail.get("price", 0))
-                price = float(field_cash_amount/field_amount)
+                price = float(field_cash_amount/(field_amount-fees))
 
                 logger.warning("[{}]买入成功, 计划买入额: {}, 实际成交额: {}, 实际买入币量: {}, 买入价格: {}".format(symbol, round(amount, 6), round(field_cash_amount, 6), round(field_amount, 6), round(price, 6)))
 
+                # 买入时买哪个币就是收你千分之二的那个币
                 result["code"] = 1
                 result["data"] = {
                     "symbol": symbol,
@@ -2529,13 +2530,12 @@ def sell_market(symbol, amount, percent=0.1, currency=""):
             #                                              'state': 'filled', 'canceled-at': 0}})
             if order_response[0] == 200 and order_response[1].get("status", "") == config.STATUS_OK:
                 order_detail = order_response[1].get("data", {})
-
                 amount = float(order_detail.get("amount", amount))
                 field_cash_amount = float(order_detail.get("field-cash-amount", 0))   # 成交金额
                 field_amount = float(order_detail.get("field-amount", 0))   #卖出币量
                 fees = float(order_detail.get("field-fees", 0))
                 # price = float(order_detail.get("price", 0))
-                price = float(field_cash_amount / field_amount)
+                price = float((field_cash_amount-fees) / field_amount)
 
                 # price = current_price if price == 0 else price
 
@@ -2547,14 +2547,15 @@ def sell_market(symbol, amount, percent=0.1, currency=""):
                                                                                            round(price, 6)))
 
                 result["code"] = 1
+                # 卖出时，你得到了哪种计价货币，就扣你千分之二的这种货币
                 result["data"] = {
                     "symbol": symbol,
                     "amount": amount,
                     "field_cash_amount": field_cash_amount,
                     "field_amount": field_amount,
                     "finished_at": order_detail.get("finished-at", ""),
-                    "price": price
-
+                    "price": price,
+                    "fees": fees
                 }
                 result["msg"] = "Sell succeed!"
                 update_balance(money_only=True)
