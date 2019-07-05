@@ -1273,7 +1273,7 @@ class MainUI:
                         'track=?, amount=?, cost=?, avg_price=?, max_cost=?, profit=?, profit_percent=?, '
                         'last_profit_percent=?, limit_profit=?, back_profit=?, buy_counts=?, sell_counts=?, patch_index=?, '
                         'patch_ref=?, patch_interval=?, last_buy_price=?, start_time=?, end_time=?, last_update=?, '
-                        'principal=?, last_sell_failed=?, sell_out=?, stop_patch=? where uri=? and user=?',
+                        'principal=?, last_sell_failed=?, sell_out=?, stop_patch=?, is_sell=? where uri=? and user=?',
                         (group.get("build", ""), group.get("mode", ""), group.get("smart_profit", -1),
                          group.get("smart_patch", -1),
                          group.get("patch_mode", ""), group.get("grid", -1),
@@ -1287,6 +1287,7 @@ class MainUI:
                          group.get("start_time", None),
                          group.get("end_time", None), group.get("last_update", None), group.get("principal", -1),
                          group.get("last_sell_failed", None), group.get("sell_out", 0), group.get("stop_patch", 0),
+                         group.get("is_sell", 0),
                          group.get("uri", ''), group.get("user", config.CURRENT_ACCOUNT)))
                 conn.commit()
 
@@ -1831,8 +1832,8 @@ class MainUI:
                 conn = sqlite3.connect("ddu.db", detect_types=sqlite3.PARSE_DECLTYPES)
                 cursor = conn.cursor()
                 cursor.execute(
-                    "select sell_time, coin, money, cost, profit, profit_percent from `trade` where is_sell=1 and id>=0 and user=?",
-                    (config.CURRENT_ACCOUNT,))
+                    "select sell_time, coin, money, cost, profit, profit_percent from `trade` where is_sell=1 and id>=0 and user=? and platform=?",
+                    (config.CURRENT_ACCOUNT, config.CURRENT_PLATFORM))
                 res = cursor.fetchall()
                 if res:
                     for r in res:

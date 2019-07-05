@@ -923,7 +923,7 @@ def stg_smart_patch():
                 continue
 
             # plan_buy_cost = principal*group_mode['first_trade']*multiple
-            plan_buy_cost = principal * trade_group["first_cost"] * multiple    # 修改成参考为第一单的买入量
+            plan_buy_cost = trade_group["first_cost"] * multiple    # 修改成参考为第一单的买入量
             ret = buy_market(symbol, currency=money.lower(), amount=plan_buy_cost)
             make_deal = True
             # 买入成功
@@ -2397,11 +2397,11 @@ def buy_market(symbol, amount, percent=0.1, currency=""):
     balance = 0
     # 如果提供了计价货币，则根据余额来检验amount
     if symbol[-4:].lower() == "usdt" and config.TRADE_MIN_LIMIT_VALUE>0 and amount < config.TRADE_MIN_LIMIT_VALUE:
-        log_config.output2ui(u"当前计划买入价值({})小于设置的最小买入额({} USDT), 直接调整为最小买入限额".format(amount, config.TRADE_MIN_LIMIT_VALUE))
+        log_config.output2ui(u"[{}]当前计划买入价值({})小于设置的最小买入额({} USDT), 直接调整为最小买入限额".format(symbol.upper(), amount, config.TRADE_MIN_LIMIT_VALUE))
         amount = config.TRADE_MIN_LIMIT_VALUE
 
     if symbol[-4:].lower() == "usdt" and config.TRADE_MAX_LIMIT_VALUE>0 and amount > config.TRADE_MAX_LIMIT_VALUE:
-        log_config.output2ui(u"当前计划买入价值({})大于设置的最大买入额({} USDT), 直接调整为最大买入限额".format(amount, config.TRADE_MAX_LIMIT_VALUE))
+        log_config.output2ui(u"[{}]当前计划买入价值({})大于设置的最大买入额({} USDT), 直接调整为最大买入限额".format(symbol.upper(), amount, config.TRADE_MAX_LIMIT_VALUE))
         amount = config.TRADE_MAX_LIMIT_VALUE
 
     if currency:
@@ -2473,7 +2473,7 @@ def buy_market(symbol, amount, percent=0.1, currency=""):
             break
 
     logger.error("buy market failed, symbol={}, amount={}, ret={}".format(symbol, amount, ret))
-    log_config.output2ui("[{}]买入失败, 计划买入币量: {}".format(symbol, amount), 2)
+    log_config.output2ui("[{}]买入失败, 计划买入币量: {}".format(symbol.upper(), amount), 2)
     result["code"] = 0
     result["msg"] = "Trade buy failed!"
     return result

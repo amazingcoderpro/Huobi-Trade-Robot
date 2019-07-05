@@ -161,7 +161,7 @@ class PopupTradeResults(MyDialog):
         Label(frame2, text=u"综合盈利:", width=8).grid(row=3, column=4)
         self.total_profit = DoubleVar()
         self.total_profit.set(0)
-        Label(frame2, textvariable=self.total_profit, width=14, fg="green", font=("", 12, 'bold')).grid(row=3, column=5)
+        Label(frame2, textvariable=self.total_profit, width=20, fg="green", font=("", 12, 'bold')).grid(row=3, column=5)
 
 
         frame2.pack(pady=10)
