@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 # Created by Charles on 2018/6/30
 # Function: 
-import os
+
 from tkinter import Label, Button, Entry, StringVar, LEFT, RIGHT, Checkbutton, Frame, \
-    messagebox, OptionMenu, IntVar, N, S, E, W, ACTIVE, DoubleVar
+    messagebox, OptionMenu, IntVar, N, S, E, W, ACTIVE, DoubleVar,IntVar
 import config
 from popup_login import MyDialog
 
@@ -48,41 +48,46 @@ class PopupMode(MyDialog):
         self.opt_patch_ref = OptionMenu(frame, self.patch_ref, *lst_patch_ref)
         self.opt_patch_ref.grid(row=3, column=3, sticky=N + S + W)
 
-        Label(frame, text=u'补仓间隔:', width=12).grid(row=4, column=0)
+        Label(frame, text=u'补仓间隔(%):', width=12).grid(row=4, column=0)
         # 创建并添加Entry,用于接受用户输入的用户名
         self.patch_interval = DoubleVar()
         self.patch_interval.set(round(current_mode.get("patch_interval", 0.05)*100, 4))
-        self.ety_interval = Entry(frame, textvariable=self.patch_interval, width=8)
+        self.ety_interval = Entry(frame, textvariable=self.patch_interval, width=6)
         self.ety_interval.grid(row=4, column=1)
-        Label(frame, text=u'%', width=2).grid(row=4, column=2, sticky=N + S + W)
+        # Label(frame, text=u'%', width=2).grid(row=4, column=2, sticky=N + S + W)
+
+        Label(frame, text=u'最大补仓次数:', width=14).grid(row=4, column=2)
+        # 创建并添加Entry,用于接受用户输入的用户名
+        self.patch_times = IntVar()
+        self.patch_times.set(round(current_mode.get("limit_patch_times", 6), 4))
+        self.ety_times = Entry(frame, textvariable=self.patch_times, width=6)
+        self.ety_times.grid(row=4, column=3)
 
         Label(frame, text=u'系统将根据您设置的补仓方式和补仓间隔在必要的时候进行补仓, 以达到降低持仓成本的目的, 使用不同的补仓数列将影响补仓的比例和次数, 默认推荐为倍投数列.',
               width=70, wraplength=500, justify='left', fg="gray", font=("", 8)).grid(row=5, column=0, columnspan=4, padx=5, ipadx=5, sticky=N + S + W)
 
-
         Label(frame, text=u"止盈参数设置:", fg="green", font=("", 11, "bold")).grid(row=6, column=0, pady=15)
-        Label(frame, text=u'止盈比例:', width=12).grid(row=7, column=0)
+        Label(frame, text=u'止盈比例(%):', width=12).grid(row=7, column=0)
         # 创建并添加Entry,用于接受用户输入的用户名
         self.limit_profit = DoubleVar()
         self.limit_profit.set(round(current_mode.get("limit_profit", 0.03)*100, 4))
         self.ety_profit = Entry(frame, textvariable=self.limit_profit, width=8)
         self.ety_profit.grid(row=7, column=1)
-        Label(frame, text=u'%', width=2).grid(row=7, column=2, sticky=N + S + W)
+        # Label(frame, text=u'%', width=2).grid(row=7, column=2, sticky=N + S + W)
 
         self.track_profit = IntVar()
         self.track_profit.set(current_mode.get("track", 1))
         Checkbutton(frame, text=u'是否开启追踪止盈', variable=self.track_profit, onvalue=1, offvalue=0, width=20, command=self.cmd_track).grid(row=8, column=0)
 
-        Label(frame, text=u'回撤比例:', width=12).grid(row=8, column=1)
+        Label(frame, text=u'回撤比例(%):', width=12).grid(row=8, column=1)
         # 创建并添加Entry,用于接受用户输入的用户名
         self.back_profit = DoubleVar()
         self.back_profit.set(round(current_mode.get("back_profit", 0.005)*100, 4))
         self.ety_back = Entry(frame, textvariable=self.back_profit, width=8)
         self.ety_back.grid(row=8, column=2)
-        Label(frame, text=u'%', width=2).grid(row=8, column=3, sticky=N + S + W)
+        # Label(frame, text=u'%', width=2).grid(row=8, column=3, sticky=N + S + W)
         Label(frame, text=u'开启追踪止盈后, 在达到要求的止盈比例后并不会立即卖出, 系统会开启追踪, 直到盈利不再增涨并且回撤到预设的回撤比例时才会卖出, 以达到盈利更大化的目的, 建议开启.',
               width=70, wraplength=500, justify='left', fg="gray", font=("", 8)).grid(row=9, column=0, columnspan=4, padx=5, ipadx=5, sticky=N + S + W)
-
 
 
         Label(frame, text=u"智能交易设置:", fg="green", font=("", 11, "bold")).grid(row=10, column=0, pady=15)
@@ -138,6 +143,7 @@ class PopupMode(MyDialog):
             patch_ref_name = self.patch_ref.get()
             smart_profit = int(self.smart_profit.get())
             smart_patch = int(self.smart_patch.get())
+            patch_times = int(self.patch_times.get())
 
             mode_key = "robust"
             for k, v in config.TRADE_MODE_CONFIG.items():
@@ -174,6 +180,7 @@ class PopupMode(MyDialog):
             self.result["mode_name"] = mode_name
             self.result["patch_name"] = patch_name
             self.result["patch_ref_name"] = patch_ref_name
+            self.result["limit_patch_times"] = patch_times
         except Exception as e:
             messagebox.showerror(u"提示", u"请输入有效数字！")
             return False
@@ -212,6 +219,7 @@ class PopupMode(MyDialog):
             lst_patch_ref = [u"持仓均价", u"上单买价"]
             self.patch_ref.set(lst_patch_ref[mode.get("patch_ref", 0)])
             self.patch_interval.set(round(mode.get("patch_interval", 0.05)*100, 4))
+            self.patch_times.set(mode.get("limit_patch_times", 5))
 
     def cmd_track(self):
         val = self.track_profit.get()

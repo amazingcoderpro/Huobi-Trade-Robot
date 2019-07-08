@@ -514,11 +514,11 @@ def global_smart_first(mode=""):
     return config.TRADE_MODE_CONFIG.get(mode, {}).get("smart_first", 1)
 
 
-def patch_multiple(index, mode="multiple", trade_limits=8):
+def patch_multiple(index, mode="multiple", patch_limits=7):
     # 根据当前的补仓模式和补仓序数(第几次补仓)计算出本次的补仓倍数, 这个倍数是相对于首单的哦
     patch = 1
     # 最多买入10次, 即最多补仓9次
-    if index >= trade_limits:
+    if index > patch_limits:
         patch = 0
     elif index <= 0:
         patch = 1
@@ -544,29 +544,41 @@ def patch_multiple(index, mode="multiple", trade_limits=8):
 
     return patch
 
+last_notify_smart_profit = {}
 
 def should_stop_profit(symbol, buy_price, limit_profit, back_profit, monitor_start, track=1, smart_profit=1):
     limit_price = buy_price*(1+limit_profit)
-    limit_delta = buy_price*back_profit
-    max_price = get_max_price(symbol, monitor_start)
-
-    if max_price >= limit_price:
-        if not track:
-            #　如果不追踪，一旦达到止盈，直接卖出
+    current_price = get_current_price(symbol)
+    if not track:
+        # 如果不追踪，价格超过规定的利润就卖
+        if current_price >= limit_price:
             return True
-
-        current_price = get_current_price(symbol)
-        # 至少保证有一个点的盈利，否则不卖
-        if current_price <= max_price-limit_delta and current_price>=(buy_price*1.01):
-            if smart_profit and is_still_up2(symbol, 0.0020):
-                logger.warning("should_stop_profit but still up!!")
-                log_config.output2ui(u"[{}]已达到预设的追踪止盈条件, 系统智能分析当前币价仍在上升, 系统将自动延迟卖出, 以扩大盈利额!".format(symbol.upper()), 2)
-                return False
-            else:
+            # 如果还在涨，再等会
+            # if smart_profit and is_still_up2(symbol, 0.0020):
+            #     return False
+            # else:
+            #     return True
+        else:
+            return False
+    else:
+        limit_delta = buy_price*back_profit
+        max_price = get_max_price(symbol, monitor_start)
+        if max_price >= limit_price:
+            # 至少保证有一个点的盈利，否则不卖
+            if current_price <= max_price-limit_delta and current_price>=(buy_price*1.005):
                 return True
+                # if smart_profit and is_still_up2(symbol, 0.0020):
+                #     logger.warning("should_stop_profit but still up!!")
+                #     log_config.output2ui(u"[{}]已达到预设的追踪止盈条件, 系统智能分析当前币价仍在上升, 系统将自动延迟卖出, 以扩大盈利额!".format(symbol.upper()), 2)
+                #     return False
+                # else:
+                #     return True
 
     return False
 
+last_notify_smart_patch = {
+
+}
 
 def should_patch(symbol, ref_price, patch_interval, smart_patch=1):
     current_price = get_current_price(symbol=symbol)
@@ -574,9 +586,18 @@ def should_patch(symbol, ref_price, patch_interval, smart_patch=1):
     # 如果当前价格小于整体均价的一定比例，则补单
     if current_price < ref_price * (1 - patch_interval):
         # 如果还在跌，暂时不补仓
-        if smart_patch and is_still_down2(symbol, 0.0020):
-            log_config.output2ui(u"[{}]已达到预设的补仓间隔条件, 系统智能分析当前币价仍在下跌, 系统将自动延迟补仓, 以降低持仓成本和交易风险!".format(symbol.upper()), 2)
-            return False
+        if smart_patch and is_still_down2(symbol, 0.0020, 30):
+            notify = False
+            if symbol in last_notify_smart_patch.keys():
+                if (datetime.now()-last_notify_smart_patch[symbol]).total_seconds() > 180:
+                    notify = True
+            else:
+                last_notify_smart_patch[symbol] = datetime.now()
+                notify = True
+
+            if notify:
+                log_config.output2ui(u"[{}]已达到预设的补仓间隔条件, 系统智能分析当前币价仍在下跌, 系统将自动延迟补仓, 以降低持仓成本和交易风险!".format(symbol.upper()), 2)
+            return False    #　暂停一下
         else:
             return True
 
@@ -662,7 +683,7 @@ def stg_smart_profit():
                 ref_price = trade['buy_price']
                 ref_cost = trade["cost"]
                 ref_amount = trade['amount']    # 卖出时以币算
-                plan_sell_amount = ref_amount
+                plan_sell_amount = format_float(ref_amount, 6)
                 ref_time = trade["buy_time"]
                 symbol = "{}{}".format(trade["coin"], trade["money"]).lower()
 
@@ -781,7 +802,7 @@ def stg_smart_profit():
             cost = trade_group.get("cost", 0)       # 当前持仓成本
             ref_price = avg_price
             ref_cost = cost
-            plan_sell_amount = amount
+            plan_sell_amount = format_float(amount, 6)
             ref_time = trade_group.get("start_time", None)
 
             # 判断是否该卖出了
@@ -815,7 +836,7 @@ def stg_smart_profit():
                     trade_group["profit"] += sell_profit
                     trade_group["profit_percent"] = trade_group["profit"]/trade_group["max_cost"]
                     trade_group["last_profit_percent"] = sell_profit_percent
-                    trade_group["amount"] = field_amount
+                    trade_group["amount"] -= field_amount
                     trade_group["cost"] -= (field_cash_amount-fees)
                     trade_group["amount"] = 0 if trade_group["amount"] < 0.0001 else trade_group["amount"]
                     trade_group["cost"] = 0 if trade_group["cost"] < 0.0001 else trade_group["cost"]
@@ -917,9 +938,17 @@ def stg_smart_patch():
 
             patch_mode = trade_group.get("patch_mode", "multiple")
             patch_mode = group_mode.get("patch_mode", "multiple") if not patch_mode else patch_mode
-            multiple = patch_multiple(trade_group["patch_index"]+1, patch_mode, group_mode.get("limit_trades", 8))
+
+            patch_times = trade_group.get("limit_patch_times", -1)
+            patch_times = group_mode.get("limit_patch_times", 5) if not patch_times < 0 else patch_times
+
+            if trade_group["patch_index"] >= patch_times:
+                log_config.output2ui(u"[{}]已经达到补仓次数上限({}次), 停止补仓!".format(symbol.upper(), patch_times), 2)
+                continue
+
+            multiple = patch_multiple(trade_group["patch_index"]+1, patch_mode, patch_times)
             if multiple == 0:
-                log_config.output2ui(u"[{}]已经达到补仓次数上限, 暂停买入!".format(symbol.upper()), 2)
+                log_config.output2ui(u"[{}]已经达到补仓次数上限, 停止补仓!".format(symbol.upper()), 2)
                 continue
 
             # plan_buy_cost = principal*group_mode['first_trade']*multiple
@@ -944,7 +973,7 @@ def stg_smart_patch():
                     "sell_time": None,
                     "coin": coin,
                     "amount": field_amount-fees,     # 买入或卖出的币量
-                    "buy_price": deal_price,    # 实际挂单成交的价格
+                    "buy_price": deal_price,        # 实际挂单成交的价格
                     "sell_price": 0,
                     "money": money,
                     "cost": field_cash_amount,  # 实际花费的计价货币量
@@ -954,7 +983,7 @@ def stg_smart_patch():
                     "limit_profit": -1,
                     "back_profit": -1,
                     "track": -1,
-                    "failed_times":0,
+                    "failed_times": 0,
                     "uri": "{}{}".format(time_now.strftime("%Y%m%d%H%M%S"), random.randint(100, 999)),
                     "group_uri": trade_group["uri"],
                     "user": config.CURRENT_ACCOUNT,
@@ -1375,8 +1404,8 @@ def first_buy(coin, money, principal, multiple=1, build="smart"):
         fees = detail.get("fees", 0)
         deal_price = detail.get("price", 0)
         deal_price = get_current_price(symbol) if deal_price <= 0 else deal_price
-        msg = "[建仓{}] 实际买入币量： {}, 实际买入金额: {}, 买入成交价格: {}".format(symbol.upper(), round(field_amount, 6),
-                                                               round(field_cash_amount, 6), round(deal_price, 6))
+        msg = "[建仓{}] 计划买入金额: {}, 实际成交金额: {}, 实际买入币量： {}, 买入成交价格: {}".\
+            format(symbol.upper(), round(plan_buy_amount, 6), round(field_cash_amount, 6), round(field_amount-fees, 6), round(deal_price, 6))
 
         time_now = datetime.now()
         trade = {
@@ -1390,7 +1419,7 @@ def first_buy(coin, money, principal, multiple=1, build="smart"):
             "sell_time": None,
             "coin": coin.upper(),
             "money": money.upper(),
-            "amount": field_amount-fees,  # 买入或卖出的币量，实际买到的币被平台扣了千二
+            "amount": field_amount-fees,  # 实际得到的币量，实际买到的币被平台扣了千二
             "buy_price": deal_price,  # 实际买入成交的价格
             "cost": field_cash_amount,  # 实际花费的计价货币量
             "is_sell": 0,  # 是否已经卖出
@@ -1426,7 +1455,7 @@ def first_buy(coin, money, principal, multiple=1, build="smart"):
             "back_profit": -1,  # 追踪比例
             "buy_counts": 1,  # 已建单数，目前处理买入状态的单数
             "sell_counts": 0,  # 卖出单数，卖出的次数，其实就是尾单收割次数
-            "patch_index": 0,
+            "patch_index": 0,   # 还没补过
             "patch_ref": -1,  # 间隔参考
             "patch_interval": -1,
             "last_buy_price": deal_price,  # 最后一次买入价格，用来做网格交易，如果最后一单已经卖出，则这个价格需要变成倒数第二次买入价格，以便循环做尾单
@@ -1439,7 +1468,8 @@ def first_buy(coin, money, principal, multiple=1, build="smart"):
             "stop_patch": 0,
             "first_cost": trade["cost"],
             "user": config.CURRENT_ACCOUNT,
-            "platform": config.CURRENT_PLATFORM
+            "platform": config.CURRENT_PLATFORM,
+            "limit_patch_times": -1,
         }
         trade["group_uri"] = trade_group["uri"]
         trade_group["trades"].append(trade)
@@ -1499,7 +1529,7 @@ def stg_smart_first():
 
             if buy_multiple > 0:
                 buy_multiple *= risk    # 能承担的风险系数越大，首单买的越多
-                ret = first_buy(coin, money, principal, buy_multiple/0.15, build=build_mode)
+                ret = first_buy(coin, money, principal, buy_multiple/0.1, build=build_mode)
                 if ret:
                     make_deal = True
                     if smart_first:
@@ -2396,7 +2426,7 @@ def buy_market(symbol, amount, percent=0.1, currency=""):
     result = {"code": 0, "data": {}, "msg": ""}
     balance = 0
     # 如果提供了计价货币，则根据余额来检验amount
-    if symbol[-4:].lower() == "usdt" and config.TRADE_MIN_LIMIT_VALUE>0 and amount < config.TRADE_MIN_LIMIT_VALUE:
+    if symbol[-4:].lower() == "usdt" and config.TRADE_MIN_LIMIT_VALUE > 0 and amount < config.TRADE_MIN_LIMIT_VALUE:
         log_config.output2ui(u"[{}]当前计划买入价值({})小于设置的最小买入额({} USDT), 直接调整为最小买入限额".format(symbol.upper(), amount, config.TRADE_MIN_LIMIT_VALUE))
         amount = config.TRADE_MIN_LIMIT_VALUE
 
@@ -2423,11 +2453,11 @@ def buy_market(symbol, amount, percent=0.1, currency=""):
                 amount = balance
 
     # 市价amount代表买多少钱的
-    amount = format_float(amount, 4)
+    amount = format_float(amount, 6)
     logger.warning("buy {} amount={}, balance={}".format(symbol, amount, balance))
 
     hrs = HuobiREST()
-    retry = 3
+    retry = 6
     while retry >= 0:
         ret = hrs.send_order(amount=amount, source="api", symbol=symbol, _type="buy-market")
         if ret[0] == 200 and ret[1]:
@@ -2447,7 +2477,7 @@ def buy_market(symbol, amount, percent=0.1, currency=""):
                 field_amount = float(order_detail.get("field-amount", 0))   #买入币量
                 fees = float(order_detail.get("field-fees", 0))
                 # price = float(order_detail.get("price", 0))
-                price = float(field_cash_amount/(field_amount-fees))
+                price = float(field_cash_amount/field_amount)
 
                 logger.warning("[{}]买入成功, 计划买入额: {}, 实际成交额: {}, 实际买入币量: {}, 买入价格: {}".format(symbol, round(amount, 6), round(field_cash_amount, 6), round(field_amount, 6), round(price, 6)))
 
@@ -2461,7 +2491,6 @@ def buy_market(symbol, amount, percent=0.1, currency=""):
                     "finished_at": order_detail.get("finished-at", ""),
                     "price": price,
                     "fees": fees
-
                 }
                 result["msg"] = "Buy succeed!"
                 update_balance(money_only=True)
@@ -2507,13 +2536,13 @@ def sell_market(symbol, amount, percent=0.1, currency=""):
     # else:
     #     amount = format_float(amount, 2)
 
-    amount = format_float(amount, 4)
+    amount = format_float(amount, 6)
     logger.warning("sell {} amount={}, balance={}".format(symbol, amount, balance))
 
     # 卖出时amount代表币量
 
     hrs = HuobiREST()
-    retry = 3
+    retry = 6
     while retry >= 0:
         ret = hrs.send_order(amount=amount, source="api", symbol=symbol, _type="sell-market")
         # (True, '6766866273')
@@ -2535,7 +2564,7 @@ def sell_market(symbol, amount, percent=0.1, currency=""):
                 field_amount = float(order_detail.get("field-amount", 0))   #卖出币量
                 fees = float(order_detail.get("field-fees", 0))
                 # price = float(order_detail.get("price", 0))
-                price = float((field_cash_amount-fees) / field_amount)
+                price = float(field_cash_amount / field_amount)
 
                 # price = current_price if price == 0 else price
 
@@ -2563,7 +2592,7 @@ def sell_market(symbol, amount, percent=0.1, currency=""):
         elif ret[0] == 200:
             # 精度有问题，可以降低精度再试试
             amount = format_float(amount, retry-1)
-            if amount<=0:
+            if amount <= 0:
                 break
             retry -= 1
         else:
@@ -3649,9 +3678,9 @@ STRATEGY_LIST = [
     # Strategy(buy_low, 10, -1, name="buy_low", after_execute_sleep=600),
     # Strategy(sell_high, 11, -1, name="sell_high", after_execute_sleep=600),
     # Strategy(auto_trade, 11, -1, name="auto trade", after_execute_sleep=10),
-    Strategy(stg_smart_first, 15, -1, name="smart first", after_execute_sleep=900),
-    Strategy(stg_smart_profit, 11, -1, name="smart profit", after_execute_sleep=180),
-    Strategy(stg_smart_patch, 11, -1, name="smart patch", after_execute_sleep=180),
+    Strategy(stg_smart_first, 8, -1, name="smart first", after_execute_sleep=900),
+    Strategy(stg_smart_profit, 5, -1, name="smart profit", after_execute_sleep=120),
+    Strategy(stg_smart_patch, 5, -1, name="smart patch", after_execute_sleep=120),
 ]
 
 

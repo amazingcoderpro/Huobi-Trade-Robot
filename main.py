@@ -189,7 +189,7 @@ class MainUI:
         # u"序号", u"交易对", u"状态", u"当前价格", u"持仓均价", u"持币数量", u"持仓费用", u"已做单数", u"已盈利单数", u"尾单收益比%", u"累计收益", u"收益比%", u"建仓时间",  u"最近更新", u"结束时间")
 
         columns = (
-            u"序号", u"交易对", u"状态", u"持仓均价", u"持币数量", u"持仓费用", u"已做单数", u"已盈利单数", u"尾单收益比%", u"累计收益", u"收益比%",
+            u"序号", u"交易对", u"状态", u"当前价格", u"持仓均价", u"持币数量", u"持仓费用", u"已做单数", u"已盈利单数", u"尾单收益比%", u"累计收益", u"收益比%",
             u"建仓时间", u"最近更新", u"结束时间")
 
         self.tree = ttk.Treeview(root, show="headings", columns=columns, height=16)  # 表格
@@ -311,7 +311,7 @@ class MainUI:
             return
 
         item = self.tree.selection()[0]
-        group_uri = self.tree.item(item, "values")[11]
+        group_uri = self.tree.item(item, "values")[12]
 
         for group in config.TRADE_RECORDS_NOW:
             if group.get("uri", "-1") == group_uri:
@@ -330,7 +330,7 @@ class MainUI:
             return
 
         item = self.tree.selection()[0]
-        group_uri = self.tree.item(item, "values")[11]
+        group_uri = self.tree.item(item, "values")[12]
 
         for group in config.TRADE_RECORDS_NOW:
             if group.get("uri", "-1") == group_uri:
@@ -353,7 +353,7 @@ class MainUI:
             return
 
         item = self.tree.selection()[0]
-        group_uri = self.tree.item(item, "values")[11]
+        group_uri = self.tree.item(item, "values")[12]
 
         for group in config.TRADE_RECORDS_NOW:
             if group.get("uri", "-1") == group_uri:
@@ -372,7 +372,7 @@ class MainUI:
             return
 
         item = self.tree.selection()[0]
-        group_uri = self.tree.item(item, "values")[11]
+        group_uri = self.tree.item(item, "values")[12]
         selected_group = None
         for group in config.TRADE_RECORDS_NOW:
             if group.get("uri", "-1") == group_uri:
@@ -456,7 +456,7 @@ class MainUI:
             return
 
         item = self.tree.selection()[0]
-        group_uri = self.tree.item(item, "values")[11]
+        group_uri = self.tree.item(item, "values")[12]
 
         select_record = None
         for record in config.TRADE_RECORDS_NOW:
@@ -863,7 +863,7 @@ class MainUI:
                     config.TRADE_MODE_CONFIG[config.TRADE_MODE][k] = v
 
             log_config.output2ui(u"交易策略设置成功! 您当前选择的策略为: [{}], 补仓数列为: [{}], 补仓参考: [{}], 补仓间隔: {}%, 止盈比例为: {}%, 追踪止盈: {}, "
-                                 u"追踪回撤比例: {}%, 网格止盈: {}, 智能建仓: {}, 智能止盈: {}, 智能补仓: {}".format(pop.result["mode_name"], pop.result["patch_name"],
+                                 u"追踪回撤比例: {}%, 网格止盈: {}, 智能建仓: {}, 智能止盈: {}, 智能补仓: {}, 最大补仓次数: {}".format(pop.result["mode_name"], pop.result["patch_name"],
                                                                            pop.result["patch_ref_name"], round(pop.result["patch_interval"]*100, 4),
                                                                          round(pop.result["limit_profit"]*100, 4),
                                                                          u"开启" if pop.result["track"] else u"关闭",
@@ -871,7 +871,8 @@ class MainUI:
                                                                          u"开启" if pop.result["grid"] else u"关闭",
                                                                          u"开启" if pop.result["smart_first"] else u"关闭",
                                                                          u"开启" if pop.result["smart_profit"] else u"关闭",
-                                                                            u"开启" if pop.result["smart_patch"] else u"关闭"), 0)
+                                                                            u"开启" if pop.result["smart_patch"] else u"关闭",
+                                                                                               pop.result["limit_patch_times"]), 0)
 
             self.mode.set(pop.result["mode_name"])
 
@@ -1225,11 +1226,11 @@ class MainUI:
                 "avg_price real, max_cost real, profit real, profit_percent real, last_profit_percent real, limit_profit real, back_profit real, "
                 "buy_counts integer, sell_counts integer, patch_index integer, patch_ref integer, patch_interval real, last_buy_price real, "
                 "start_time timestamp, end_time timestamp, last_update timestamp, uri varchar(100), principal real, last_sell_failed timestamp, sell_out integer,"
-                "is_sell integer, stop_patch integer, first_cost real, user varchar(128), platform varchar(40))")
+                "is_sell integer, stop_patch integer, first_cost real, user varchar(128), platform varchar(40), limit_patch_times integer)")
 
             # trade_mode
             cursor.execute(
-                "create table if not exists trade_mode(id integer primary key autoincrement, mode varchar(20), limit_profit real, back_profit real)")
+                "create table if not exists trade_mode(id integer primary key autoincrement, mode varchar(20), principal real, user varchar(128), platform varchar(40))")
 
             conn.commit()
             cursor.execute('select uri from trade_group where id>=0')
@@ -1249,7 +1250,7 @@ class MainUI:
             for group in config.TRADE_RECORDS_NOW:
                 if group.get("uri", "") not in group_uris:
                     cursor.execute(
-                        'insert into `trade_group` values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        'insert into `trade_group` values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                         (None, group.get("build", ""), group.get("mode", ""), group.get("smart_profit", -1),
                          group.get("smart_patch", -1),
                          group.get("patch_mode", ""), group.get("coin", ""), group.get("money", ""),
@@ -1266,14 +1267,14 @@ class MainUI:
                          group.get("principal", -1),
                          group.get("last_sell_failed", None), group.get("sell_out", 0), group.get("is_sell", 0),
                          group.get("stop_patch", 0), group.get("first_cost", 10), group.get("user", config.CURRENT_ACCOUNT),
-                         group.get("platform", config.CURRENT_PLATFORM)))
+                         group.get("platform", config.CURRENT_PLATFORM), group.get("limit_patch_times", -1)))
                 else:
                     cursor.execute(
                         'update `trade_group` set build=?, mode=?, smart_profit=?, smart_patch=?, patch_mode=?, grid=?, '
                         'track=?, amount=?, cost=?, avg_price=?, max_cost=?, profit=?, profit_percent=?, '
                         'last_profit_percent=?, limit_profit=?, back_profit=?, buy_counts=?, sell_counts=?, patch_index=?, '
                         'patch_ref=?, patch_interval=?, last_buy_price=?, start_time=?, end_time=?, last_update=?, '
-                        'principal=?, last_sell_failed=?, sell_out=?, stop_patch=?, is_sell=? where uri=? and user=?',
+                        'principal=?, last_sell_failed=?, sell_out=?, stop_patch=?, is_sell=?, limit_patch_times=? where uri=? and user=?',
                         (group.get("build", ""), group.get("mode", ""), group.get("smart_profit", -1),
                          group.get("smart_patch", -1),
                          group.get("patch_mode", ""), group.get("grid", -1),
@@ -1287,7 +1288,7 @@ class MainUI:
                          group.get("start_time", None),
                          group.get("end_time", None), group.get("last_update", None), group.get("principal", -1),
                          group.get("last_sell_failed", None), group.get("sell_out", 0), group.get("stop_patch", 0),
-                         group.get("is_sell", 0),
+                         group.get("is_sell", 0), group.get("limit_patch_times", -1),
                          group.get("uri", ''), group.get("user", config.CURRENT_ACCOUNT)))
                 conn.commit()
 
@@ -1322,11 +1323,25 @@ class MainUI:
                              trade.get("failed_times", 0), trade.get("uri", "")))
                 conn.commit()
             conn.commit()
+
+            # cursor.execute('select * from trade_mode where user=? and platform=?', (config.CURRENT_ACCOUNT, config.CURRENT_PLATFORM))
+            # user_mode = cursor.fetchall()
+            # if user_mode:
+            #     cursor.execute('update `trade_mode` set id=?, mode=?, principal=? where user=? and platform=?',
+            #                    (None, config.TRADE_MODE, config.PRINCIPAL, config.CURRENT_ACCOUNT, config.CURRENT_PLATFORM))
+            # else:
+            #     cursor.execute('insert into `trade_mode` values(?, ?, ?, ?, ?)', (None, config.TRADE_MODE, config.PRINCIPAL, config.CURRENT_ACCOUNT, config.CURRENT_PLATFORM))
+            #
+            # conn.commit()
+            conn.close()
         except Exception as e:
             log_config.output2ui(u"更新数据失败!", 2)
             logger.exception(str(e))
-        finally:
-            conn.close()
+            try:
+                conn.close()
+                os.remove(config.DB_FILE)
+            except:
+                pass
 
     def update_ui_trade_info(self):
         self.tree.delete(*self.tree.get_children())
@@ -1381,7 +1396,7 @@ class MainUI:
             self.tree.insert("", index, values=(index+1,
                                                 trade_pair,
             state,
-            # current_price,
+            current_price,
             round(trade["avg_price"], 6),
             round(trade["amount"], 6),
             round(trade["cost"], 6),
@@ -1635,10 +1650,14 @@ class MainUI:
         def update_ui_trade_info_thread():
             while 1:
                 time.sleep(1)
-                if self.working and strategies.should_update_ui_tree:
-                    self.update_ui_trade_info()
-                    self.update_ui_balance()
-                    strategies.should_update_ui_tree = False
+                if self.working:
+                    if strategies.should_update_ui_tree:
+                        self.update_ui_trade_info()
+                        self.update_ui_balance()
+                        strategies.should_update_ui_tree = False
+                    else:
+                        time.sleep(30)
+                        strategies.should_update_ui_tree = True
 
             # self.tree.after(5000, update_trade_record)
 
@@ -1689,6 +1708,7 @@ class MainUI:
     def load_trades(self):
         log_config.output2ui(u"正在加载历史未完成的交易对...", 0)
         num = 0
+        finished_trades = []
         try:
             conn = sqlite3.connect(config.DB_FILE, detect_types=sqlite3.PARSE_DECLTYPES)
             cursor = conn.cursor()
@@ -1698,7 +1718,7 @@ class MainUI:
                 "avg_price real, max_cost real, profit real, profit_percent real, last_profit_percent real, limit_profit real, back_profit real, "
                 "buy_counts integer, sell_counts integer, patch_index integer, patch_ref integer, patch_interval real, last_buy_price real, "
                 "start_time timestamp, end_time timestamp, last_update timestamp, uri varchar(100), principal real, last_sell_failed timestamp, sell_out integer,"
-                "is_sell integer, stop_patch integer, first_cost real, user varchar(128), platform varchar(40))")
+                "is_sell integer, stop_patch integer, first_cost real, user varchar(128), platform varchar(40), limit_patch_times integer)")
 
 
             cursor.execute("select * from `trade_group` where is_sell=0 and user=? and platform=?", (config.CURRENT_ACCOUNT, config.CURRENT_PLATFORM))
@@ -1744,7 +1764,8 @@ class MainUI:
                         "stop_patch": r[33],  # 是否停止补仓
                         "first_cost": r[34],  # 第一单买入花费，以后补仓就参考这个
                         "user": r[35],
-                        "platform": r[36]
+                        "platform": r[36],
+                        "limit_patch_times": r[37] if len(r) >= 38 else -1
                     }
                     cursor.execute("select * from `trade` where group_uri=? and user=? and platform=?", (r[28], r[35], r[36]))
 
@@ -1781,31 +1802,34 @@ class MainUI:
         except Exception as e:
             log_config.output2ui(u"加载历史交易数据失败！", 2)
 
-        # try:
-        #     num = 0
-        #     history_file = "{}.pkl".format(config.CURRENT_ACCOUNT)
-        #     finished_trades = []
-        #     with open(history_file, 'rb') as f:
-        #         while True:
-        #             try:
-        #                 trades_records = pickle.load(f)
-        #                 for trade_group in trades_records:
-        #                     if not trade_group.get("end_time", None):
-        #                         num += 1
-        #                         config.TRADE_RECORDS_NOW.append(trade_group)
-        #                     else:
-        #                         finished_trades.append(trade_group)
-        #             except:
-        #                 break
-        # except:
-        #     log_config.output2ui(u"未发现历史数据！", 2)
-        #     return
+        load_from_yaml = False
+        history_file = "{}.pkl".format(config.CURRENT_ACCOUNT)
 
+        try:
+            # 如果db里没有再从yaml里试试
+            if not config.TRADE_RECORDS_NOW:
+                with open(history_file, 'rb') as f:
+                    while True:
+                        try:
+                            trades_records = pickle.load(f)
+                            for trade_group in trades_records:
+                                load_from_yaml = True
+                                if not trade_group.get("end_time", None):
+                                    num += 1
+                                    config.TRADE_RECORDS_NOW.append(trade_group)
+                                else:
+                                    finished_trades.append(trade_group)
+                        except:
+                            break
+        except:
+            log_config.output2ui(u"未发现历史数据！", 2)
+            return
 
         if num > 0:
-            # # 从历史文件中删除未完成的交易组
-            # with open(history_file, 'wb') as f:
-            #     pickle.dump(finished_trades, f)
+            # 清空yaml文件
+            if load_from_yaml:
+                with open(history_file, 'wb') as f:
+                    pickle.dump([], f)
 
             pair_names = []
             for group in config.TRADE_RECORDS_NOW:

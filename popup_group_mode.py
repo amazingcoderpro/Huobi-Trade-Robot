@@ -50,7 +50,7 @@ class PopupGroupMode(MyDialog):
         self.opt_patch_ref = OptionMenu(frame, self.patch_ref, *lst_patch_ref)
         self.opt_patch_ref.grid(row=1, column=3, sticky=N + S + W)
 
-        Label(frame, text=u'补仓间隔:', width=12).grid(row=2, column=0)
+        Label(frame, text=u'补仓间隔(%):', width=12).grid(row=2, column=0)
         # 创建并添加Entry,用于接受用户输入的用户名
         patch_interval = self.group.get("patch_interval", -1)
         patch_interval = global_mode.get("patch_interval", 0.05) if patch_interval<0 else patch_interval
@@ -59,9 +59,19 @@ class PopupGroupMode(MyDialog):
 
         self.ety_interval = Entry(frame, textvariable=self.patch_interval, width=8)
         self.ety_interval.grid(row=2, column=1)
-        Label(frame, text=u'%', width=2).grid(row=2, column=2, sticky=N + S + W)
+        # Label(frame, text=u'%', width=2).grid(row=2, column=2, sticky=N + S + W)
 
-        Label(frame, text=u'止盈比例:', width=12).grid(row=3, column=0)
+        Label(frame, text=u'最大补仓次数:', width=14).grid(row=2, column=2)
+        # 创建并添加Entry,用于接受用户输入的用户名
+        patch_times = self.group.get("limit_patch_times", -1)
+        patch_times = global_mode.get("limit_patch_times", 5) if patch_times<0 else patch_times
+        self.patch_times = DoubleVar()
+        self.patch_times.set(patch_times)
+        self.ety_times = Entry(frame, textvariable=self.patch_times, width=6)
+        self.ety_times.grid(row=2, column=3)
+
+
+        Label(frame, text=u'止盈比例(%):', width=12).grid(row=3, column=0)
         # 创建并添加Entry,用于接受用户输入的用户名
         limit_profit = self.group.get("limit_profit", -1)
         limit_profit = global_mode.get("limit_profit", 0.026) if limit_profit<0 else limit_profit
@@ -70,7 +80,7 @@ class PopupGroupMode(MyDialog):
         self.limit_profit.set(round(limit_profit*100, 4))
         self.ety_profit = Entry(frame, textvariable=self.limit_profit, width=8)
         self.ety_profit.grid(row=3, column=1)
-        Label(frame, text=u'%', width=2).grid(row=3, column=2, sticky=N + S + W)
+        # Label(frame, text=u'%', width=2).grid(row=3, column=2, sticky=N + S + W)
 
         track = self.group.get("track", -1)
         track = global_mode.get("track", 1) if track<0 else track
@@ -78,7 +88,7 @@ class PopupGroupMode(MyDialog):
         self.track_profit.set(track)
         Checkbutton(frame, text=u'是否开启追踪止盈', variable=self.track_profit, onvalue=1, offvalue=0, width=20, command=self.cmd_track).grid(row=4, column=0)
 
-        Label(frame, text=u'回撤比例:', width=12).grid(row=4, column=1)
+        Label(frame, text=u'回撤比例(%):', width=12).grid(row=4, column=1)
         # 创建并添加Entry,用于接受用户输入的用户名
         back_profit = self.group.get("back_profit", -1)
         back_profit = global_mode.get("back_profit", 0.005) if back_profit<0 else back_profit
@@ -87,7 +97,7 @@ class PopupGroupMode(MyDialog):
         self.back_profit.set(round(back_profit*100, 4))
         self.ety_back = Entry(frame, textvariable=self.back_profit, width=8)
         self.ety_back.grid(row=4, column=2)
-        Label(frame, text=u'%', width=2).grid(row=4, column=3, sticky=N + S + W)
+        # Label(frame, text=u'%', width=2).grid(row=4, column=3, sticky=N + S + W)
 
         #设置独立的本金预算
 
@@ -104,7 +114,7 @@ class PopupGroupMode(MyDialog):
 
         self.principal = DoubleVar()
         self.principal.set(round(principal, 4))
-        self.ety_profit = Entry(frame, textvariable=self.principal, width=8)
+        self.ety_profit = Entry(frame, textvariable=self.principal, width=10)
         self.ety_profit.grid(row=5, column=1)
         Label(frame, text=u'您可以为该组交易设置独立的本金预算, 默认为全局本金预算除以监控的币种数', fg="gray", font=("", 8)).grid(row=5, column=2, columnspan=2, sticky=N + S + W)
 
@@ -155,6 +165,7 @@ class PopupGroupMode(MyDialog):
             smart_profit = int(self.smart_profit.get())
             smart_patch = int(self.smart_patch.get())
             principal = float(self.principal.get())
+            patch_times = int(self.patch_times.get())
 
             mode_key = "robust"
             for k, v in config.TRADE_MODE_CONFIG.items():
@@ -191,6 +202,7 @@ class PopupGroupMode(MyDialog):
             self.result["patch_name"] = patch_name
             self.result["patch_ref_name"] = patch_ref_name
             self.result["principal"] = principal
+            self.result["limit_patch_times"] = patch_times
         except Exception as e:
             messagebox.showerror(u"提示", u"请输入有效数字！")
             return False
@@ -228,6 +240,7 @@ class PopupGroupMode(MyDialog):
             lst_patch_ref = [u"持仓均价", u"上单买价"]
             self.patch_ref.set(lst_patch_ref[mode.get("patch_ref", 0)])
             self.patch_interval.set(round(mode.get("patch_interval", 0.05)*100, 4))
+            self.patch_times.set(mode.get("limit_patch_times", 5))
 
     def cmd_track(self):
         val = self.track_profit.get()

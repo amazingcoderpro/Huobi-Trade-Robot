@@ -792,7 +792,7 @@ if __name__ == '__main__':
     # print("order_info = {}".format(hrs.order_info(ret[1])))
 
     # sell ---------
-    ret = hrs.send_order(2, source="api", symbol="iostusdt", _type="sell-market")
+    ret = hrs.send_order(4, source="api", symbol="topusdt", _type="buy-market")
     print("send_order = {}".format(ret))
     print("order_info = {}".format(hrs.order_info(ret[1])))
 

@@ -25,8 +25,8 @@ HOST = "47.75.10.215"
 CURRENT_ACCOUNT = ""            # 当前用户账号
 CURRENT_PASSWORD = ""
 CURRENT_PLATFORM = "huobi"      # 当前平台
-ACCESS_KEY = ""
-SECRET_KEY = ""
+ACCESS_KEY = "ht4tgq1e4t-e22212d5-632b2d77-b3694"
+SECRET_KEY = "e01a1a28-7b67bc6d-4e6ec1cb-e613a"
 CURRENT_SYMBOLS = {}            # 用户选择的交易对{'USDT': {'trade': 0, 'frozen': 0, 'coins': [{'coin': 'HT', 'trade': 0, 'frozen': 0}], 'principal': 0}, 'BTC': {'trade': 0, 'frozen': 0, 'coins': []}, 'ETH': {'trade': 0, 'frozen': 0, 'coins': []}, 'HT': {'trade': 0, 'frozen': 0, 'coins': []}, 'HUSD': {'trade': 0, 'frozen': 0, 'coins': [{'coin': 'XRP', 'trade': 0, 'frozen': 0}]}}
 
 NEED_TOBE_SUB_SYMBOL = []
@@ -255,7 +255,7 @@ NICK_NAME = u"用户昵称"
 # 交易风格字典
 TRADE_MODE_CONFIG_STD = {
     "keep_0": {"display": u"保守-",
-               "limit_trades": 6,       # 最大买入次数，超过这个次数，不论何种补仓模式都不再补仓，对于不同的补仓模式，这个值会动态减小，比如平方队列时，最多买入4次
+               "limit_patch_times": 5,       # 最大补仓次数，超过这个次数，不论何种补仓模式都不再补仓，对于不同的补仓模式，这个值会动态减小，比如平方队列时，最多买入4次
                "limit_profit": 0.05,    # 要求的盈利比例
                "back_profit": 0.02,     # 盈利回撤比例
                "track": 1,              # 是否启动追踪止盈
@@ -272,7 +272,7 @@ TRADE_MODE_CONFIG_STD = {
                "risk": 0.84             # 风险系数，主要用于智能买入和卖出时参考
                },
     "keep": {"display": u"保守",
-             "limit_trades": 6,
+             "limit_patch_times": 5,
              "limit_profit": 0.05,
              "back_profit": 0.02,
              "track": 1,  # 是否启动追踪止盈
@@ -289,7 +289,7 @@ TRADE_MODE_CONFIG_STD = {
              "risk": 0.88,
              },
     "keep_1": {"display": u"保守+",
-               "limit_trades": 6,
+               "limit_patch_times": 5,
                "limit_profit": 0.05,
                "back_profit": 0.02,
                "smart_first": 1,  # 是否启用智能建仓
@@ -306,7 +306,7 @@ TRADE_MODE_CONFIG_STD = {
                "risk": 0.92
                },
     "robust_0": {"display": u"稳健-",
-                 "limit_trades": 8,
+                 "limit_patch_times": 7,
                  "limit_profit": 0.04,
                  "back_profit": 0.01,
                  "track": 1,  # 是否启动追踪止盈
@@ -323,7 +323,7 @@ TRADE_MODE_CONFIG_STD = {
                  "risk": 0.96
                  },
     "robust": {"display": u"稳健",
-               "limit_trades": 8,
+               "limit_patch_times": 7,
                "limit_profit": 0.04,
                "back_profit": 0.01,
                "track": 1,  # 是否启动追踪止盈
@@ -340,7 +340,7 @@ TRADE_MODE_CONFIG_STD = {
                "risk": 1
                },
     "robust_1": {"display": u"稳健+",
-                 "limit_trades": 8,
+                 "limit_patch_times": 7,
                  "limit_profit": 0.04,
                  "back_profit": 0.01,
                  "track": 1,  # 是否启动追踪止盈
@@ -357,7 +357,7 @@ TRADE_MODE_CONFIG_STD = {
                  "risk": 1.04
                  },
     "aggressive_0": {"display": u"激进-",
-                     "limit_trades": 10,
+                     "limit_patch_times": 9,
                      "limit_profit": 0.03,
                      "back_profit": 0.01,
                      "track": 1,  # 是否启动追踪止盈
@@ -374,7 +374,7 @@ TRADE_MODE_CONFIG_STD = {
                      "risk": 1.08
                      },
     "aggressive": {"display": u"激进",
-                   "limit_trades": 10,
+                   "limit_patch_times": 9,
                    "limit_profit": 0.03,
                    "back_profit": 0.01,
                    "track": 1,  # 是否启动追踪止盈
@@ -391,7 +391,7 @@ TRADE_MODE_CONFIG_STD = {
                    "risk": 1.12
                    },
     "aggressive_1": {"display": u"激进+",
-                     "limit_trades": 10,
+                     "limit_patch_times": 9,
                      "limit_profit": 0.03,
                      "back_profit": 0.01,
                      "track": 1,  # 是否启动追踪止盈
@@ -413,9 +413,9 @@ TRADE_MODE_CONFIG_STD = {
 # 交易风格字典
 TRADE_MODE_CONFIG = {
     "keep_0": {"display": u"保守-",
-               "limit_trades": 6,       # 最大买入次数，超过这个次数，不论何种补仓模式都不再补仓，对于不同的补仓模式，这个值会动态减小，比如平方队列时，最多买入4次
-               "limit_profit": 0.04,    # 要求的盈利比例
-               "back_profit": 0.012,     # 盈利回撤比例
+               "limit_patch_times": 6,       # 最大补仓次数，超过这个次数，不论何种补仓模式都不再补仓，对于不同的补仓模式，这个值会动态减小，比如平方队列时，最多买入4次
+               "limit_profit": 0.038,    # 要求的盈利比例
+               "back_profit": 0.010,     # 盈利回撤比例
                "track": 1,              # 是否启动追踪止盈
                "grid": 1,               # 是否启用网格止盈方案
                "smart_first": 1,        # 是否启用智能建仓
@@ -430,9 +430,9 @@ TRADE_MODE_CONFIG = {
                "risk": 0.84             # 风险系数，主要用于智能买入和卖出时参考
                },
     "keep": {"display": u"保守",
-             "limit_trades": 6,
-             "limit_profit": 0.038,
-             "back_profit": 0.010,
+             "limit_patch_times": 6,
+             "limit_profit": 0.034,
+             "back_profit": 0.008,
              "track": 1,  # 是否启动追踪止盈
              "grid": 1,  # 是否启用网格止盈方案
              "smart_first": 1,        # 是否启用智能建仓
@@ -445,9 +445,9 @@ TRADE_MODE_CONFIG = {
              "risk": 0.88,
              },
     "keep_1": {"display": u"保守+",
-               "limit_trades": 6,
-               "limit_profit": 0.036,
-               "back_profit": 0.010,
+               "limit_patch_times": 6,
+               "limit_profit": 0.032,
+               "back_profit": 0.008,
                "smart_first": 1,  # 是否启用智能建仓
                "smart_profit": 1,  # 是否启用智能止盈
                "smart_patch": 1,  # 是否启用智能补仓
@@ -462,9 +462,9 @@ TRADE_MODE_CONFIG = {
                "risk": 0.92
                },
     "robust_0": {"display": u"稳健-",
-                 "limit_trades": 8,
-                 "limit_profit": 0.03,
-                 "back_profit": 0.008,
+                 "limit_patch_times": 8,
+                 "limit_profit": 0.028,
+                 "back_profit": 0.006,
                  "track": 1,  # 是否启动追踪止盈
                  "grid": 1,  # 是否启用网格止盈方案
                  "smart_first": 1,  # 是否启用智能建仓
@@ -479,9 +479,9 @@ TRADE_MODE_CONFIG = {
                  "risk": 0.96
                  },
     "robust": {"display": u"稳健",
-               "limit_trades": 8,
-               "limit_profit": 0.028,
-               "back_profit": 0.007,
+               "limit_patch_times": 8,
+               "limit_profit": 0.027,
+               "back_profit": 0.005,
                "track": 1,  # 是否启动追踪止盈
                "grid": 1,  # 是否启用网格止盈方案
                "smart_first": 1,  # 是否启用智能建仓
@@ -496,9 +496,9 @@ TRADE_MODE_CONFIG = {
                "risk": 1
                },
     "robust_1": {"display": u"稳健+",
-                 "limit_trades": 8,
-                 "limit_profit": 0.027,
-                 "back_profit": 0.006,
+                 "limit_patch_times": 8,
+                 "limit_profit": 0.025,
+                 "back_profit": 0.005,
                  "track": 1,  # 是否启动追踪止盈
                  "grid": 1,  # 是否启用网格止盈方案
                  "smart_first": 0,  # 是否启用智能建仓
@@ -513,9 +513,9 @@ TRADE_MODE_CONFIG = {
                  "risk": 1.04
                  },
     "aggressive_0": {"display": u"激进-",
-                     "limit_trades": 10,
-                     "limit_profit": 0.025,
-                     "back_profit": 0.005,
+                     "limit_patch_times": 10,
+                     "limit_profit": 0.022,
+                     "back_profit": 0.004,
                      "track": 1,  # 是否启动追踪止盈
                      "grid": 1,  # 是否启用网格止盈方案
                      "smart_first": 0,  # 是否启用智能建仓
@@ -530,9 +530,9 @@ TRADE_MODE_CONFIG = {
                      "risk": 1.08
                      },
     "aggressive": {"display": u"激进",
-                   "limit_trades": 10,
-                   "limit_profit": 0.024,
-                   "back_profit": 0.005,
+                   "limit_patch_times": 10,
+                   "limit_profit": 0.020,
+                   "back_profit": 0.003,
                    "track": 1,  # 是否启动追踪止盈
                    "grid": 1,  # 是否启用网格止盈方案
                    "smart_first": 0,  # 是否启用智能建仓
@@ -547,9 +547,9 @@ TRADE_MODE_CONFIG = {
                    "risk": 1.12
                    },
     "aggressive_1": {"display": u"激进+",
-                     "limit_trades": 10,
-                     "limit_profit": 0.022,
-                     "back_profit": 0.004,
+                     "limit_patch_times": 10,
+                     "limit_profit": 0.018,
+                     "back_profit": 0.002,
                      "track": 1,  # 是否启动追踪止盈
                      "grid": 1,  # 是否启用网格止盈方案
                      "smart_first": 0,  # 是否启用智能建仓
@@ -678,7 +678,8 @@ TRADE_GROUP = {
     "stop_patch": 0,        # 是否停止补仓
     "first_cost": -1,       #第一单买入花费，以后补仓就参考这个
     "user": "",
-    "platform": ""
+    "platform": "",
+    "limit_patch_times": -1,    # 最大补仓次数，如果未设置则以全局的为准　
 }
 
 
