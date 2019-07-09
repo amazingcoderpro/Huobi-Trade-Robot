@@ -595,6 +595,7 @@ def should_patch(symbol, ref_price, patch_interval, smart_patch=1):
             global last_notify_smart_patch
             if symbol in last_notify_smart_patch.keys():
                 if (datetime.now()-last_notify_smart_patch[symbol]).total_seconds() > 180:
+                    last_notify_smart_patch[symbol] = datetime.now()
                     notify = True
                 else:
                     notify = False
@@ -736,6 +737,9 @@ def stg_smart_profit():
                         # 从整体持仓量和成本减去实际卖掉量和钱，止盈，成本会被渐渐拉低，甚至为负
                         trade_group["amount"] -= field_amount
                         trade_group["cost"] -= (field_cash_amount-fees)
+
+                        # 持仓成本得用总成本减去卖掉的这单的成本
+                        # trade_group["cost"] -= ref_cost#不对
                         trade_group["cost"] = 0 if trade_group["cost"] < 0.0001 else trade_group["cost"]
                         trade_group["amount"] = 0 if trade_group["amount"] < 0.0001 else trade_group["amount"]
 
@@ -802,13 +806,22 @@ def stg_smart_profit():
             else:
                 # 修改最后一次买入价格为最后一单未卖出的买入价格
                 trade_group["last_buy_price"] = trades[len_trades-1]["buy_price"]
+
+                # 卖出一单后，平均价格应该是所有未卖出的单子的总成本除以总量
+                not_sell_cost = 0
+                not_sell_amount = 0
+                for trade in trades:
+                    if not trade.get("is_sell", 0):
+                        not_sell_cost += trade["cost"]
+                        not_sell_amount += trade["amount"]
+                trade_group["avg_price"] = not_sell_cost / not_sell_amount
+
         else:
             # 以整体均价判断是否该卖出所有
             avg_price = trade_group.get("avg_price", 0)
             amount = trade_group.get("amount", 0)   # 持币量
-            cost = trade_group.get("cost", 0)       # 当前持仓成本
+            # cost = trade_group.get("cost", 0)       # 当前持仓成本
             ref_price = avg_price
-            ref_cost = cost
             plan_sell_amount = format_float(amount, 6)
             ref_time = trade_group.get("start_time", None)
 
@@ -825,6 +838,8 @@ def stg_smart_profit():
                     deal_price = get_current_price(symbol) if deal_price<=0 else deal_price
                     fees = detail.get("fees", 0)
 
+                    sell_profit = 0
+                    last_profit_percent = 0
                     # 整体卖出后，把每一单都设置为已卖出状态
                     for trade in trade_group["trades"]:
                         if trade["is_sell"] == 0:
@@ -834,15 +849,19 @@ def stg_smart_profit():
                             trade["sell_price"] = deal_price
                             trade["profit"] = (deal_price-trade["buy_price"]) * trade["amount"]
                             trade["profit_percent"] = trade["profit"]/trade["cost"]
+                            if last_profit_percent == 0:
+                                last_profit_percent = trade["profit_percent"]
+
+                        sell_profit += trade["profit"]
 
                     #卖出盈利
-                    sell_profit = (deal_price - ref_price) * field_amount
+                    # sell_profit = (deal_price - ref_price) * field_amount
                     # sell_profit = field_cash_amount - ref_amount
-                    sell_profit_percent = sell_profit / ref_cost
+                    # sell_profit_percent = sell_profit / ref_cost
 
-                    trade_group["profit"] += sell_profit
+                    trade_group["profit"] = sell_profit
                     trade_group["profit_percent"] = trade_group["profit"]/trade_group["max_cost"]
-                    trade_group["last_profit_percent"] = sell_profit_percent
+                    trade_group["last_profit_percent"] = last_profit_percent
                     trade_group["amount"] -= field_amount
                     trade_group["cost"] -= (field_cash_amount-fees)
                     trade_group["amount"] = 0 if trade_group["amount"] < 0.0001 else trade_group["amount"]
@@ -1001,7 +1020,10 @@ def stg_smart_patch():
                 trade_group["amount"] += (field_amount-fees)
                 trade_group["cost"] += field_cash_amount
                 trade_group["max_cost"] = trade_group["cost"] if trade_group["max_cost"] < trade_group["cost"] else trade_group["max_cost"]   #整体过程中最大持仓成本
-                trade_group["avg_price"] = trade_group["cost"]/trade_group["amount"]
+
+                # 这样算出来的不对，因为成本是刨除利润了的
+                # trade_group["avg_price"] = trade_group["cost"]/trade_group["amount"]
+
                 trade_group["profit_percent"] = trade_group["profit"]/trade_group["max_cost"]
                 trade_group["buy_counts"] += 1
                 trade_group["patch_index"] += 1
@@ -1009,6 +1031,15 @@ def stg_smart_patch():
                 if not trade_group["start_time"]:
                     trade_group["start_time"] = time_now
                 trade_group["last_update"] = time_now
+
+                # 卖出一单后，平均价格应该是所有未卖出的单子的总成本除以总量
+                not_sell_cost = 0
+                not_sell_amount = 0
+                for trade in trade_group["trades"]:
+                    if not trade.get("is_sell", 0):
+                        not_sell_cost += trade["cost"]
+                        not_sell_amount += trade["amount"]
+                trade_group["avg_price"] = not_sell_cost / not_sell_amount
 
                 smart_patch_interval = (ref_price-deal_price)/ref_price
                 msg = "[{}{}] 计划买入金额： {}, 实际买入币量： {}, 实际买入金额: {}, 补仓参考价格: {}, 补仓成交价格: {}, 计划补仓间隔: {}%, 智能补仓间隔: {}%, 第{}次补仓, 补仓系数: {}". \
