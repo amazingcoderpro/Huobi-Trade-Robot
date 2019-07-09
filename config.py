@@ -25,8 +25,8 @@ HOST = "47.75.10.215"
 CURRENT_ACCOUNT = ""            # 当前用户账号
 CURRENT_PASSWORD = ""
 CURRENT_PLATFORM = "huobi"      # 当前平台
-ACCESS_KEY = "ht4tgq1e4t-e22212d5-632b2d77-b3694"
-SECRET_KEY = "e01a1a28-7b67bc6d-4e6ec1cb-e613a"
+ACCESS_KEY = ""
+SECRET_KEY = ""
 CURRENT_SYMBOLS = {}            # 用户选择的交易对{'USDT': {'trade': 0, 'frozen': 0, 'coins': [{'coin': 'HT', 'trade': 0, 'frozen': 0}], 'principal': 0}, 'BTC': {'trade': 0, 'frozen': 0, 'coins': []}, 'ETH': {'trade': 0, 'frozen': 0, 'coins': []}, 'HT': {'trade': 0, 'frozen': 0, 'coins': []}, 'HUSD': {'trade': 0, 'frozen': 0, 'coins': [{'coin': 'XRP', 'trade': 0, 'frozen': 0}]}}
 
 NEED_TOBE_SUB_SYMBOL = []
@@ -210,7 +210,7 @@ NET_TIMEOUT = 45
 RETRY_TIMES = -1  # 小于0无限重试
 
 
-TRADE_MIN_LIMIT_VALUE = 10  # 单次最小交易額不能低於20美金
+TRADE_MIN_LIMIT_VALUE = 15  # 单次最小交易額不能低於20美金
 TRADE_MAX_LIMIT_VALUE = 100000  # 单次最大交易額不能高於100000美金
 
 WAIT_BUY_PRICE = [0, 0, 0]
