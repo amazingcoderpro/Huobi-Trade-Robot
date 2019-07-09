@@ -940,7 +940,7 @@ def stg_smart_patch():
             patch_mode = group_mode.get("patch_mode", "multiple") if not patch_mode else patch_mode
 
             patch_times = trade_group.get("limit_patch_times", -1)
-            patch_times = group_mode.get("limit_patch_times", 5) if not patch_times < 0 else patch_times
+            patch_times = group_mode.get("limit_patch_times", 5) if patch_times < 0 else patch_times
 
             if trade_group["patch_index"] >= patch_times:
                 log_config.output2ui(u"[{}]已经达到补仓次数上限({}次), 停止补仓!".format(symbol.upper(), patch_times), 2)
