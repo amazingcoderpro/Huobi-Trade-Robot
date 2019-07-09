@@ -549,7 +549,9 @@ def patch_multiple(index, mode="multiple", patch_limits=7):
 
     return patch
 
+
 last_notify_smart_profit = {}
+
 
 def should_stop_profit(symbol, buy_price, limit_profit, back_profit, monitor_start, track=1, smart_profit=1):
     limit_price = buy_price*(1+limit_profit)
@@ -582,14 +584,13 @@ def should_stop_profit(symbol, buy_price, limit_profit, back_profit, monitor_sta
     return False
 
 
-
 def should_patch(symbol, ref_price, patch_interval, smart_patch=1):
     current_price = get_current_price(symbol=symbol)
 
     # 如果当前价格小于整体均价的一定比例，则补单
     if current_price < ref_price * (1 - patch_interval):
         # 如果还在跌，暂时不补仓
-        if smart_patch and is_still_down2(symbol, 0.0020, 30):
+        if smart_patch and is_still_down2(symbol, 0.0015, 30):
             notify = False
             global last_notify_smart_patch
             if symbol in last_notify_smart_patch.keys():
@@ -3024,7 +3025,6 @@ def is_still_down2(symbol, bp=0.0035, delta_time=310):
     :param delta_time:
     :return:
     """
-    return True
     now = int(time.time()) * 1000
     current_price = get_current_price(symbol)
     min_price = get_min_price(symbol, last_time=now - (delta_time * 1000))
