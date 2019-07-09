@@ -184,6 +184,8 @@ class MainUI:
 
         self.btn_results = Button(root, text="收益统计", command=self.cmd_trade_result, width=7, font=("", 12, 'bold'))
 
+        self.btn_refresh = Button(root, text="立即刷新", command=self.cmd_refresh, width=7, font=("", 12, 'bold'))
+
         # columns = (u"启动时间", u"状态", u"交易对", u"当前价格", u"持仓均价", u"货币数量", u"持仓费用", u"收益比%", u"已做单数", u"止盈比例%", u"止盈追踪%", u"间隔参考", u"网格止盈", u"尾单收益比%", u"累计收益", u"最近更新", u"结束时间")
         # columns = (
         # u"序号", u"交易对", u"状态", u"当前价格", u"持仓均价", u"持币数量", u"持仓费用", u"已做单数", u"已盈利单数", u"尾单收益比%", u"累计收益", u"收益比%", u"建仓时间",  u"最近更新", u"结束时间")
@@ -277,6 +279,7 @@ class MainUI:
         self.label_total_run.grid(row=1, column=5, padx=1, pady=10, sticky=S+N+W)
         self.label_total_run_.grid(row=1, column=6, padx=1, pady=10, sticky=S+N+W)
         self.btn_results.grid(row=1, column=7, padx=1, pady=10, sticky=S+N+W)
+        self.btn_refresh.grid(row=1, column=8, padx=1, pady=10, sticky=S+N+W)
 
         self.tree.grid(row=2, column=1, rowspan=4, columnspan=10, padx=8, pady=8, sticky=N+S+W+E)
         # tv.grid(row=0, column=0, sticky=NSEW)
@@ -294,6 +297,7 @@ class MainUI:
         self.btn_start.config(state="disabled")
         self.btn_wechat.config(state="disabled")
         self.btn_results.config(state="disabled")
+        self.btn_refresh.config(state="disabled")
 
     def logout(self):
         if self.is_login:
@@ -395,7 +399,7 @@ class MainUI:
 
             log_config.output2ui(
                 u"[{}]本组交易策略设置成功! 本组交易将按照您设置的参数进行交易, 其他未设置的交易组仍会按照全局的交易参数进行处理！\n以下是您为当前交易组选择的策略参数: [{}], 补仓数列为: [{}], 补仓参考: [{}], 补仓间隔: {}%, 止盈比例为: {}%, 追踪止盈: {}, "
-                u"追踪回撤比例: {}%, 网格止盈: {}, 智能止盈: {}, 智能补仓: {}".format(self.tree.item(item, "values")[1], pop.result["mode_name"],
+                u"追踪回撤比例: {}%, 网格止盈: {}, 智能止盈: {}, 智能补仓: {}, 最大补仓次数: {}".format(self.tree.item(item, "values")[1], pop.result["mode_name"],
                                                                               pop.result["patch_name"],
                                                                               pop.result["patch_ref_name"],
                                                                               round(pop.result["patch_interval"] * 100,
@@ -408,7 +412,8 @@ class MainUI:
                                                                               u"开启" if pop.result[
                                                                                   "smart_profit"] else u"关闭",
                                                                               u"开启" if pop.result[
-                                                                                  "smart_patch"] else u"关闭"), 0)
+                                                                                  "smart_patch"] else u"关闭",
+                                                                                pop.result["limit_patch_times"]), 0)
             self.update_trade_info_to_db()
 
     def cmd_sell_all(self):
@@ -828,6 +833,7 @@ class MainUI:
         self.btn_pending_setting.config(state="normal")
         # self.btn_wechat.config(state="normal")
         self.btn_principal.config(state="normal")
+        self.btn_refresh.config(state="normal")
         time.sleep(0.5)
         self.register_strategy()
         self.start_check_strategy()
@@ -1655,9 +1661,9 @@ class MainUI:
                         self.update_ui_trade_info()
                         self.update_ui_balance()
                         strategies.should_update_ui_tree = False
-                    else:
-                        time.sleep(30)
-                        strategies.should_update_ui_tree = True
+                    # else:
+                    #     time.sleep(30)
+                    #     strategies.should_update_ui_tree = True
 
             # self.tree.after(5000, update_trade_record)
 
@@ -1875,6 +1881,13 @@ class MainUI:
 
         PopupTradeResults(parent=self.root, trade_records=records)
 
+    def cmd_refresh(self):
+        if not self.working:
+            log_config.output2ui(u"请先启动系统监控.", 2)
+            return
+
+        strategies.should_update_ui_tree = True
+        log_config.output2ui("刷新交易数据成功!", 0)
 
     def close_window(self):
         # ans = askyesno("Warning", message="Are you sure to quit？")

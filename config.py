@@ -558,7 +558,7 @@ TRADE_MODE_CONFIG = {
                      "patch_mode": "multiple",  # 补仓的模式，默认为倍投
                      # "multiple_list": [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
                      "first_trade": 0.041,
-                     "patch_interval": 0.032,
+                     "patch_interval": 0.034,
                      "patch_ref": 0,           # 0--参考均价，１-参考上次买入价
                      "expect_profit_m": 0.28,
                      "risk": 1.16
@@ -611,7 +611,7 @@ STRATEGIES_CONFIG = {
 
 
 PRINCIPAL = 0.0         # 本金
-TRADE_MODE = "aggressive"   # 当前选择的交易风格，稳健
+TRADE_MODE = "aggressive_1"   # 当前选择的交易风格，稳健
 TRADE_GRID = 1
 INTERVAL_REF = {0: "整体均价", 1: "上单价格"}      # 间隔补单参考，0-参考整体持仓均价，1-参考上一单买入价
 

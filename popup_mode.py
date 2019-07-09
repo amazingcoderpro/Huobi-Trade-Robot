@@ -28,7 +28,6 @@ class PopupMode(MyDialog):
         Label(frame, text=u'在行情稳定或上升时建议策略设置偏向激进, 以博得更多的利润; 在行情较坏时, 建议策略设置偏向稳健或保守, 以降低交易风险.',
               width=70, wraplength=500, justify='left', fg="gray", font=("", 8)).grid(row=1, column=0, columnspan=4, padx=5, ipadx=5, sticky=N + S + W)
 
-
         Label(frame, text=u"补仓参数设置:", fg="green", font=("", 11, "bold")).grid(row=2, column=0, pady=15)
 
         Label(frame, text=u"补仓数列: ", width=12).grid(row=3, column=0)

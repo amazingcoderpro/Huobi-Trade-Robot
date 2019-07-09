@@ -48,6 +48,11 @@ should_update_ui_tree = True
 # BUY_LOW_RECORD = {}
 # SELL_HIGH_RECORD = {}
 
+last_notify_smart_patch = {
+
+}
+
+
 def macd_strategy_5min():
     logger.info("macd_strategy_5min be called")
     dw = process.KLINE_DATA.get("market.btcusdt.kline.5min", None)
@@ -576,9 +581,7 @@ def should_stop_profit(symbol, buy_price, limit_profit, back_profit, monitor_sta
 
     return False
 
-last_notify_smart_patch = {
 
-}
 
 def should_patch(symbol, ref_price, patch_interval, smart_patch=1):
     current_price = get_current_price(symbol=symbol)
@@ -588,9 +591,12 @@ def should_patch(symbol, ref_price, patch_interval, smart_patch=1):
         # 如果还在跌，暂时不补仓
         if smart_patch and is_still_down2(symbol, 0.0020, 30):
             notify = False
+            global last_notify_smart_patch
             if symbol in last_notify_smart_patch.keys():
                 if (datetime.now()-last_notify_smart_patch[symbol]).total_seconds() > 180:
                     notify = True
+                else:
+                    notify = False
             else:
                 last_notify_smart_patch[symbol] = datetime.now()
                 notify = True
@@ -2599,7 +2605,7 @@ def sell_market(symbol, amount, percent=0.1, currency=""):
             break
 
     logger.error("sell market failed, symbol={}, amount={}, ret={}".format(symbol, amount, ret))
-    log_config.output2ui("[{}]卖出失败, 计划卖出币量: {}．".format(symbol, amount), 2)
+    log_config.output2ui("[{}]卖出失败, 计划卖出币量: {}．".format(symbol.upper(), amount), 2)
     result["code"] = 0
     result["msg"] = "Trade sell failed!"
     return result
@@ -3018,6 +3024,7 @@ def is_still_down2(symbol, bp=0.0035, delta_time=310):
     :param delta_time:
     :return:
     """
+    return True
     now = int(time.time()) * 1000
     current_price = get_current_price(symbol)
     min_price = get_min_price(symbol, last_time=now - (delta_time * 1000))
